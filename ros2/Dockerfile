@@ -80,7 +80,7 @@ RUN cd ~/ros2_galactic/ && colcon build --symlink-install
 
 # Run example 
 RUN cd ~/ros2_galactic/src 
-RUN git clone https://github.com/letrthong/ros2
+RUN git clone https://github.com/letrthong/ros2 thong
 
 # Set the working directory to /app
 #WORKDIR /app
