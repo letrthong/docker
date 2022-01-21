@@ -78,6 +78,10 @@ RUN rosdep install --from-paths ~/ros2_galactic/src --ignore-src -y --skip-keys 
 RUN cd ~/ros2_galactic/ && colcon build --symlink-install
  
 
+# Run example 
+RUN cd ~/ros2_galactic/src 
+RUN git clone https://github.com/letrthong/ros2
+
 # Set the working directory to /app
 #WORKDIR /app
 
