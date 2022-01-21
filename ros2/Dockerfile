@@ -2,6 +2,7 @@
 FROM ubuntu:20.04
 
  
+ ENV DEBIAN_FRONTEND=noninteractive
 # Update image
 
 # https://docs.ros.org/en/galactic/Installation/Ubuntu-Development-Setup.html
