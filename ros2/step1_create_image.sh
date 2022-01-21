@@ -1,2 +1,2 @@
-sudo docker build -t sshd_tagged_image .
+sudo docker build -t test_ros2_image .
 
