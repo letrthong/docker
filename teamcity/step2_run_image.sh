@@ -1,2 +1,2 @@
-sudo docker run -it  test_ros2_image
+sudo docker run -it  test_teamcity_image
  

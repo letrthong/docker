@@ -1,7 +1,7 @@
 # Ubuntu
  https://hub.docker.com/_/ubuntu
 
-#Show all iamges 
+#Show all images 
 	docker images
 
 # Connect image
@@ -11,6 +11,8 @@
 # Check version on Linux
 	cat /etc/os-release
 
+# docker remove image id
+docker rmi a2053118cff3
 
 Example link
 https://github.com/osrf/docker_images/blob/master/ros2/nightly/nightly/Dockerfile

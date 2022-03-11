@@ -31,9 +31,5 @@ RUN update-alternatives --install /usr/bin/java java ${JAVA_HOME}/bin/java 1 && 
 
 # JDK preparation end
 ##################################
-
- 
-
-CMD ["/run-services.sh"]
  
  

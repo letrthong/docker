@@ -1,2 +1,2 @@
-sudo docker build -t test_ros2_image .
+sudo docker build -t test_teamcity_image .
 
