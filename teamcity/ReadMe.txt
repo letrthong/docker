@@ -20,3 +20,7 @@ https://github.com/osrf/docker_images/blob/master/docker/Dockerfile
 # Teamcity
 	https://github.com/JetBrains/teamcity-docker-server/blob/master/ubuntu/Dockerfile
 	https://github.com/JetBrains/teamcity-docker-images
+
+
+https://www.geeksforgeeks.org/copying-files-to-and-from-docker-containers/?ref=lbp
+sudo docker cp ~/Desktop/to-be-copied.txt 135950565ad8:/to-be-copied.txt
