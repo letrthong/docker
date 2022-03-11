@@ -83,6 +83,18 @@ RUN cd ~/ros2_galactic/ && colcon build --symlink-install
 RUN cd ~/ros2_galactic/src 
 RUN git clone https://github.com/letrthong/ros2 thong
 
+RUN cd ~/ros2_galactic/src
+RUN git clone https://github.com/GENIVI/dlt-daemon.git
+# DLT log
+RUN apt-get install cmake zlib1g-dev libdbus-glib-1-dev
+RUN cd ~/ros2_galactic/src/dlt-daemon
+RUN mkdir build
+RUN cd build
+RUN cmake ..
+RUN make
+RUN make install
+RUN ldconfig 
+
 # Set the working directory to /app
 #WORKDIR /app
 
