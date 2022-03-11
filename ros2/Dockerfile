@@ -95,6 +95,10 @@ RUN make
 RUN make install
 RUN ldconfig 
 
+# 
+RUN cd ~/ros2_galactic/src
+RUN  git clone https://github.com/letrthong/dlt_logger.git
+  
 # Set the working directory to /app
 #WORKDIR /app
 
