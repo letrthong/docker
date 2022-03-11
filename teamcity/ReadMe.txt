@@ -19,3 +19,4 @@ https://github.com/osrf/docker_images/blob/master/docker/Dockerfile
 
 # Teamcity
 	https://github.com/JetBrains/teamcity-docker-server/blob/master/ubuntu/Dockerfile
+	https://github.com/JetBrains/teamcity-docker-images
