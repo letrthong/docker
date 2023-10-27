@@ -13,3 +13,6 @@ https://hub.docker.com/r/letrthong/ros2
 https://docs.docker.com/engine/reference/commandline/save/
 
 https://docs.docker.com/engine/reference/commandline/import/
+
+check log
+journalctl -eu docker
