@@ -16,3 +16,7 @@ https://docs.docker.com/engine/reference/commandline/import/
 
 check log
 journalctl -eu docker
+
+Install by the script
+
+https://github.com/letrthong/redis
