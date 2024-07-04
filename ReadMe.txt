@@ -20,3 +20,8 @@ journalctl -eu docker
 Install by the script
 
 https://github.com/letrthong/redis
+
+
+
+#free space
+docker system prune -a
