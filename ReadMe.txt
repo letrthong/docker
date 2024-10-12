@@ -25,3 +25,8 @@ https://github.com/letrthong/redis
 
 #free space
 docker system prune -a
+
+
+root@instance-redis-1:/opt/shop# sudo dockerd
+INFO[2024-10-12T01:48:17.561521110Z] Starting up                                  
+failed to start daemon: Unable to get the TempDir under /var/lib/docker: mkdir /var/lib/docker/tmp: no space left on device
