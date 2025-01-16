@@ -19,7 +19,8 @@ journalctl -eu docker
 
 Install by the script
 
-
+https://depot.dev/blog/docker-clear-cache
+docker system df
 
 
 
