@@ -1,0 +1,43 @@
+Step 1: Create a Dockerfile
+First, create a Dockerfile to set up the FTP server.
+
+# Use the official Ubuntu image
+FROM ubuntu:latest
+
+# Install vsftpd
+RUN apt-get update && apt-get install -y vsftpd
+
+# Copy the vsftpd configuration file
+COPY vsftpd.conf /etc/vsftpd.conf
+
+# Expose the FTP port
+EXPOSE 21
+
+# Start vsftpd
+CMD ["vsftpd", "/etc/vsftpd.conf"]
+
+
+Step 2: Create the vsftpd Configuration File
+Create a vsftpd.conf file with the following content:
+
+# vsftpd configuration file
+listen=YES
+anonymous_enable=NO
+local_enable=YES
+write_enable=YES
+local_umask=022
+dirmessage_enable=YES
+xferlog_enable=YES
+connect_from_port_20=YES
+chroot_local_user=YES
+secure_chroot_dir=/var/run/vsftpd/empty
+pam_service_name=vsftpd
+rsa_cert_file=/etc/ssl/certs/ssl-cert-snakeoil.pem
+rsa_private_key_file=/etc/ssl/private/ssl-cert-snakeoil.key
+ssl_enable=NO
+
+
+Step 3: Build the Docker Image
+Build theftpd`.
+
+Build and Run: Commands to build the Docker image and run the container.
