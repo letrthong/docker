@@ -41,3 +41,7 @@ Step 3: Build the Docker Image
 Build theftpd`.
 
 Build and Run: Commands to build the Docker image and run the container.
+
+https://linuxize.com/post/how-to-setup-ftp-server-with-vsftpd-on-ubuntu-20-04/
+
+sudo systemctl status vsftpd
