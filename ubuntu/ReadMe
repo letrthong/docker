@@ -20,3 +20,5 @@ docker compose up --build -d
 
 # ssh docker
 ssh root@localhost -p 2222
+
+scp  -P 2222 ReadMe  root@localhost:/opt
