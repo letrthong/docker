@@ -26,7 +26,7 @@ server = '10.0.2.15'
 port = 2222
 user = 'root'
 password = 'telua'
-local_file = 'test.py'
+local_file = 'upload_download_file.py'
 remote_path = '/home'
 
 ssh_client = create_ssh_client(server, port, user, password)
