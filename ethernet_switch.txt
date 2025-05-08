@@ -1,0 +1,51 @@
+Dockerfile 
+# Use an official Ubuntu base image
+FROM ubuntu:latest
+
+# Install Open vSwitch
+RUN apt-get update && \
+    apt-get install -y openvswitch-switch && \
+    apt-get clean
+
+# Start Open vSwitch
+CMD ["ovs-vswitchd", "--pidfile", "--detach"]
+
+Build the Docker Image:
+docker build -t ovs-switch .
+
+Run the Docker Container:
+docker run --name ovs-switch -d --privileged --network host ovs-switch
+
+Configure Open vSwitch:
+Access the running container and configure Open vSwitch.
+
+docker exec -it ovs-switch bash
+
+
+# Create a new OVS bridge
+ovs-vsctl add-br br0
+
+# Add ports to the bridge
+ovs-vsctl add-port br0 eth1
+ovs-vsctl add-port br0 eth2
+
+# Verify the configuration
+ovs-vsctl show
+
+
+# Create a new OVS bridge
+ovs-vsctl add-br br0
+
+# Add two internal ports to the bridge
+ovs-vsctl add-port br0 port1 -- set interface port1 type=internal
+ovs-vsctl add-port br0 port2 -- set interface port2 type=internal
+
+# Assign IP addresses to the ports
+ip addr add 192.168.1.1/24 dev port1
+ip addr add 192.168.1.2/24 dev port2
+
+# Bring up the ports
+ip link set port1 up
+ip link set port2 up
+
+ping -c 4 192.168.1.2 -I port1
