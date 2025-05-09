@@ -5,5 +5,7 @@ https://ioflood.com/blog/install-openvswitch-linux/
 docker exec -it telua_ethernet_switch bash
 
  
-#  start the ovs deamon
- ovs-vswitchd
+#  Using and Verifying Open vSwitch 
+ovs-vsctl show
+# start the ovs deamon
+ovs-vswitchd
