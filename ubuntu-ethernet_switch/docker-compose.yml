@@ -3,13 +3,9 @@ version: '3.8'
 services:
   ubuntu_ssh:
     image: ubuntu
-    container_name: telua
-    ports:
-      - "2222:22"
+    container_name: telua_ethernet_switch
     build:
       context: .
       dockerfile: Dockerfile
-    volumes:
-      - ./ssh_config:/etc/ssh/sshd_config
     stdin_open: true
     tty: true
