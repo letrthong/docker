@@ -4,6 +4,8 @@ https://ioflood.com/blog/install-openvswitch-linux/
 # Connect docker
 docker exec -it telua_ethernet_switch bash
 
+systemctl staus  openvswitch-switch
+
  
 #  Using and Verifying Open vSwitch 
 ovs-vsctl show
