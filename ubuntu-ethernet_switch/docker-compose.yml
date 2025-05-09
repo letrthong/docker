@@ -1,8 +1,8 @@
-version: '3.8'
+version: '3.9'
 
 services:
   ubuntu_ssh:
-    image: ubuntu
+    image: ubuntu_vswitch
     container_name: telua_ethernet_switch
     build:
       context: .
