@@ -1,3 +1,7 @@
 https://ioflood.com/blog/install-openvswitch-linux/
 
  
+# Connect docker
+docker exec -it telua_ethernet_switch bash
+
+ 
