@@ -11,3 +11,7 @@ systemctl staus  openvswitch-switch
 ovs-vsctl show
 # start the ovs deamon
 ovs-vswitchd
+
+
+https://github.com/GNS3/gns3-registry/tree/master/docker/openvswitch
+https://docs.gns3.com/docs/emulators/create-a-docker-container-for-gns3/
