@@ -16,3 +16,32 @@ ovs-vswitchd
 https://github.com/GNS3/gns3-registry/tree/master/docker/openvswitch
 https://docs.gns3.com/docs/emulators/create-a-docker-container-for-gns3/
 https://github.com/GNS3
+Here are the steps to install the GNS3 VM:
+
+Download the GNS3 VM:
+
+Go to the GNS3 website and download the GNS3 VM for your virtualization software (VMware Workstation, VMware Player, or VirtualBox).
+Import the GNS3 VM:
+
+Open your virtualization software.
+Import the GNS3 VM file you downloaded. The process will vary slightly depending on the software:
+VMware Workstation/Player: Go to File > Open and select the GNS3 VM .ova file.
+VirtualBox: Go to File > Import Appliance and select the GNS3 VM .ova file.
+Configure the GNS3 VM:
+
+Once the VM is imported, you may need to adjust the settings (like memory and CPU) to match your system's capabilities.
+Start the GNS3 VM.
+Link GNS3 to the GNS3 VM:
+
+Open the GNS3 application on your computer.
+Go to Edit > Preferences > GNS3 VM.
+Enable the GNS3 VM and select your virtualization software.
+Click Test Settings to ensure GNS3 can communicate with the VM.
+Add Devices to GNS3:
+
+You can now add devices to your GNS3 projects that will run on the GNS3 VM. This can improve performance and allow for more complex simulations.
+Test Your Setup:
+
+Create a simple network topology to ensure everything is working correctly.
+Verify that you can start and connect devices within GNS3.
+If you encounter any issues during the installation, feel free to ask for help!
