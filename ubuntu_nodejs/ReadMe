@@ -1,13 +1,12 @@
 # Connect docker
-docker exec -it telua bash
+docker exec -it telua_nodejs bash
+ 
 
-cat /var/log/auth.log
-cat /etc/ssh/sshd_config
+# cd  my-node-qunit-app to install packets at  package.json
+npm install
 
-
-service ssh status
-service ssh restart
-
+# Run the tests
+npm test
 
 # start docker
 
@@ -17,8 +16,5 @@ docker compose up -d
 docker compose down
 docker compose up --build -d
 
-
-# ssh docker
-ssh root@localhost -p 2222
-
-scp  -P 2222 ReadMe  root@localhost:/opt
+ 
+ 
