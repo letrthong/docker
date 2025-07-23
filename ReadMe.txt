@@ -34,3 +34,4 @@ failed to start daemon: Unable to get the TempDir under /var/lib/docker: mkdir /
 =>https://github.com/letrthong/redis install new docker
 
 # solarman smart restful API
+https://globalhome.solarmanpv.com/plant/infos/data
