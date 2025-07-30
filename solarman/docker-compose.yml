@@ -1,0 +1,14 @@
+version: '3.9'
+
+services:
+  ubuntu_node:
+    image: ubuntu_yolov8
+    container_name: ubuntu_yolov8
+    ports:
+      - "9001:9001"
+    build:
+      context: .
+      dockerfile: Dockerfile
+   
+    stdin_open: true
+    tty: true
