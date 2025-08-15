@@ -25,8 +25,9 @@ message = "Hello, MQTT"
 # Create an MQTT client instance
 client = mqtt.Client()
 
+keepalive=60
 # Connect to the broker
-client.connect(broker, port, 60)
+client.connect(broker, port, keepalive)
 
 # Publish a message
 client.publish(topic, message)
