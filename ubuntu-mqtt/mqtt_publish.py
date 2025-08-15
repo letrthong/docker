@@ -13,8 +13,9 @@ client = mqtt.Client()
 client.on_connect = on_connect
 client.on_message = on_message
 
+keepalive=60
 # Connect to the broker
-client.connect("localhost", 2883, 60)
+client.connect(broker, port, keepalive)
 
 # Start the loop to process network traffic and dispatch callbacks
 client.loop_forever()
