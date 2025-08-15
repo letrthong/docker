@@ -2,19 +2,11 @@ import json
 import os
 import paho.mqtt.client as mqtt
 
- # Load config from JSON file if available
-CONFIG_FILE = "mqtt_config.json"
-if os.path.exists(CONFIG_FILE):
-    with open(CONFIG_FILE, "r") as f:
-        config = json.load(f)
-    broker = config.get("broker", "localhost")
-    port = config.get("port", 1883)
-    keepalive = config.get("keepalive", 60)
-else:
-    print(f"⚠️ Config file '{CONFIG_FILE}' not found. Using default values.")
-    broker = "localhost"
-    port = 1883
-    keepalive = 60
+
+from mqtt_config import load_config
+config = load_config()
+
+ 
 
 # Define the callback functions
 def on_connect(client, userdata, flags, rc):
@@ -34,7 +26,7 @@ client.on_connect = on_connect
 client.on_message = on_message
 
 # Connect to the broker using config
-client.connect(broker, port, keepalive)
+client.connect(config["broker"], config["port"], config["keepalive"])
 
 # Start the loop to process network traffic and dispatch callbacks
 client.loop_forever()
