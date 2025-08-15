@@ -13,6 +13,8 @@ client = mqtt.Client()
 client.on_connect = on_connect
 client.on_message = on_message
 
+broker = "localhost"
+port = 2883
 keepalive=60
 # Connect to the broker
 client.connect(broker, port, keepalive)
