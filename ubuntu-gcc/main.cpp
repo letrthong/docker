@@ -10,5 +10,5 @@
 int main() {
    
     std::cout << "Hello, World! on docker with gcc:4.9" << std::endl; 
-    return 0; // Indicate that the program ended successfully
+    return 1; // Indicate that the program ended successfully
 }
