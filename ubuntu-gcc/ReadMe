@@ -1,5 +1,5 @@
 # Connect docker
-docker exec -it telua bash
+docker exec -it ubuntu_gcc bash
 
 cat /var/log/auth.log
 cat /etc/ssh/sshd_config
