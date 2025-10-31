@@ -16,7 +16,12 @@ RUN cd /usr/src/gtest && \
 
 # Tạo thư mục làm việc
 WORKDIR /app
-# Copy mã nguồn test vào container (nếu có)
-# COPY . /app
-# Mặc định chạy bash để bạn có thể biên dịch và test thủ công
-CMD ["/bin/bash"]
+
+# Copy file test.cpp từ thư mục build vào container
+COPY test.cpp /app/test.cpp
+
+# Biên dịch test.cpp
+RUN g++ test.cpp -lgtest -lgtest_main -pthread -o test
+
+# Chạy test khi container khởi động
+CMD ["./test"]
