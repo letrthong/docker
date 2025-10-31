@@ -1,5 +1,8 @@
 # Connect docker
-docker exec -it telua bash
+
+docker run -it -d --name telua_gtest your_image_name tail -f /dev/null
+docker ps -a
+docker exec -it telua_gtest bash
 
 cat /var/log/auth.log
 cat /etc/ssh/sshd_config
