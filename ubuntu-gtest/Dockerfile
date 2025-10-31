@@ -19,9 +19,13 @@ WORKDIR /app
 
 # Copy file test.cpp từ thư mục build vào container
 COPY test.cpp /app/test.cpp
+COPY test_gmock.cpp /app/test_gmock.cpp
 
 # Biên dịch test.cpp
 RUN g++ test.cpp -lgtest -lgtest_main -pthread -o test
 
+RUN g++ test_gmock.cpp -lgtest  -lgmock  -lgtest_main -pthread -o test_gmock
+
 # Chạy test khi container khởi động
 CMD ["./test"]
+CMD ["./test_gmock"]
