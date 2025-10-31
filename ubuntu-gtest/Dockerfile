@@ -1,14 +1,22 @@
-FROM ubuntu:latest
+FROM ubuntu:22.04
 
-# iputils-ping  -> ping 8.8.8.
+# Cài đặt các gói cần thiết
+RUN apt update && apt install -y \
+    build-essential \
+    cmake \
+    git \
+    libgtest-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN apt-get update && apt-get install -y openssh-server iputils-ping  && mkdir -p /var/run/sshd
+# Build Google Test từ mã nguồn
+RUN cd /usr/src/gtest && \
+    cmake . && \
+    make && \
+    cp lib/*.a /usr/lib
 
-
-# Set root password
-RUN echo 'root:telua' | chpasswd
-
-
-COPY ./ssh_config /etc/ssh/sshd_config
-
-CMD ["/usr/sbin/sshd", "-D"]
+# Tạo thư mục làm việc
+WORKDIR /app
+# Copy mã nguồn test vào container (nếu có)
+# COPY . /app
+# Mặc định chạy bash để bạn có thể biên dịch và test thủ công
+CMD ["/bin/bash"]
