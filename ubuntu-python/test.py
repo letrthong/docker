@@ -1,2 +1,2 @@
-PermitRootLogin yes
-PasswordAuthentication yes
+
+print("Hello world!")
