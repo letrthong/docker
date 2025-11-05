@@ -15,4 +15,4 @@ COPY test.py /app/
 
 # 5. RUN TESTS ON CONTAINER STARTUP
 # Use bash -c to execute both test binaries sequentially
-CMD ["python3 /app/test.py"]
+CMD ["python3", "/app/test.py"]
