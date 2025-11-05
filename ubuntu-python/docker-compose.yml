@@ -3,13 +3,13 @@ version: '3.8'
 services:
   ubuntu_ssh:
     image: ubuntu
-    container_name: telua
+    container_name: telua_python
     ports:
       - "2222:22"
     build:
       context: .
       dockerfile: Dockerfile
-    volumes:
-      - ./ssh_config:/etc/ssh/sshd_config
+#    volumes:
+#      - ./test.py:/etc/ssh/sshd_config
     stdin_open: true
     tty: true
