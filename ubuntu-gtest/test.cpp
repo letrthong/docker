@@ -37,13 +37,13 @@ int getMinProcessingTime(vector<int> data, int processTimeA, int processTimeB) {
 
 TEST(SampleTest, checkTime01) {
     std::vector<int> dataList ={1, 3, 4, 5, 6};
-    int ret = getMinProcessingTime(list1, 1 ,2);
+    int ret = getMinProcessingTime(dataList, 1 ,2);
     EXPECT_EQ(ret, 22);
 }
 
 TEST(SampleTest, checkTime01) {
     std::vector<int> dataList ={1, 1, 1, 1, 1};
-    int ret = getMinProcessingTime(list1, 2 ,2);
+    int ret = getMinProcessingTime(dataList, 2 ,2);
     EXPECT_EQ(ret, 6);
 }
 
