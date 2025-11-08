@@ -1,15 +1,3 @@
-//#include <gtest/gtest.h>
-//
-//TEST(SampleTest, Addition) {
-//    EXPECT_EQ(2 + 2, 4);
-//}
-//
-//int main(int argc, char **argv) {
-//    ::testing::InitGoogleTest(&argc, argv);
-//
-//    return RUN_ALL_TESTS();
-//}
-
 #include <gtest/gtest.h>
 #include <bits/stdc++.h>
 #include <memory>
@@ -58,6 +46,12 @@ TEST(SampleTest, Addition02) {
     int ret = getMinProcessingTime(list1, 2 ,2);
     EXPECT_EQ(ret, 6);
 }
+
+
+TEST(SampleTest, Addition) {
+    EXPECT_EQ(2 + 2, 4);
+}
+
 
 int main(int argc, char **argv) {
     ::testing::InitGoogleTest(&argc, argv);
