@@ -16,4 +16,4 @@ COPY *.sh /app/
 
 # 5. RUN TESTS ON CONTAINER STARTUP
 # Use bash -c to execute both test binaries sequentially
-CMD ["/bin/bash", "/app/start.sh"]
+CMD ["/bin/bash", "/app/start_testing.sh"]
