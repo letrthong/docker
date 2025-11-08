@@ -27,7 +27,7 @@ class TestCalculator(unittest.TestCase):
         # Check if calculator.add(0, 5) is equal to 5
         self.assertEqual(calculator.add(0, 5), 5)
         # Check if calculator.add(5, 0) is equal to 5
-        self.assertEqual(calculator.add(5, 0), 5)
+        self.assertEqual(calculator.add(5, 0), 1)
 
 if __name__ == '__main__':
     # This allows you to run the tests directly from the file

@@ -11,8 +11,9 @@ RUN apt-get update &&  apt-get install -y python3 python3-pip
 WORKDIR /app
 
 # Copy the test files from the local build directory into the container
-COPY test.py /app/
+COPY *.py /app/
+COPY *.sh /app/
 
 # 5. RUN TESTS ON CONTAINER STARTUP
 # Use bash -c to execute both test binaries sequentially
-CMD ["python3", "/app/test.py"]
+CMD ["/bin/bash", "/app/start.sh"]
