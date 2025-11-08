@@ -23,7 +23,6 @@ int getMinProcessingTime(vector<int> data, int processTimeA, int processTimeB) {
         } else {
             if (( size_of_list%2 == 1 ) && (i +1) ==  size_of_list/2 ) {
                 int tempA = processA_processingTime + data[i+1]*processTimeA;
-
                 if (tempA < processB_processingTime){
                     return processB_processingTime;
                 } else {
