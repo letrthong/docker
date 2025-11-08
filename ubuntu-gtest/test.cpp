@@ -23,18 +23,17 @@ int getMinProcessingTime(vector<int> data, int processTimeA, int processTimeB) {
     int processB_processingTime = 0;
     int size_of_list = data.size();
 
-    for(int i = 0; i < size_of_list; i++){
+    for (int i = 0; i < size_of_list; i++) {
         processA_processingTime = processA_processingTime + (data[i]*processTimeA);
         processB_processingTime = processB_processingTime + (data[data.size()- (i+1)]*processTimeB);
-
-        if( ( size_of_list%2 == 0 ) && (i +1) ==  size_of_list/2 ){
-            if(processA_processingTime > processB_processingTime){
+        if (( size_of_list%2 == 0 ) && (i +1) ==  size_of_list/2 ) {
+            if(processA_processingTime > processB_processingTime) {
                 return processA_processingTime;
             } else {
                 return processB_processingTime;
             }
         } else {
-            if( ( size_of_list%2 == 1 ) && (i +1) ==  size_of_list/2 ){
+            if (( size_of_list%2 == 1 ) && (i +1) ==  size_of_list/2 ) {
                 int tempA = processA_processingTime + data[i+1]*processTimeA;
 
                 if (tempA < processB_processingTime){
@@ -45,7 +44,6 @@ int getMinProcessingTime(vector<int> data, int processTimeA, int processTimeB) {
             }
         }
     }
-
    return 0;
 }
 
