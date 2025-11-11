@@ -11,6 +11,4 @@ docker compose up -d
 # Rebuild
 docker compose down
 docker compose up --build -d
-
-
-apt-get install -y openjdk-11-jdk 
+ 
