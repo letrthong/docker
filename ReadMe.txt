@@ -33,7 +33,4 @@ INFO[2024-10-12T01:48:17.561521110Z] Starting up
 failed to start daemon: Unable to get the TempDir under /var/lib/docker: mkdir /var/lib/docker/tmp: no space left on device
 =>https://github.com/letrthong/redis install new docker
  
-Java
-RUN apt-get update && apt-get install -y openjdk-11-jdk 
-RUN chmod +x gen_jni.sh build_jni.sh run_jni.sh
-CMD bash -c "./gen_jni.sh && ./build_jni.sh && ./run_jni.sh"
+ 
