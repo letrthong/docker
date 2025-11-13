@@ -1,5 +1,5 @@
 # Connect docker
-docker exec -it telua_python bash
+docker exec -it telua_sqlalchemy bash
 
 # start docker
 docker compose up -d

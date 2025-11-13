@@ -3,7 +3,7 @@ version: '3.8'
 services:
   ubuntu_ssh:
     image: ubuntu
-    container_name: telua_python
+    container_name: telua_sqlalchemy
     ports:
       - "2222:22"
     build:
