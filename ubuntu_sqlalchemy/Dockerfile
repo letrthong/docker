@@ -5,6 +5,7 @@ FROM ubuntu:22.04
 # libgtest-dev package downloads the SOURCE CODE for both GTest and GMock to /usr/src/googletest/
 RUN apt-get update &&  apt-get install -y python3 python3-pip
 #
+RUN pip install sqlalchemy mysql-connector-python
 
 # 3. SET UP PROJECT ENVIRONMENT
 # Set the working directory
