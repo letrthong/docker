@@ -13,7 +13,9 @@ class TestDatabaseConnection(unittest.TestCase):
     def test_create_db_engine_success(self):
         """Kiểm tra tạo engine với mật khẩu chứa ký tự đặc biệt."""
         engine = create_db_engine("root", "b5sLNk3v9gq}8HZ)", "35.202.109.33", 3306, "iot_ecommerce", "utf8mb4")
-        
+        if engine:
+                print("✅ Engine được khởi tạo thành công.")
+
         self.assertIsNotNone(engine)
         
         # Kiểm tra chuỗi URL có được mã hóa đúng không
