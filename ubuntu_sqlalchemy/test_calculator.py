@@ -6,13 +6,19 @@ from unittest.mock import patch, MagicMock
 from telua_pymysql import create_db_engine, check_connection_and_get_db_name
 
 # Giả sử bạn lưu code refactor ở trên vào file `your_module_name.py`
+DB_USERNAME = 'root'
+DB_PASSWORD = 'b5sLNk3v9gq}8HZ)'
+DB_HOST = '35.202.109.33'
+DB_PORT = 3306
+DB_NAME = 'iot_ecommerce'
+DB_CHARSET = 'utf8mb4'
 
 class TestDatabaseConnection(unittest.TestCase):
 
     # --- Unit Test cho create_db_engine (Kiểm tra logic xây dựng URL) ---
     def test_create_db_engine_success(self):
         """Kiểm tra tạo engine với mật khẩu chứa ký tự đặc biệt."""
-        engine = create_db_engine("root", "b5sLNk3v9gq}8HZ)", "35.202.109.33", 3306, "iot_ecommerce", "utf8mb4")
+        engine = create_db_engine(DB_USERNAME, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME, DB_CHARSET)
         if engine:
                 print("✅ Engine được khởi tạo thành công.")
 
