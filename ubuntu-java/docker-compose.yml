@@ -2,8 +2,8 @@ version: '3.9'
 
 services:
   ubuntu_node:
-    image: ubuntu_gcc
-    container_name: ubuntu_gcc
+    image: ubuntu_java
+    container_name: ubuntu_java
     ports:
       - "9001:9001"
     build:
