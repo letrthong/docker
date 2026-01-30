@@ -7,5 +7,5 @@ RUN apt-get update && apt-get install -y openjdk-11-jdk
 
 COPY . /usr/src/myapp
 WORKDIR /usr/src/myapp
-RUN javac Main.java
+RUN javac -encoding UTF-8 Main.java
 CMD ["java", "Main"]
