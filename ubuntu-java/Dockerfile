@@ -3,14 +3,9 @@ FROM ubuntu:20.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Cài đặt g++
-RUN apt-get update && apt-get install -y g++
-
-RUN apt-get update && apt-get install -y git
-RUN apt-get update && apt-get install -y cmake
-RUN apt-get install -y openjdk-11-jdk 
+RUN apt-get update && apt-get install -y openjdk-11-jdk
 
 COPY . /usr/src/myapp
 WORKDIR /usr/src/myapp
-RUN g++ -std=c++17 -o myapp main.cpp
-CMD ["./myapp"]
+RUN javac Main.java
+CMD ["java", "Main"]
