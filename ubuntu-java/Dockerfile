@@ -3,20 +3,20 @@ FROM ubuntu:20.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Cài đặt OpenJDK và g++ trong cùng một layer để tối ưu kích thước
-# Xóa danh sách apt sau khi cài đặt để giảm dung lượng image
+# Install OpenJDK and g++ in the same layer to optimize size
+# Remove apt lists after installation to reduce image size
 RUN apt-get update && apt-get install -y openjdk-11-jdk g++ && rm -rf /var/lib/apt/lists/*
 
 COPY . /usr/src/myapp
 WORKDIR /usr/src/myapp
 
-# 1. Biên dịch Java và tạo file header C++ (Main.h) bằng flag -h
+# 1. Compile Java and generate C++ header file (Main.h) using -h flag
 RUN javac -h . -encoding UTF-8 Main.java
 
-# 2. Biên dịch C++ thành thư viện chia sẻ (.so)
-# -fPIC: Position Independent Code (bắt buộc cho thư viện chia sẻ)
-# -I: Chỉ định đường dẫn include cho JNI header
+# 2. Compile C++ into shared library (.so)
+# -fPIC: Position Independent Code (required for shared libraries)
+# -I: Specify include path for JNI headers
 RUN JAVA_HOME="$(dirname $(dirname $(readlink -f $(which javac))))" && \
     g++ -shared -fPIC -I"$JAVA_HOME/include" -I"$JAVA_HOME/include/linux" -o libhello.so HelloJNI.cpp Greeting.cpp
-# 3. Chạy Java, chỉ định đường dẫn thư viện native (-Djava.library.path)
+# 3. Run Java, specifying the native library path (-Djava.library.path)
 CMD ["java", "-Djava.library.path=.", "Main"]
