@@ -4,7 +4,7 @@ set -e
 # remove the rest containers if have
 docker compose down
 
-# Đảm bảo xóa container cũ nếu lệnh down chưa xử lý hết hoặc container được tạo thủ công
+# Ensure old container is removed if down command didn't handle it or if manually created
 docker rm -f ubuntu_java 2>/dev/null || true
  
 

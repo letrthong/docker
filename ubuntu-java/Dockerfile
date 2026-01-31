@@ -17,6 +17,6 @@ RUN javac -h . -encoding UTF-8 Main.java
 # -fPIC: Position Independent Code (bắt buộc cho thư viện chia sẻ)
 # -I: Chỉ định đường dẫn include cho JNI header
 RUN JAVA_HOME="$(dirname $(dirname $(readlink -f $(which javac))))" && \
-    g++ -shared -fPIC -I"$JAVA_HOME/include" -I"$JAVA_HOME/include/linux" -o libhello.so HelloJNI.cpp
+    g++ -shared -fPIC -I"$JAVA_HOME/include" -I"$JAVA_HOME/include/linux" -o libhello.so HelloJNI.cpp Greeting.cpp
 # 3. Chạy Java, chỉ định đường dẫn thư viện native (-Djava.library.path)
 CMD ["java", "-Djava.library.path=.", "Main"]

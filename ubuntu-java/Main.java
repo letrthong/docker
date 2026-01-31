@@ -3,16 +3,16 @@
 */
 
 public class Main {
-    // Load thư viện native (libhello.so)
+    // Load native library (libhello.so)
     static {
         System.loadLibrary("hello");
     }
 
-    // Khai báo phương thức native được cài đặt trong C++
+    // Declare native method implemented in C++
     public native String getGreetingFromCpp();
 
     public static void main(String[] args) {
-        // Gọi hàm native và in kết quả
+        // Call native method and print result
         System.out.println(new Main().getGreetingFromCpp());
     }
 }
