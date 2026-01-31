@@ -3,9 +3,12 @@ FROM ubuntu:20.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get install -y openjdk-11-jdk
-# Cần cài đặt g++ để biên dịch code C++
-RUN apt-get install -y g++
+# Thiết lập JAVA_HOME để g++ có thể tìm thấy jni.h
+ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+
+# Cài đặt OpenJDK và g++ trong cùng một layer để tối ưu kích thước
+# Xóa danh sách apt sau khi cài đặt để giảm dung lượng image
+RUN apt-get update && apt-get install -y openjdk-11-jdk g++ && rm -rf /var/lib/apt/lists/*
 
 COPY . /usr/src/myapp
 WORKDIR /usr/src/myapp
