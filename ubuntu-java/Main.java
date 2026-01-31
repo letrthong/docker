@@ -3,8 +3,16 @@
 */
 
 public class Main {
+    // Load thư viện native (libhello.so)
+    static {
+        System.loadLibrary("hello");
+    }
+
+    // Khai báo phương thức native được cài đặt trong C++
+    public native String getGreetingFromCpp();
+
     public static void main(String[] args) {
-        // In Java, System.out.println tự động xuống dòng (tương đương std::endl)
-        System.out.println("Hello, World! on docker with Java");
+        // Gọi hàm native và in kết quả
+        System.out.println(new Main().getGreetingFromCpp());
     }
 }
