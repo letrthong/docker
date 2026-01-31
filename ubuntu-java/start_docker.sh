@@ -1,3 +1,7 @@
+#!/bin/bash
+# Dừng script ngay lập tức nếu có lỗi (quan trọng để phát hiện lỗi build)
+set -e
+
 # remove the rest containers if have
 docker compose down
 

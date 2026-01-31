@@ -1,3 +1,6 @@
+#!/bin/bash
+set -e
+
 # remove the rest containers if have
 docker compose down
 
