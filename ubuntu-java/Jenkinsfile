@@ -1,0 +1,47 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Cleanup') {
+            steps {
+                // Xóa workspace cũ và thư mục report để tránh dữ liệu rác
+                cleanWs()
+                sh 'mkdir -p test-reports'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                // Build image bằng docker compose (hoặc docker build)
+                // Lưu ý: Lúc này image chỉ chứa code đã biên dịch, chưa chạy test
+                sh 'docker compose build --no-cache'
+            }
+        }
+
+        stage('Run Unit Tests') {
+            steps {
+                script {
+                    // Chạy container tạm thời để thực thi test
+                    // -v: Mount thư mục test-reports từ host vào container để lấy kết quả XML
+                    // Override CMD mặc định bằng lệnh chạy JUnit
+                    sh """
+                    docker run --rm \
+                        -v ${WORKSPACE}/test-reports:/usr/src/myapp/test-reports \
+                        ubuntu_java \
+                        java -Djava.library.path=. \
+                             -jar junit-platform-console-standalone-1.10.0.jar \
+                             -cp . -c MainTest \
+                             --reports-dir=test-reports
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            // Thu thập kết quả test JUnit (XML) dù test pass hay fail
+            junit 'test-reports/*.xml'
+        }
+    }
+}
