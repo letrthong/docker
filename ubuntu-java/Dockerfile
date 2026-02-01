@@ -27,7 +27,8 @@ RUN JAVA_HOME="$(dirname $(dirname $(readlink -f $(which javac))))" && \
 # Compile MainTest.java with JUnit in classpath
 RUN javac -cp .:junit-platform-console-standalone-1.10.0.jar MainTest.java
 # Run tests using Console Launcher. -Djava.library.path=. is crucial for JNI
-RUN java -Djava.library.path=. -jar junit-platform-console-standalone-1.10.0.jar -cp . -c MainTest
+# --reports-dir generates XML reports (TEST-*.xml) suitable for Jenkins integration
+RUN java -Djava.library.path=. -jar junit-platform-console-standalone-1.10.0.jar -cp . -c MainTest --reports-dir=test-reports
 
 # 4. Run Java App (Runtime)
 CMD ["java", "-Djava.library.path=.", "Main"]
