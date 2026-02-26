@@ -2,14 +2,9 @@ version: '3.8'
 
 services:
   ubuntu_ssh:
-    image: ubuntu
     container_name: telua_python
-    ports:
-      - "2222:22"
     build:
       context: .
       dockerfile: Dockerfile
-#    volumes:
-#      - ./test.py:/etc/ssh/sshd_config
-    stdin_open: true
-    tty: true
+    environment:
+      - FACEBOOK_ACCESS_TOKEN=2122353218519689|s3tdzFTP20NHc-7biJHjQ42RqwQ

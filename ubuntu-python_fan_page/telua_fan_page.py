@@ -1,7 +1,8 @@
 import facebook
+import os
 
-token = '2122353218519689|s3tdzFTP20NHc-7biJHjQ42RqwQ'
-page_id = ' 2062127911303488'
+token = os.environ.get('FACEBOOK_ACCESS_TOKEN', '2122353218519689|s3tdzFTP20NHc-7biJHjQ42RqwQ')
+page_id = '2062127911303488'
 
 graph = facebook.GraphAPI(access_token=token)
 
