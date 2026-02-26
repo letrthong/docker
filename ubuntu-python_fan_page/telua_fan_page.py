@@ -1,29 +1,27 @@
-from flask import Flask
+import facebook
 
-app = Flask(__name__)
+# Thay bằng Token bạn lấy từ Graph API Explorer
+PAGE_ACCESS_TOKEN = 'YOUR_PAGE_ACCESS_TOKEN'
 
-@app.route('/')
-def home():
-    """Trang chủ của Telua Fan Page."""
-    return """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Telua Fan Page</title>
-        <style>
-            body { font-family: sans-serif; text-align: center; padding: 50px; background-color: #f0f8ff; }
-            h1 { color: #007bff; }
-            p { font-size: 1.2em; color: #333; }
-            .footer { margin-top: 50px; font-size: 0.8em; color: #777; }
-        </style>
-    </head>
-    <body>
-        <h1>Chào mừng đến với Telua Fan Page!</h1>
-        <p>Nơi chia sẻ niềm đam mê về Telua.</p>
-        <div class="footer">&copy; 2024 Telua Community</div>
-    </body>
-    </html>
-    """
+def post_to_fanpage(message):
+    try:
+        # Khởi tạo graph API với token của Page
+        graph = facebook.GraphAPI(access_token=PAGE_ACCESS_TOKEN)
+        
+        # Thực hiện đăng bài
+        attachment = {
+            'link': 'https://www.google.com', # Tùy chọn chèn link
+        }
+        graph.put_object(
+            parent_object='me', 
+            connection_name='feed', 
+            message=message,
+            **attachment
+        )
+        print("Đăng bài thành công!")
+    except facebook.GraphAPIError as e:
+        print(f"Lỗi: {e.message}")
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+if __name__ == "__main__":
+    msg = "Chào buổi sáng từ Python script của tôi! 🐍🚀"
+    post_to_fanpage(msg)
