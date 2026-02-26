@@ -1,27 +1,10 @@
 import facebook
 
-# Thay bằng Token bạn lấy từ Graph API Explorer
-PAGE_ACCESS_TOKEN = 'YOUR_PAGE_ACCESS_TOKEN'
+token = '2122353218519689|s3tdzFTP20NHc-7biJHjQ42RqwQ'
+page_id = ' 2062127911303488'
 
-def post_to_fanpage(message):
-    try:
-        # Khởi tạo graph API với token của Page
-        graph = facebook.GraphAPI(access_token=PAGE_ACCESS_TOKEN)
-        
-        # Thực hiện đăng bài
-        attachment = {
-            'link': 'https://www.google.com', # Tùy chọn chèn link
-        }
-        graph.put_object(
-            parent_object='me', 
-            connection_name='feed', 
-            message=message,
-            **attachment
-        )
-        print("Đăng bài thành công!")
-    except facebook.GraphAPIError as e:
-        print(f"Lỗi: {e.message}")
+graph = facebook.GraphAPI(access_token=token)
 
-if __name__ == "__main__":
-    msg = "Chào buổi sáng từ Python script của tôi! 🐍🚀"
-    post_to_fanpage(msg)
+# Thử lấy tên trang để kiểm tra kết nối
+page_info = graph.get_object(id=page_id, fields='name')
+print(f"Kết nối thành công với trang: {page_info['name']}")
