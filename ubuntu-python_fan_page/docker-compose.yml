@@ -6,5 +6,4 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    environment:
-      - FACEBOOK_ACCESS_TOKEN=2122353218519689|s3tdzFTP20NHc-7biJHjQ42RqwQ
+    
