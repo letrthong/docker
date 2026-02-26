@@ -6,6 +6,8 @@ FROM ubuntu:22.04
 RUN apt-get update &&  apt-get install -y python3 python3-pip
 #
 
+RUN pip install facebook-sdk
+
 # 3. SET UP PROJECT ENVIRONMENT
 # Set the working directory
 WORKDIR /app

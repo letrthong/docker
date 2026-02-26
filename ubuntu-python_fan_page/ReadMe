@@ -8,3 +8,7 @@ docker compose up -d
 docker compose down
 docker compose up --build -d
  
+
+
+ 
+https://developers.facebook.com/apps/
