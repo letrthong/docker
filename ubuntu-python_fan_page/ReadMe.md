@@ -47,7 +47,7 @@ docker compose up --build -d
 Visit Meta for Developers to manage your App:
 https://developers.facebook.com/apps/ 
 App Name: NongPhu
-Page ID: 933708969830795 (Nông Trang)
+Page ID: 9337089698xyz (Nông Trang)
 
 Required Scopes: pages_manage_posts, pages_read_engagement, pages_show_list.
 
@@ -55,9 +55,7 @@ Required Scopes: pages_manage_posts, pages_read_engagement, pages_show_list.
 
 ## 📋 Requirements / Yêu cầu
 The following components must be installed inside the container:
-
 python3-pip
-
 facebook-sdk (via pip)
 
 ---
