@@ -41,6 +41,7 @@ docker compose down
 ### Rebuild environment 
 docker compose up --build -d
 
+### Install docker at https://github.com/letrthong/redis 
 ---
 
 ## 🔑 API Configuration  
