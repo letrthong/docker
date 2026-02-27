@@ -1,5 +1,5 @@
  
-# 🚜 Facebook Fanpage Automation (Nông Trang)
+# 🚜 Facebook Fanpage Automation (Telua)
 
 Professional automation tool for Facebook Page management using Python and Docker.
 
@@ -66,5 +66,5 @@ Never commit your PAGE_ACCESS_TOKEN directly to GitHub. It is recommended to use
 
 ---
 
-Maintained by Thong LT.
+Maintained by Telua.
 
