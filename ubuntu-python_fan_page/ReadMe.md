@@ -41,5 +41,8 @@ docker compose down
 # Rebuild environment 
 docker compose up --build -d
 
+⚠️ Security Note
+Never commit your PAGE_ACCESS_TOKEN directly to GitHub. It is recommended to use a .env file or environment variables.
+
 Maintained by Thong LT.
 
