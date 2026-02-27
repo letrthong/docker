@@ -160,11 +160,10 @@
 
         const App = () => {
             const [labelData, setLabelData] = useState({
-                brandName: 'Nong Trang',
+                brandName: 'Nông Trang',
                 logoUrl: 'data:image/webp;base64,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', 
                 productName: 'CÁ TRÊ AQUAPONICS',
                 productSubName: 'PHI LÊ SẤY LẠNH',
-                englishName: 'Freeze-Dried Aquaponics Catfish Fillet',
                 ingredients: '100% Cá trê sạch vỗ béo bằng rau xanh, gia vị tự nhiên.',
                 storage: 'Nơi khô ráo, thoáng mát, tránh ánh nắng trực tiếp.',
                 usage: 'Dùng ăn trực tiếp hoặc chế biến món ăn tùy thích.',
@@ -479,45 +478,43 @@
                                         </div>
                                         {/* Khung viền hình viên thuốc chứa tên, trượt vào dưới logo (-ml-5) */}
                                         <div className="relative z-0 -ml-5 bg-white/10 border-2 border-white/30 rounded-r-full py-1.5 pr-5 pl-8 backdrop-blur-sm shadow-sm flex items-center">
-                                            <span className="font-black text-xl tracking-wider uppercase leading-none">{labelData.brandName}</span>
+                                            <span className="font-black text-xl tracking-wider leading-none">{labelData.brandName}</span>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Main Content Grid */}
-                                <div className="w-full grid grid-cols-12 gap-4 relative z-50 print-no-transform items-center">
-                                    <div className="col-span-3 border-r border-white/20 pr-4 flex flex-col justify-center gap-5">
+                                <div className="w-full grid grid-cols-[1.3fr_1.6fr_1.3fr] gap-3 relative z-50 print-no-transform items-center">
+                                    <div className="border-r border-white/20 pr-3 flex flex-col justify-center gap-4">
                                         <div className="text-[10px]">
                                             <p className="font-black uppercase mb-1" style={{ color: labelData.accentColor }}>Kiểm định</p>
-                                            <p className="opacity-90 leading-tight">Đạt chuẩn VietGAP, an toàn cho gia đình.</p>
+                                            <p className="opacity-90 leading-snug">Đạt chuẩn VietGAP, an toàn cho gia đình.</p>
                                         </div>
                                         <div className="text-[10px]">
                                             <p className="font-black uppercase mb-1" style={{ color: labelData.accentColor }}>Xuất xứ</p>
-                                            <p className="opacity-90 leading-tight">Trang trại Aquaponics Việt Nam.</p>
+                                            <p className="opacity-90 leading-snug">Trang trại Aquaponics Việt Nam.</p>
                                         </div>
                                     </div>
 
-                                    <div className="col-span-6 flex flex-col items-center justify-center text-center px-2">
-                                        <div className="main-product-card bg-white px-5 py-4 rounded-2xl shadow-2xl border-4 border-black/5 w-full transform -rotate-1 print-no-transform">
-                                            {/* ĐÃ CHỈNH SỬA Ở ĐÂY: Thay text-3xl thành text-2xl và tracking-tighter thành tracking-tight */}
+                                    <div className="flex flex-col items-center justify-center text-center px-1">
+                                        <div className="main-product-card bg-white px-3 py-3 rounded-2xl shadow-2xl border-4 border-black/5 w-full transform -rotate-1 print-no-transform">
                                             <h2 className="text-2xl font-black mb-1 leading-tight tracking-tight text-gray-900 uppercase">{labelData.productName}</h2>
                                             <div className="h-1 bg-gray-100 my-2 w-2/3 mx-auto rounded-full"></div>
                                             <h3 className="text-xl font-extrabold text-blue-600">{labelData.productSubName}</h3>
-                                            <div className="h-10 flex items-center justify-center opacity-10 my-1">
-                                                <Icon name="waves" size={40} className="text-gray-900" />
+                                            <div className="h-8 flex items-center justify-center opacity-10 my-1">
+                                                <Icon name="waves" size={32} className="text-gray-900" />
                                             </div>
-                                            <p className="text-[9px] uppercase italic opacity-40 font-black tracking-widest leading-none">{labelData.englishName}</p>
                                         </div>
                                     </div>
 
-                                    <div className="col-span-3 border-l border-white/20 pl-4 flex flex-col justify-center gap-5 text-right">
+                                    <div className="border-l border-white/20 pl-3 flex flex-col justify-center gap-4 text-right">
                                         <div className="text-[10px]">
                                             <p className="font-black uppercase mb-1" style={{ color: labelData.accentColor }}>Thành phần</p>
-                                            <p className="opacity-90 leading-tight">{labelData.ingredients}</p>
+                                            <p className="opacity-90 leading-snug">{labelData.ingredients}</p>
                                         </div>
                                         <div className="text-[10px]">
                                             <p className="font-black uppercase mb-1" style={{ color: labelData.accentColor }}>Hạn dùng</p>
-                                            <p className="opacity-90 leading-tight">{labelData.expiry}</p>
+                                            <p className="opacity-90 leading-snug">{labelData.expiry}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -532,7 +529,7 @@
                                         <div className="flex flex-col gap-2 pb-0.5">
                                             <div className="text-[11px] font-black italic opacity-80 leading-none">{labelData.website}</div>
                                             <div className="bg-white text-gray-900 px-3 py-1 rounded-lg text-xs font-black w-fit shadow-md border border-black/5">
-                                                NET WT: {labelData.weight}
+                                                Khối lượng: {labelData.weight}
                                             </div>
                                         </div>
                                     </div>
