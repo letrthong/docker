@@ -48,7 +48,7 @@ docker compose up --build -d
 Visit Meta for Developers to manage your App:
 https://developers.facebook.com/apps/ 
 App Name: NongPhu
-Page ID: 9337089698xyz (Nông Trang)
+Page ID: 9337089698_xyz (Nông Trang)
 
 Required Scopes: pages_manage_posts, pages_read_engagement, pages_show_list.
 
