@@ -53,7 +53,7 @@ Required Scopes: pages_manage_posts, pages_read_engagement, pages_show_list.
 
 ---
 
-## 📋 Requirements / Yêu cầu
+## 📋 Requirements 
 The following components must be installed inside the container:
 python3-pip
 facebook-sdk (via pip)
