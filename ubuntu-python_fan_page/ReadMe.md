@@ -28,7 +28,7 @@ Professional automation tool for Facebook Page management using Python and Docke
 
 Run these commands in your terminal:
 
-```bash
+ 
 # Start environment 
 docker compose up -d
 
