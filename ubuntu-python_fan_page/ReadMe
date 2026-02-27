@@ -1,3 +1,4 @@
+======================Docker=============================================
 # Connect docker
 docker exec -it telua_python bash
 
@@ -10,5 +11,10 @@ docker compose up --build -d
  
 
 
- 
+=======================faceboook developer ==============================
 https://developers.facebook.com/apps/
+
+
+===========================Requirements===================================
+-
+- 
