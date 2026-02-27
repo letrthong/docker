@@ -29,16 +29,16 @@ Professional automation tool for Facebook Page management using Python and Docke
 Run these commands in your terminal:
 
  
-# Start environment 
+### Start environment 
 docker compose up -d
 
-# Access container shell 
+### Access container shell 
 docker exec -it telua_python bash
 
-# Stop and remove 
+### Stop and remove 
 docker compose down
 
-# Rebuild environment 
+### Rebuild environment 
 docker compose up --build -d
 
 ---
