@@ -462,19 +462,25 @@
                             >
                                 {/* Header */}
                                 <div className="w-full flex justify-between items-start relative z-50 print-no-transform">
-                                    <div className="flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full border border-white/10 print-no-transform">
-                                        <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-md overflow-hidden shrink-0" style={{ color: labelData.bgColor }}>
-                                            <img 
-                                                src={labelData.logoUrl || ''} 
-                                                alt="Logo" 
-                                                className="w-full h-full object-cover" 
-                                                style={{ display: labelData.logoUrl ? 'block' : 'none' }} 
-                                            />
-                                            <div style={{ display: labelData.logoUrl ? 'none' : 'flex' }}>
-                                                <Icon name="fish" fill="currentColor" size={24} />
+                                    <div className="flex items-center print-no-transform">
+                                        {/* Logo Container: Vòng tròn nổi lên trên (z-10) với viền trắng tinh (border-white) */}
+                                        <div className="relative z-10 rounded-full shadow-md border-2 border-white bg-white/10 p-0.5">
+                                            <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center overflow-hidden shrink-0 shadow-inner" style={{ color: labelData.bgColor }}>
+                                                <img 
+                                                    src={labelData.logoUrl || ''} 
+                                                    alt="Logo" 
+                                                    className="w-full h-full object-cover" 
+                                                    style={{ display: labelData.logoUrl ? 'block' : 'none' }} 
+                                                />
+                                                <div style={{ display: labelData.logoUrl ? 'none' : 'flex' }}>
+                                                    <Icon name="fish" fill="currentColor" size={28} />
+                                                </div>
                                             </div>
                                         </div>
-                                        <span className="font-black text-2xl tracking-tighter uppercase leading-none">{labelData.brandName}</span>
+                                        {/* Khung viền hình viên thuốc chứa tên, trượt vào dưới logo (-ml-5) */}
+                                        <div className="relative z-0 -ml-5 bg-white/10 border-2 border-white/30 rounded-r-full py-1.5 pr-5 pl-8 backdrop-blur-sm shadow-sm flex items-center">
+                                            <span className="font-black text-xl tracking-wider uppercase leading-none">{labelData.brandName}</span>
+                                        </div>
                                     </div>
                                 </div>
 
