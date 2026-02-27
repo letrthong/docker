@@ -43,4 +43,3 @@ docker compose up --build -d
 
 Maintained by Thong LT.
 
-Markdown
