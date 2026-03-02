@@ -1,0 +1,12 @@
+{
+    "name": "node-qunit-example",
+    "version": "1.0.0",
+    "description": "A simple Node.js app with QUnit tests",
+    "main": "app.js",
+    "scripts": {
+      "test": "qunit"
+    },
+    "devDependencies": {
+      "qunit": "^2.20.0"
+    }
+  }

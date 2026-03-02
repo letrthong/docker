@@ -1,0 +1,20 @@
+# Connect docker
+docker exec -it telua_nodejs bash
+ 
+
+# cd  my-node-qunit-app to install packets at  package.json
+npm install
+
+# Run the tests
+npm test
+
+# start docker
+
+docker compose up -d
+
+# Rebuild
+docker compose down
+docker compose up --build -d
+
+ 
+ 
