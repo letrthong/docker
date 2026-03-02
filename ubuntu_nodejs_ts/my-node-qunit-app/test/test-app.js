@@ -11,6 +11,6 @@ QUnit.test('subtract() should return the difference of two numbers', assert => {
   assert.equal(subtract(5, 3), 2, '5 - 3 should equal 2');
 });
 
-QUnit.test('subtract() should return the difference of two numbers', assert => {
-  assert.equal(subtract(2, 3), 2, '5 - 3 should equal 2');
+QUnit.test('subtract() should handle negative results', assert => {
+  assert.equal(subtract(2, 3), -1, '2 - 3 should equal -1');
 });
