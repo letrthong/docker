@@ -1,10 +1,6 @@
-function add(a, b) {
-    return a + b;
-  }
-  
-  function subtract(a, b) {
-    return a - b;
-  }
-  
-  module.exports = { add, subtract };
-  
+require('ts-node').register();
+
+// Bây giờ bạn có thể require file .ts trực tiếp
+const { add, subtract } = require('./app.ts');
+
+module.exports = { add, subtract };
