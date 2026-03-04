@@ -1,6 +1,7 @@
 import os
 import json
-from flask import Flask, jsonify
+import logging
+from flask import Flask, jsonify, request, abort
 from flask_cors import cross_origin # Import đúng tên thư viện
 
 app = Flask(__name__)
