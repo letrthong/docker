@@ -1,0 +1,10 @@
+# Connect docker
+docker exec -it telua_python bash
+
+# start docker
+docker compose up -d
+
+# Rebuild
+docker compose down
+docker compose up --build -d
+ 
