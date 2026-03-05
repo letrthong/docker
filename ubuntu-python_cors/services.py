@@ -10,8 +10,9 @@ contentHub_file_mapping = {
     'products': 'productslManagerData.json',
     'contents': 'contentslManagerData.json',
     'usersGet': 'userslManagerData.json',
+    'usersUpdate': 'userslManagerData.json',
 }
-
+ 
 @app.route('/api/v1/contentHub/<resource>', methods=['GET'])
 @cross_origin() 
 def get_content_Hub(resource):
