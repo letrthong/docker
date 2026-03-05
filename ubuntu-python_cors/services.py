@@ -14,42 +14,42 @@ contentHub_file_mapping = {
 
 @app.route('/api/v1/contentHub/<resource>', methods=['GET'])
 @cross_origin()
-def get_content_Hub(resource):
+# 1. Kiểm tra mapping
     filename = contentHub_file_mapping.get(resource)
-
     if not filename:
         return jsonify({"error": "Resource not found"}), 404
 
     folder_path = "/app/config"
     path_file = os.path.join(folder_path, filename)
 
-    # Kiểm tra nếu file chưa tồn tại
+    # 2. Xử lý logic nếu file chưa tồn tại
     if not os.path.exists(path_file):
-        if not os.path.exists(folder_path):
-            os.makedirs(folder_path, exist_ok=True)
+        os.makedirs(folder_path, exist_ok=True)
 
-        # Mặc định là mảng rỗng
-        data_to_save = []
-
-        # Nếu resource là 'users', khởi tạo với danh sách user mẫu
+        # Khởi tạo data mặc định
         if resource == 'users':
             data_to_save = [
                 {"username": "admin", "pass": "135246", "role": "admin", "name": "Administrator"},
                 {"username": "view", "pass": "1234", "role": "view", "name": "Viewer Mode"},
                 {"username": "edit", "pass": "2468", "role": "edit", "name": "Editor Mode"}
             ]
+        else:
+            data_to_save = []
 
-        # Ghi dữ liệu vào file
+        # Ghi file
         with open(path_file, 'w', encoding='utf-8') as f:
             json.dump(data_to_save, f, indent=4, ensure_ascii=False)
         
         return jsonify(data_to_save)
 
-    # Nếu file đã tồn tại, đọc và trả về nội dung
-    with open(path_file, "r", encoding='utf-8') as file:
-        data = file.read()
-
-    return data, 200, {'Content-Type': 'application/json'}
+    # 3. Xử lý logic nếu file đã tồn tại
+    try:
+        with open(path_file, "r", encoding='utf-8') as file:
+            # Thay vì đọc string, hãy load JSON để jsonify đảm bảo tính đồng nhất
+            data = json.load(file)
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({"error": f"Read file error: {str(e)}"}), 500
 
  
 
