@@ -8,6 +8,7 @@ app = Flask(__name__)
 
 contentHub_file_mapping = {
     'products': 'productslManagerData.json',
+    'contents': 'productslManagerData.json',
 }
 
 @app.route('/api/v1/contentHub/<resource>', methods=['GET'])
