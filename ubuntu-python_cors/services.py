@@ -13,7 +13,8 @@ contentHub_file_mapping = {
 }
 
 @app.route('/api/v1/contentHub/<resource>', methods=['GET'])
-@cross_origin() def get_content_Hub(resource):
+@cross_origin() 
+def get_content_Hub(resource):
     filename = contentHub_file_mapping.get(resource)
 
     if not filename:
