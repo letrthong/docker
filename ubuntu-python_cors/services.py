@@ -35,9 +35,7 @@ def get_content_Hub(resource):
         # Nếu resource là 'users', khởi tạo với danh sách user mẫu
         if resource in ['users', 'usersGet']:
             data_to_save = [
-                {"username": "admin", "pass": "135246", "role": "admin", "name": "Administrator"},
-                {"username": "view", "pass": "1234", "role": "view", "name": "Viewer Mode"},
-                {"username": "edit", "pass": "2468", "role": "edit", "name": "Editor Mode"}
+                {"username": "admin", "pass": "135246", "role": "admin", "name": "Administrator"} 
             ]
 
         # Ghi dữ liệu vào file
