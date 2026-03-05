@@ -9,6 +9,7 @@ app = Flask(__name__)
 contentHub_file_mapping = {
     'products': 'productslManagerData.json',
     'contents': 'contentslManagerData.json',
+    'users': 'userslManagerData.json',
 }
 
 @app.route('/api/v1/contentHub/<resource>', methods=['GET'])
@@ -19,22 +20,33 @@ def get_content_Hub(resource):
     if not filename:
         return jsonify({"error": "Resource not found"}), 404
 
-    # Định nghĩa đường dẫn
     folder_path = "/app/config"
     path_file = os.path.join(folder_path, filename)
 
+    # Kiểm tra nếu file chưa tồn tại
     if not os.path.exists(path_file):
-        # --- BỔ SUNG ĐOẠN NÀY ---
-        # Đảm bảo thư mục /app/config tồn tại
         if not os.path.exists(folder_path):
             os.makedirs(folder_path, exist_ok=True)
 
+        # Mặc định là mảng rỗng
         data_to_save = []
-        with open(path_file, 'w') as f:
-            json.dump(data_to_save, f, indent=4)
-        return jsonify([])
 
-    with open(path_file, "r") as file:
+        # Nếu resource là 'users', khởi tạo với danh sách user mẫu
+        if resource == 'users':
+            data_to_save = [
+                {"username": "admin", "pass": "135246", "role": "admin", "name": "Administrator"},
+                {"username": "view", "pass": "1234", "role": "view", "name": "Viewer Mode"},
+                {"username": "edit", "pass": "2468", "role": "edit", "name": "Editor Mode"}
+            ]
+
+        # Ghi dữ liệu vào file
+        with open(path_file, 'w', encoding='utf-8') as f:
+            json.dump(data_to_save, f, indent=4, ensure_ascii=False)
+        
+        return jsonify(data_to_save)
+
+    # Nếu file đã tồn tại, đọc và trả về nội dung
+    with open(path_file, "r", encoding='utf-8') as file:
         data = file.read()
 
     return data, 200, {'Content-Type': 'application/json'}
