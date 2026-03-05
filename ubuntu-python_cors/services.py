@@ -9,7 +9,7 @@ app = Flask(__name__)
 contentHub_file_mapping = {
     'products': 'productslManagerData.json',
     'contents': 'contentslManagerData.json',
-    'users': 'userslManagerData.json',
+    'usersGet': 'userslManagerData.json',
 }
 
 @app.route('/api/v1/contentHub/<resource>', methods=['GET'])
@@ -32,7 +32,7 @@ def get_content_Hub(resource):
         data_to_save = []
 
         # Nếu resource là 'users', khởi tạo với danh sách user mẫu
-        if resource == 'users':
+        if resource in ['users', 'usersGet']:
             data_to_save = [
                 {"username": "admin", "pass": "135246", "role": "admin", "name": "Administrator"},
                 {"username": "view", "pass": "1234", "role": "view", "name": "Viewer Mode"},
