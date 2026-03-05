@@ -13,8 +13,7 @@ contentHub_file_mapping = {
 }
 
 @app.route('/api/v1/contentHub/<resource>', methods=['GET'])
-@cross_origin() 
-def get_content_Hub(resource):
+@cross_origin() def get_content_Hub(resource):
     filename = contentHub_file_mapping.get(resource)
 
     if not filename:
@@ -23,37 +22,35 @@ def get_content_Hub(resource):
     folder_path = "/app/config"
     path_file = os.path.join(folder_path, filename)
 
-    # 1. Nếu file đã tồn tại -> Đọc và trả về ngay (Tối ưu hiệu suất)
-    if os.path.exists(path_file):
-        try:
-            with open(path_file, "r", encoding='utf-8') as file:
-                data = json.load(file) # Load trực tiếp thành object
-            return jsonify(data)
-        except Exception as e:
-            return jsonify({"error": f"Read error: {str(e)}"}), 500
+    # Kiểm tra nếu file chưa tồn tại
+    if not os.path.exists(path_file):
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path, exist_ok=True)
 
-    # 2. Nếu file CHƯA tồn tại -> Khởi tạo dữ liệu
-    if not os.path.exists(folder_path):
-        os.makedirs(folder_path, exist_ok=True)
+        # Mặc định là mảng rỗng
+        data_to_save = []
 
-    # Khởi tạo giá trị mặc định TRƯỚC khi check resource
-    data_to_save = [] 
+        # Nếu resource là 'users', khởi tạo với danh sách user mẫu
+        if resource == 'users':
+            data_to_save = [
+                {"username": "admin", "pass": "135246", "role": "admin", "name": "Administrator"},
+                {"username": "view", "pass": "1234", "role": "view", "name": "Viewer Mode"},
+                {"username": "edit", "pass": "2468", "role": "edit", "name": "Editor Mode"}
+            ]
 
-    if resource == 'users':
-        data_to_save = [
-            {"username": "admin", "pass": "135246", "role": "admin", "name": "Administrator"},
-            {"username": "view", "pass": "1234", "role": "view", "name": "Viewer Mode"},
-            {"username": "edit", "pass": "2468", "role": "edit", "name": "Editor Mode"}
-        ]
-
-    # 3. Ghi dữ liệu (đảm bảo data_to_save luôn có giá trị)
-    try:
+        # Ghi dữ liệu vào file
         with open(path_file, 'w', encoding='utf-8') as f:
             json.dump(data_to_save, f, indent=4, ensure_ascii=False)
-        return jsonify(data_to_save)
-    except Exception as e:
-        return jsonify({"error": f"Write error: {str(e)}"}), 500
 
+        return jsonify(data_to_save)
+
+    # Nếu file đã tồn tại, đọc và trả về nội dung
+    with open(path_file, "r", encoding='utf-8') as file:
+        data = file.read()
+
+    return data, 200, {'Content-Type': 'application/json'}
+
+    
 @app.route('/api/v1/contentHub/<resource>', methods=['POST'])
 @cross_origin()
 def post_content_Hub(resource):
