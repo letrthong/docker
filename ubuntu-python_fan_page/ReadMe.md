@@ -47,6 +47,8 @@ docker compose up --build -d
 ## 🔑 API Configuration  
 Visit Meta for Developers to manage your App:
 https://developers.facebook.com/apps/ 
+https://developers.facebook.com/docs/graph-api/get-started 
+https://developers.facebook.com/docs/graph-api/overview
 App Name: NongPhu
 Page ID: 9337089698_xyz (Nông Trang)
 
