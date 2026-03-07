@@ -1,10 +1,19 @@
 import os
 import json
 import logging
+import sys
 import google.generativeai as genai
 
+# Force unbuffered output for Docker logging (Hiển thị log ngay lập tức)
+sys.stdout.reconfigure(line_buffering=True)
+sys.stderr.reconfigure(line_buffering=True)
+
 # Cấu hình logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 logger = logging.getLogger(__name__)
 
 # Danh sách các đường dẫn file cấu hình để tìm kiếm API Key
