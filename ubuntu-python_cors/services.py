@@ -13,7 +13,7 @@ contentHub_file_mapping = {
     'usersGet': 'userslManagerData.json',
     'usersUpdate': 'userslManagerData.json',
     'apiKeys': 'apiKeysConfig.json',
-    'labelContent': 'labelbContentConfig.json',
+     'labelContent': 'labelContentContentConfig.json',
 }
  
  
@@ -174,6 +174,20 @@ def get_content_Hub_generate_report():
         return jsonify({'report': report_content})
     except Exception as e:
         logging.error(f"Report API Error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/v1/contentHub/chatbot/draft', methods=['POST'])
+@cross_origin()
+def get_content_Hub_generate_draft():
+    try:
+        data = request.json
+        topic = data.get('topic', 'Tin tức mới')
+        
+        # Gọi hàm tạo draft trả về JSON
+        draft_json = telua_chatbot.generate_draft_proposal(topic)
+        return jsonify(draft_json)
+    except Exception as e:
+        logging.error(f"Draft API Error: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == "__main__":
