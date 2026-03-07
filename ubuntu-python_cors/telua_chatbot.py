@@ -284,9 +284,27 @@ def generate_draft_proposal(topic):
         # Tạo hình ảnh dựa trên image_prompt vừa được AI đề xuất
         if 'image_prompt' in draft_data and draft_data['image_prompt']:
             try:
-                logger.info(f"Generating image with prompt: {draft_data['image_prompt']}")
+                # Kiểm tra danh sách model khả dụng để tìm model Imagen phù hợp
+                target_model = None
+                try:
+                    for m in client.models.list():
+                        if 'imagen' in m.name:
+                            target_model = m.name
+                            # Ưu tiên model imagen-3 nếu có
+                            if 'imagen-3' in m.name:
+                                break
+                    if target_model:
+                        target_model = target_model.replace('models/', '')
+                    else:
+                        logger.warning("Không tìm thấy model Imagen nào trong danh sách hỗ trợ của API Key. Sẽ thử model mặc định.")
+                        target_model = 'imagen-3.0-generate-001'
+                except Exception as list_e:
+                    logger.warning(f"Lỗi khi liệt kê model: {list_e}")
+                    target_model = 'imagen-3.0-generate-001'
+
+                logger.info(f"Generating image with prompt using model '{target_model}': {draft_data['image_prompt']}")
                 image_response = client.models.generate_images(
-                    model='imagen-3',
+                    model=target_model,
                     prompt=draft_data['image_prompt'],
                     config=types.GenerateImagesConfig(number_of_images=1)
                 )
