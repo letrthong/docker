@@ -9,7 +9,7 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - ./:/app/config
-      - ./:/app/key
+      - ./config:/app/config
+      - ./key:/app/key
     stdin_open: true
     tty: true
