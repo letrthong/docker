@@ -154,5 +154,20 @@ def get_content_Hub_generate_content():
             
     return jsonify({'message': 'Chatbot API ready. Use POST with {"prompt": "..."}'})
 
+@app.route('/api/v1/contentHub/chatbot/report', methods=['POST'])
+@cross_origin()
+def get_content_Hub_generate_report():
+    try:
+        data = request.json
+        topic = data.get('topic', 'Tổng quan hệ thống')
+        
+        # Gọi hàm chuyên biệt cho báo cáo
+        report_content = telua_chatbot.generate_report_response(topic)
+        
+        return jsonify({'report': report_content})
+    except Exception as e:
+        logging.error(f"Report API Error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, debug=True)
