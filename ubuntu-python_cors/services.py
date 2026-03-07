@@ -13,7 +13,7 @@ contentHub_file_mapping = {
     'usersGet': 'userslManagerData.json',
     'usersUpdate': 'userslManagerData.json',
     'apiKeys': 'apiKeysConfig.json',
-    'labelbContent': 'labelbContentConfig.json',
+    'labelContent': 'labelbContentConfig.json',
 }
  
  
