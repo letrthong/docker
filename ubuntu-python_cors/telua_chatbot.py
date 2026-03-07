@@ -14,10 +14,7 @@ logger = logging.getLogger(__name__)
 
 # Danh sách các đường dẫn file cấu hình để tìm kiếm API Key
 # Ưu tiên /app/apiKeys.json theo yêu cầu
-API_KEY_FILES = [
-    '/app/apiKeys.json',
-    '/app/config/apiKeysConfig.json'  # Fallback nếu file trên không tồn tại
-]
+API_KEY_FILES = '/app/config/apiKeysConfig.json'
 
 def get_google_api_key():
     """
@@ -31,21 +28,20 @@ def get_google_api_key():
         }
     ]
     """
-    for file_path in API_KEY_FILES:
-        if os.path.exists(file_path):
-            try:
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    
-                if isinstance(data, list):
-                    for item in data:
-                        # Tìm object có key là "google"
-                        if item.get('key') == 'google':
-                            return item.get('value')
+    if os.path.exists(API_KEY_FILES):
+        try:
+            with open(API_KEY_FILES, 'r', encoding='utf-8') as f:
+                data = json.load(f)
                 
-                logger.warning(f"Key 'google' not found in {file_path}")
-            except Exception as e:
-                logger.error(f"Error reading API key from {file_path}: {e}")
+            if isinstance(data, list):
+                for item in data:
+                    # Tìm object có key là "google"
+                    if item.get('key') == 'google':
+                        return item.get('value')
+            
+            logger.warning(f"Key 'google' not found in {API_KEY_FILES}")
+        except Exception as e:
+            logger.error(f"Error reading API key from {API_KEY_FILES}: {e}")
     
     logger.error("Google API Key not found in any configuration file.")
     return None
