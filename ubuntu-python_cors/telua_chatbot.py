@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 # Danh sách các đường dẫn file cấu hình để tìm kiếm API Key
 # Ưu tiên /app/apiKeys.json theo yêu cầu
-API_KEY_FILES = '/app/config/apiKeysConfig.json'
+API_KEY_FILES = '/app/apiKeysConfig.json'
 
 def get_google_api_key():
     """
