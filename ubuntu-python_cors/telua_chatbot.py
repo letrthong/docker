@@ -2,6 +2,8 @@ import os
 import json
 import logging
 import sys
+
+# https://aistudio.google.com/
 from google import genai
 
 # Force unbuffered output for Docker logging (Hiển thị log ngay lập tức)
