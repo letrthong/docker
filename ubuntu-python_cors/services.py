@@ -25,6 +25,9 @@ def get_content_Hub(resource):
         return jsonify({"error": "Resource not found"}), 404
 
     folder_path = "/app/config"
+    if resource in ['usersUpdate', 'usersGet',  'apiKeys' ]:
+        folder_path  = "/app/key"
+
     path_file = os.path.join(folder_path, filename)
 
     # Kiểm tra nếu file chưa tồn tại
@@ -69,6 +72,9 @@ def post_content_Hub(resource):
 
     # 2. Định nghĩa đường dẫn và tạo thư mục nếu chưa có
     folder_path = "/app/config"
+    if resource in ['usersUpdate', 'usersGet', 'apiKeys']:
+        folder_path = "/app/key"
+        
     path_file = os.path.join(folder_path, filename)
 
     try:
