@@ -134,7 +134,7 @@ def get_content_Hub_detail():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/v1/contentHub/chatboot/content', methods=['GET', 'POST'])
+@app.route('/api/v1/contentHub/chatbot/content', methods=['GET', 'POST'])
 @cross_origin()
 def get_content_Hub_generate_content():
     if request.method == 'POST':
