@@ -3,3 +3,4 @@ docker compose down
 
 # start up containers (logs will be streamed to console)
 docker compose up
+ 
