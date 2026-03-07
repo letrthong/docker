@@ -3,6 +3,7 @@ import json
 import logging
 from flask import Flask, jsonify, request, abort
 from flask_cors import cross_origin # Import đúng tên thư viện
+import telua_chatbot
 
 app = Flask(__name__)
 
@@ -11,7 +12,7 @@ contentHub_file_mapping = {
     'contents': 'contentslManagerData.json',
     'usersGet': 'userslManagerData.json',
     'usersUpdate': 'userslManagerData.json',
-    'apiKeys': 'apiKeys.json',
+    'apiKeys': 'apiKeysConfig.json',
 }
  
  
@@ -133,6 +134,25 @@ def get_content_Hub_detail():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/v1/contentHub/chatboot/content', methods=['GET', 'POST'])
+@cross_origin()
+def get_content_Hub_generate_content():
+    if request.method == 'POST':
+        try:
+            # Nội dung lấy từ json
+            data = request.json
+            prompt = data.get('prompt', '')
+            
+            if not prompt:
+                return jsonify({'error': 'Prompt is required'}), 400
+            
+            response_text = telua_chatbot.generate_response(prompt)
+            return jsonify({'response': response_text})
+        except Exception as e:
+            logging.error(f"Chatbot error: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+            
+    return jsonify({'message': 'Chatbot API ready. Use POST with {"prompt": "..."}'})
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, debug=True)
