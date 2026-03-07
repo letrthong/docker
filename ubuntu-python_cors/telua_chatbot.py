@@ -82,7 +82,6 @@ def get_system_context():
         if os.path.exists(file_path):
             try:
                 with open(file_path, 'r', encoding='utf-8') as f:
-                    context += f"\n--- Dữ liệu từ {filename} ---\n{f.read()}\n"
                     data = json.load(f)
                     # Giải mã title và ẩn ảnh thumbnail trong contentslManagerData.json
                     if filename == 'contentslManagerData.json' and isinstance(data, list):
@@ -98,6 +97,8 @@ def get_system_context():
                             context += f"\n--- Dữ liệu từ {filename} (50 bài mới nhất) ---\n"
                         else:
                             context += f"\n--- Dữ liệu từ {filename} ---\n"
+                    else:
+                        context += f"\n--- Dữ liệu từ {filename} ---\n"
                                 
                     context += f"{json.dumps(data, ensure_ascii=False, indent=2)}\n"
             except Exception as e:
@@ -285,7 +286,7 @@ def generate_draft_proposal(topic):
             try:
                 logger.info(f"Generating image with prompt: {draft_data['image_prompt']}")
                 image_response = client.models.generate_images(
-                    model='imagen-3.0-generate-001',
+                    model='imagen-3',
                     prompt=draft_data['image_prompt'],
                     config=types.GenerateImagesConfig(number_of_images=1)
                 )
@@ -294,7 +295,10 @@ def generate_draft_proposal(topic):
                     b64_img = base64.b64encode(img_bytes).decode('utf-8')
                     draft_data['image'] = f"data:image/png;base64,{b64_img}"
             except Exception as e:
-                logger.error(f"Lỗi tạo hình ảnh (Imagen): {e}")
+                if "404" in str(e):
+                    logger.warning(f"Model tạo ảnh không khả dụng (404). Có thể API Key chưa được kích hoạt Imagen 3 hoặc sai Region: {e}")
+                else:
+                    logger.error(f"Lỗi tạo hình ảnh (Imagen): {e}")
 
         return draft_data
     except Exception as e:
