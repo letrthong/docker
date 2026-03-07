@@ -2,7 +2,7 @@ import os
 import json
 import logging
 import sys
-import google.generativeai as genai
+from google import genai
 
 # Force unbuffered output for Docker logging (Hiển thị log ngay lập tức)
 sys.stdout.reconfigure(line_buffering=True)
@@ -55,9 +55,8 @@ def generate_response(prompt):
         return "Lỗi hệ thống: Chưa cấu hình Google API Key."
 
     try:
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-pro')
-        response = model.generate_content(prompt)
+        client = genai.Client(api_key=api_key)
+        response = client.models.generate_content(model='gemini-1.5-flash', contents=prompt)
         return response.text
     except Exception as e:
         logger.error(f"Gemini API Error: {e}")
