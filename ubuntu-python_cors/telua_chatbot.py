@@ -6,6 +6,7 @@ import base64
 
 # https://aistudio.google.com/
 from google import genai
+from google.genai import types
 
 # Force unbuffered output for Docker logging (Hiển thị log ngay lập tức)
 sys.stdout.reconfigure(line_buffering=True)
@@ -224,13 +225,32 @@ def generate_draft_proposal(topic):
     try:
         client = genai.Client(api_key=api_key)
         system_context = get_system_context()
+        config_dir = '/app/config'
         
         # Thêm lịch sử chat vào context tạo draft để AI hiểu ngữ cảnh
         history_context = ""
         if chat_history:
             history_context = "\nLịch sử trò chuyện trước đó (tham khảo ý định người dùng):\n" + "\n".join([f"- {msg['role']}: {msg['content']}" for msg in chat_history])
         
-        prompt = f"""
+        # Thử lấy một ảnh mẫu từ dữ liệu cũ để AI tham khảo phong cách (Style Transfer via Prompting)
+        sample_image_part = None
+        try:
+            contents_path = os.path.join(config_dir, 'contentslManagerData.json')
+            if os.path.exists(contents_path):
+                with open(contents_path, 'r', encoding='utf-8') as f:
+                    items = json.load(f)
+                    # Tìm ảnh đầu tiên có dữ liệu base64 hợp lệ
+                    for item in items:
+                        if 'image' in item and isinstance(item['image'], str) and len(item['image']) > 1000:
+                            # Cắt header data:image/..., chỉ lấy base64
+                            b64_data = item['image'].split(',')[-1]
+                            img_bytes = base64.b64decode(b64_data)
+                            sample_image_part = types.Part.from_bytes(data=img_bytes, mime_type="image/jpeg")
+                            break
+        except Exception as e:
+            logger.warning(f"Không thể tải ảnh mẫu để tham khảo: {e}")
+
+        prompt_text = f"""
         {system_context}
         {history_context}
         
@@ -242,14 +262,41 @@ def generate_draft_proposal(topic):
             "title": "Tiêu đề bài viết hấp dẫn",
             "body": "Nội dung chi tiết bài viết (định dạng text hoặc html cơ bản)",
             "contact": "Thông tin liên hệ gợi ý",
-            "labels": ["Tên nhãn 1", "Tên nhãn 2"]
+            "labels": ["Tên nhãn 1", "Tên nhãn 2"],
+            "image_prompt": "Mô tả chi tiết bằng tiếng Anh (để tạo ảnh) về hình ảnh minh họa cho bài viết này. Mô tả cần dựa trên phong cách của hình ảnh mẫu (nếu có) hoặc theo phong cách hiện đại, chuyên nghiệp phù hợp với nội dung."
         }}
         """
         
-        response = client.models.generate_content(model='gemini-3-flash-preview', contents=prompt)
+        # Xây dựng nội dung gửi lên Gemini (Text + Ảnh mẫu nếu có)
+        contents_payload = []
+        if sample_image_part:
+            contents_payload.append("Dưới đây là một hình ảnh mẫu từ hệ thống để bạn tham khảo phong cách thiết kế:")
+            contents_payload.append(sample_image_part)
+        contents_payload.append(prompt_text)
+
+        response = client.models.generate_content(model='gemini-3-flash-preview', contents=contents_payload)
+        
         # Làm sạch response nếu AI lỡ thêm markdown block
         text = response.text.replace('```json', '').replace('```', '').strip()
-        return json.loads(text)
+        draft_data = json.loads(text)
+
+        # Tạo hình ảnh dựa trên image_prompt vừa được AI đề xuất
+        if 'image_prompt' in draft_data and draft_data['image_prompt']:
+            try:
+                logger.info(f"Generating image with prompt: {draft_data['image_prompt']}")
+                image_response = client.models.generate_images(
+                    model='imagen-3.0-generate-001',
+                    prompt=draft_data['image_prompt'],
+                    config=types.GenerateImagesConfig(number_of_images=1)
+                )
+                if image_response.generated_images:
+                    img_bytes = image_response.generated_images[0].image.image_bytes
+                    b64_img = base64.b64encode(img_bytes).decode('utf-8')
+                    draft_data['image'] = f"data:image/png;base64,{b64_img}"
+            except Exception as e:
+                logger.error(f"Lỗi tạo hình ảnh (Imagen): {e}")
+
+        return draft_data
     except Exception as e:
         logger.error(f"Draft Generation Error: {e}")
         return {"error": str(e)}
