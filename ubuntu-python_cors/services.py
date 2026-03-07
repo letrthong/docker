@@ -13,6 +13,7 @@ contentHub_file_mapping = {
     'usersUpdate': 'userslManagerData.json',
 }
  
+ 
 @app.route('/api/v1/contentHub/<resource>', methods=['GET'])
 @cross_origin() 
 def get_content_Hub(resource):
@@ -83,6 +84,53 @@ def post_content_Hub(resource):
     except Exception as e:
         logging.error(f"Failed to save {resource}: {str(e)}")
         return jsonify({'error': 'Internal Server Error', 'message': str(e)}), 500
+
+
+@app.route('/api/v1/contentHub/detailInfo', methods=['GET', 'POST'])
+@cross_origin()
+def get_content_Hub_detail():
+    # Lấy tên file từ header (Key: Filename)
+    filename = request.headers.get('Filename')
+    
+    if not filename:
+        return jsonify({"error": "Header 'Filename' is required"}), 400
+
+    # Bảo mật: chỉ lấy tên file, loại bỏ đường dẫn thư mục để tránh traversal attack
+    filename = os.path.basename(filename)
+    
+    folder_path = "/app/config"
+    path_file = os.path.join(folder_path, filename)
+
+    if request.method == 'POST':
+        data_to_save = request.json
+        if data_to_save is None:
+            return jsonify({'error': 'Invalid JSON data'}), 400
+
+        try:
+            if not os.path.exists(folder_path):
+                os.makedirs(folder_path, exist_ok=True)
+
+            # Lưu file với encoding utf-8 để hỗ trợ tiếng Việt
+            with open(path_file, 'w', encoding='utf-8') as f:
+                json.dump(data_to_save, f, indent=4, ensure_ascii=False)
+
+            logging.info(f"POST /api/v1/contentHub/detailInfo saved {filename} successfully")
+            return jsonify({'status': 'saved', 'filename': filename})
+
+        except Exception as e:
+            logging.error(f"Failed to save {filename}: {str(e)}")
+            return jsonify({'error': 'Internal Server Error', 'message': str(e)}), 500
+
+    # Xử lý GET
+    if not os.path.exists(path_file):
+        return jsonify({"error": "File not found"}), 404
+
+    try:
+        with open(path_file, "r", encoding='utf-8') as file:
+            data = file.read()
+        return data, 200, {'Content-Type': 'application/json'}
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":
