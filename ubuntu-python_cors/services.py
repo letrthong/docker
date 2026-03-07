@@ -11,6 +11,7 @@ contentHub_file_mapping = {
     'contents': 'contentslManagerData.json',
     'usersGet': 'userslManagerData.json',
     'usersUpdate': 'userslManagerData.json',
+    'apiKeys': 'apiKeys.json',
 }
  
  
