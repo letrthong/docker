@@ -23,6 +23,9 @@ API_KEY_FILES = '/app/key/apiKeysConfig.json'
 MAX_CONTEXT_LENGTH = 200000  # Giới hạn khoảng 200k ký tự
 MAX_DETAIL_FILES = 20        # Chỉ đọc chi tiết 20 bài viết mới nhất
 
+# Biến toàn cục lưu lịch sử chat
+chat_history = []
+
 def decode_base64_safe(s):
     """Giải mã Base64 an toàn, trả về chuỗi gốc nếu lỗi."""
     if not isinstance(s, str):
@@ -150,6 +153,7 @@ def generate_response(prompt):
     """
     Gửi prompt đến Google Gemini và nhận phản hồi.
     """
+    global chat_history
     api_key = get_google_api_key()
     if not api_key:
         return "Lỗi hệ thống: Chưa cấu hình Google API Key."
@@ -160,10 +164,26 @@ def generate_response(prompt):
         # 1. Lấy dữ liệu hệ thống
         system_context = get_system_context()
         
-        # 2. Ghép dữ liệu vào prompt để AI có thông tin phân tích
-        full_prompt = f"{system_context}\n\nCâu hỏi của người dùng: {prompt}"
+        # 2. Xây dựng context từ lịch sử
+        history_context = ""
+        if chat_history:
+            history_context = "\nLịch sử trò chuyện:\n" + "\n".join([f"- {msg['role']}: {msg['content']}" for msg in chat_history])
+        
+        # 3. Ghép dữ liệu vào prompt
+        full_prompt = f"{system_context}\n{history_context}\n\nCâu hỏi của người dùng: {prompt}"
+        
+        # Lưu câu hỏi vào lịch sử
+        chat_history.append({"role": "User", "content": prompt})
         
         response = client.models.generate_content(model='gemini-3-flash-preview', contents=full_prompt)
+        
+        # Lưu phản hồi vào lịch sử
+        chat_history.append({"role": "AI", "content": response.text})
+        
+        # Giới hạn lịch sử (20 tin nhắn gần nhất)
+        if len(chat_history) > 20:
+            chat_history = chat_history[-20:]
+            
         return response.text
     except Exception as e:
         logger.error(f"Gemini API Error: {e}")
@@ -196,6 +216,7 @@ def generate_draft_proposal(topic):
     Tạo bản nháp bài viết mới dựa trên phân tích dữ liệu cũ.
     Trả về định dạng JSON để Frontend có thể điền vào form.
     """
+    global chat_history
     api_key = get_google_api_key()
     if not api_key:
         return {"error": "Chưa cấu hình API Key"}
@@ -204,8 +225,14 @@ def generate_draft_proposal(topic):
         client = genai.Client(api_key=api_key)
         system_context = get_system_context()
         
+        # Thêm lịch sử chat vào context tạo draft để AI hiểu ngữ cảnh
+        history_context = ""
+        if chat_history:
+            history_context = "\nLịch sử trò chuyện trước đó (tham khảo ý định người dùng):\n" + "\n".join([f"- {msg['role']}: {msg['content']}" for msg in chat_history])
+        
         prompt = f"""
         {system_context}
+        {history_context}
         
         NHIỆM VỤ: Dựa trên phong cách và nội dung của các bài viết đã có trong hệ thống, hãy viết một bài viết mới về chủ đề: "{topic}".
         
@@ -226,3 +253,9 @@ def generate_draft_proposal(topic):
     except Exception as e:
         logger.error(f"Draft Generation Error: {e}")
         return {"error": str(e)}
+
+def clear_history():
+    """Xóa toàn bộ lịch sử trò chuyện."""
+    global chat_history
+    chat_history = []
+    return "Đã xóa lịch sử trò chuyện."

@@ -190,5 +190,15 @@ def get_content_Hub_generate_draft():
         logging.error(f"Draft API Error: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/v1/contentHub/chatbot/clear', methods=['POST'])
+@cross_origin()
+def clear_chatbot_history():
+    try:
+        msg = telua_chatbot.clear_history()
+        return jsonify({'message': msg})
+    except Exception as e:
+        logging.error(f"Clear History Error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, debug=True)
