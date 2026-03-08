@@ -68,6 +68,9 @@ def get_system_context():
     safe_files = ['contentslManagerData.json', 'labelContentContentConfig.json']
     config_dir = '/app/config'
 
+    # Danh sách các file chi tiết cần ưu tiên đọc (được lấy từ contentslManagerData.json)
+    priority_detail_files = []
+
     for filename in safe_files:
         file_path = os.path.join(config_dir, filename)
         if os.path.exists(file_path):
@@ -76,40 +79,61 @@ def get_system_context():
                     data = json.load(f)
                     # Giải mã title và ẩn ảnh thumbnail trong contentslManagerData.json
                     if filename == 'contentslManagerData.json' and isinstance(data, list):
-                        for item in data:
-                            if 'title' in item:
-                                item['title'] = decode_base64_safe(item['title'])
-                            if 'image' in item and isinstance(item['image'], str) and len(item['image']) > 200:
-                                item['image'] = "[IMAGE_THUMBNAIL_DATA]"
-                        
                         # Tối ưu hóa: Nếu danh sách quá dài, chỉ lấy 50 bài mới nhất (thường là đầu danh sách)
                         if len(data) > 50:
                             data = data[:50]
                             context += f"\n--- Dữ liệu từ {filename} (50 bài mới nhất) ---\n"
                         else:
                             context += f"\n--- Dữ liệu từ {filename} ---\n"
+
+                        for item in data:
+                            if 'title' in item:
+                                item['title'] = decode_base64_safe(item['title'])
+                            if 'image' in item and isinstance(item['image'], str) and len(item['image']) > 200:
+                                item['image'] = "[IMAGE_THUMBNAIL_DATA]"
+                            
+                            # Thu thập detailFilename để ưu tiên đọc chi tiết
+                            if 'detailFilename' in item and item['detailFilename']:
+                                priority_detail_files.append(item['detailFilename'])
+                        
+                        context += f"{json.dumps(data, ensure_ascii=False, indent=2)}\n"
                     else:
                         context += f"\n--- Dữ liệu từ {filename} ---\n"
-                                
-                    context += f"{json.dumps(data, ensure_ascii=False, indent=2)}\n"
+                        context += f"{json.dumps(data, ensure_ascii=False, indent=2)}\n"
             except Exception as e:
                 logging.warning(f"Không thể đọc file {filename}: {e}")
 
     # Đọc thêm các file chi tiết bài viết (content_detail_*.json)
     try:
         if os.path.exists(config_dir):
-            # 1. Lấy danh sách tất cả file chi tiết
-            detail_files = []
-            for filename in os.listdir(config_dir):
-                if filename.startswith('content_detail_') and filename.endswith('.json'):
-                    detail_files.append(os.path.join(config_dir, filename))
+            # 1. Xác định danh sách file cần đọc
+            files_to_read = []
             
-            # 2. Sắp xếp theo thời gian sửa đổi (Mới nhất lên đầu)
-            detail_files.sort(key=lambda x: os.path.getmtime(x), reverse=True)
-            
+            # Ưu tiên các file được reference trong contentslManagerData.json
+            for fname in priority_detail_files:
+                fpath = os.path.join(config_dir, fname)
+                if os.path.exists(fpath) and fpath not in files_to_read:
+                    files_to_read.append(fpath)
+
+            # 2. Lấy thêm danh sách tất cả file chi tiết khác nếu chưa đủ quota
+            if len(files_to_read) < MAX_DETAIL_FILES:
+                other_files = []
+                for filename in os.listdir(config_dir):
+                    if filename.startswith('content_detail_') and filename.endswith('.json'):
+                        fpath = os.path.join(config_dir, filename)
+                        if fpath not in files_to_read:
+                            other_files.append(fpath)
+                
+                # Sắp xếp theo thời gian sửa đổi (Mới nhất lên đầu)
+                other_files.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+                
+                # Fill vào danh sách cần đọc
+                needed = MAX_DETAIL_FILES - len(files_to_read)
+                files_to_read.extend(other_files[:needed])
+
             # 3. Đọc file với giới hạn số lượng và dung lượng
             processed_count = 0
-            for file_path in detail_files:
+            for file_path in files_to_read:
                 if processed_count >= MAX_DETAIL_FILES:
                     break
                 
@@ -305,7 +329,7 @@ def generate_draft_proposal(topic):
                     draft_data['image'] = f"data:image/png;base64,{b64_img}"
             except Exception as e:
                 if "404" in str(e):
-                    logging.warning(f"Model tạo ảnh không khả dụng (404). Có thể API Key chưa được kích hoạt Imagen 3 hoặc sai Region: {e}")
+                    logging.warning(f"Model tạo ảnh không khả dụng (404). Có thể API Key chưa được kích hoạt djowis hoặc sai Region: {e}")
                 else:
                     logging.error(f"Lỗi tạo hình ảnh (Imagen): {e}")
 
