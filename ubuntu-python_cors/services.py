@@ -2,7 +2,7 @@ import os
 import json
 import logging
 import sys
-from flask import Flask, jsonify, request, abort
+from flask import Flask, jsonify, request, abort, send_from_directory
 from flask_cors import cross_origin # Import đúng tên thư viện
 import telua_chatbot
 
@@ -18,7 +18,7 @@ contentHub_file_mapping = {
     'usersGet': 'userslManagerData.json',
     'usersUpdate': 'userslManagerData.json',
     'apiKeys': 'apiKeysConfig.json',
-     'labelContent': 'labelContentContentConfig.json',
+    'labelContent': 'labelContentContentConfig.json',
 }
  
  
@@ -99,6 +99,15 @@ def post_content_Hub(resource):
         logging.error(f"Failed to save {resource}: {str(e)}")
         return jsonify({'error': 'Internal Server Error', 'message': str(e)}), 500
 
+@app.route('/api/v1/contentHub/media/<path:filename>', methods=['GET'])
+@cross_origin()
+def serve_media_file(filename):
+    """API để tải xuống file media (video/ảnh) từ thư mục config."""
+    config_dir = '/app/config'
+    try:
+        return send_from_directory(config_dir, filename, as_attachment=True)
+    except FileNotFoundError:
+        abort(404)
 
 @app.route('/api/v1/contentHub/detailInfo', methods=['GET', 'POST'])
 @cross_origin()
@@ -193,6 +202,18 @@ def get_content_Hub_generate_draft():
         return jsonify(draft_json)
     except Exception as e:
         logging.error(f"Draft API Error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/v1/contentHub/chatbot/video', methods=['POST'])
+@cross_origin()
+def get_content_Hub_generate_video():
+    try:
+        data = request.json
+        topic = data.get('topic', 'Giới thiệu sản phẩm')
+        video_json = telua_chatbot.generate_video_proposal(topic)
+        return jsonify(video_json)
+    except Exception as e:
+        logging.error(f"Video API Error: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/v1/contentHub/chatbot/clear', methods=['POST'])

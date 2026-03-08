@@ -11,5 +11,6 @@ services:
     volumes:
       - ./config:/app/config
       - ./key:/app/key
+      - ./video:/app/video
     stdin_open: true
     tty: true
