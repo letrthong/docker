@@ -1,20 +1,11 @@
 import os
 import json
 import logging
-import sys
 import base64
 
 # https://aistudio.google.com/
 from google import genai
 from google.genai import types
-
-# Force unbuffered output for Docker logging (Hiển thị log ngay lập tức)
-sys.stdout.reconfigure(line_buffering=True)
- 
-
-# Cấu hình logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 # Danh sách các đường dẫn file cấu hình để tìm kiếm API Key
 # Ưu tiên /app/apiKeys.json theo yêu cầu
@@ -59,11 +50,11 @@ def get_google_api_key():
                     if item.get('key') == 'google':
                         return item.get('value')
             
-            logger.warning(f"Key 'google' not found in {API_KEY_FILES}")
+            logging.warning(f"Key 'google' not found in {API_KEY_FILES}")
         except Exception as e:
-            logger.error(f"Error reading API key from {API_KEY_FILES}: {e}")
+            logging.error(f"Error reading API key from {API_KEY_FILES}: {e}")
     
-    logger.error("Google API Key not found in any configuration file.")
+    logging.error("Google API Key not found in any configuration file.")
     return None
 
 def get_system_context():
@@ -102,7 +93,7 @@ def get_system_context():
                                 
                     context += f"{json.dumps(data, ensure_ascii=False, indent=2)}\n"
             except Exception as e:
-                logger.warning(f"Không thể đọc file {filename}: {e}")
+                logging.warning(f"Không thể đọc file {filename}: {e}")
 
     # Đọc thêm các file chi tiết bài viết (content_detail_*.json)
     try:
@@ -145,9 +136,9 @@ def get_system_context():
                         context += f"\n--- Chi tiết bài viết ({filename}) ---\n{json.dumps(data, ensure_ascii=False)}\n"
                         processed_count += 1
                 except Exception as e:
-                    logger.warning(f"Lỗi đọc file chi tiết {file_path}: {e}")
+                    logging.warning(f"Lỗi đọc file chi tiết {file_path}: {e}")
     except Exception as e:
-        logger.warning(f"Lỗi quét thư mục config: {e}")
+        logging.warning(f"Lỗi quét thư mục config: {e}")
 
     return context
 
@@ -188,7 +179,7 @@ def generate_response(prompt):
             
         return response.text
     except Exception as e:
-        logger.error(f"Gemini API Error: {e}")
+        logging.error(f"Gemini API Error: {e}")
         return f"Lỗi khi gọi AI: {str(e)}"
 
 def generate_report_response(topic):
@@ -210,7 +201,7 @@ def generate_report_response(topic):
         response = client.models.generate_content(model='gemini-3-flash-preview', contents=report_prompt)
         return response.text
     except Exception as e:
-        logger.error(f"Gemini Report Error: {e}")
+        logging.error(f"Gemini Report Error: {e}")
         return f"Không thể tạo báo cáo: {str(e)}"
 
 def generate_draft_proposal(topic):
@@ -249,7 +240,7 @@ def generate_draft_proposal(topic):
                             sample_image_part = types.Part.from_bytes(data=img_bytes, mime_type="image/jpeg")
                             break
         except Exception as e:
-            logger.warning(f"Không thể tải ảnh mẫu để tham khảo: {e}")
+            logging.warning(f"Không thể tải ảnh mẫu để tham khảo: {e}")
 
         prompt_text = f"""
         {system_context}
@@ -296,13 +287,13 @@ def generate_draft_proposal(topic):
                     if target_model:
                         target_model = target_model.replace('models/', '')
                     else:
-                        logger.warning("Không tìm thấy model Imagen nào trong danh sách hỗ trợ của API Key. Sẽ thử model mặc định.")
+                        logging.warning("Không tìm thấy model Imagen nào trong danh sách hỗ trợ của API Key. Sẽ thử model mặc định.")
                         target_model = 'imagen-3.0-generate-001'
                 except Exception as list_e:
-                    logger.warning(f"Lỗi khi liệt kê model: {list_e}")
+                    logging.warning(f"Lỗi khi liệt kê model: {list_e}")
                     target_model = 'imagen-3.0-generate-001'
 
-                logger.info(f"Generating image with prompt using model '{target_model}': {draft_data['image_prompt']}")
+                logging.info(f"Generating image with prompt using model '{target_model}': {draft_data['image_prompt']}")
                 image_response = client.models.generate_images(
                     model=target_model,
                     prompt=draft_data['image_prompt'],
@@ -314,13 +305,13 @@ def generate_draft_proposal(topic):
                     draft_data['image'] = f"data:image/png;base64,{b64_img}"
             except Exception as e:
                 if "404" in str(e):
-                    logger.warning(f"Model tạo ảnh không khả dụng (404). Có thể API Key chưa được kích hoạt Imagen 3 hoặc sai Region: {e}")
+                    logging.warning(f"Model tạo ảnh không khả dụng (404). Có thể API Key chưa được kích hoạt Imagen 3 hoặc sai Region: {e}")
                 else:
-                    logger.error(f"Lỗi tạo hình ảnh (Imagen): {e}")
+                    logging.error(f"Lỗi tạo hình ảnh (Imagen): {e}")
 
         return draft_data
     except Exception as e:
-        logger.error(f"Draft Generation Error: {e}")
+        logging.error(f"Draft Generation Error: {e}")
         return {"error": str(e)}
 
 def clear_history():

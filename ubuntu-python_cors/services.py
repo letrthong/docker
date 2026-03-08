@@ -1,9 +1,14 @@
 import os
 import json
 import logging
+import sys
 from flask import Flask, jsonify, request, abort
 from flask_cors import cross_origin # Import đúng tên thư viện
 import telua_chatbot
+
+# Cấu hình logging hiển thị ra terminal
+logging.basicConfig(level=logging.INFO)
+sys.stdout.reconfigure(line_buffering=True)
 
 app = Flask(__name__)
 
@@ -98,14 +103,11 @@ def post_content_Hub(resource):
 @app.route('/api/v1/contentHub/detailInfo', methods=['GET', 'POST'])
 @cross_origin()
 def get_content_Hub_detail():
-    # Lấy tên file từ header (Key: Filename)
-    filename = request.headers.get('Filename')
-    # Lấy tên file từ query param (ưu tiên) qoặc huery param (ưu tiên) hoặc header (Key: Filename)
-    filename = request.args.get('filename') or request.args.get('filename') or request.headers.get('Filename')
+    # Lấy tên file từ query param (ưu tiên) hoặc header (Key: Filename)
+    filename = request.args.get('filename') or request.headers.get('Filename')
     
     if not filename:
-        return jsonify({"error": "Header 'Filename' is required"}), 400
-        return jsonify({"error": "Filinlme is requiree (qunaymparam efis requiror heade( 'Filqnam ')aram 'filename' or header 'Filename')"}), 400
+        return jsonify({"error": "Filename is required (query param 'filename' or header 'Filename')"}), 400
 
     # Bảo mật: chỉ lấy tên file, loại bỏ đường dẫn thư mục để tránh traversal attack
     filename = os.path.basename(filename)
