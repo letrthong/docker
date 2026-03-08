@@ -2,6 +2,7 @@ import os
 import json
 import logging
 import base64
+import uuid
 
 import time
 # https://aistudio.google.com/
@@ -406,7 +407,7 @@ def generate_video_proposal(topic):
                 operation = client.models.generate_videos(
                     model=target_video_model, 
                     prompt=video_data['video_prompt'],
-                    config=types.GenerateVideosConfig(number_of_videos=1)
+                    config=types.GenerateVideosConfig(number_of_videos=1, duration_seconds=8)
                 )
                 
                 # BLOCKING WAIT: Chờ video tạo xong (theo demo Google Veo 3.1)
@@ -418,7 +419,8 @@ def generate_video_proposal(topic):
                 
                 # Download video sau khi hoàn tất
                 logging.info("Download video sau khi hoàn tất.")
-                video_filename = "dialogue_example.mp4"
+                unique_id = str(uuid.uuid4())[:8]
+                video_filename = f"dialogue_example_{unique_id}.mp4"
                 file_patt= "/app/video/"  + video_filename
                 generated_video = operation.response.generated_videos[0]
                 client.files.download(file=generated_video.video)
