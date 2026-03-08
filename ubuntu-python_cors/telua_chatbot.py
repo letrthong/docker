@@ -23,6 +23,11 @@ def decode_base64_safe(s):
     if not isinstance(s, str):
         return s
     try:
+        # Tự động thêm padding nếu thiếu để tránh lỗi binascii.Error
+        s = s.strip()
+        missing_padding = len(s) % 4
+        if missing_padding:
+            s += '=' * (4 - missing_padding)
         return base64.b64decode(s).decode('utf-8')
     except Exception:
         return s
