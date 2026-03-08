@@ -418,8 +418,8 @@ def generate_video_proposal(topic):
                 
                 # Download video sau khi hoàn tất
                 logging.info("Download video sau khi hoàn tất.")
-                saved_filename = "dialogue_example.mp4"
-                file_patt= "/app/video/"  + saved_filename
+                video_filename = "dialogue_example.mp4"
+                file_patt= "/app/video/"  + video_filename
                 generated_video = operation.response.generated_videos[0]
                 client.files.download(file=generated_video.video)
                 generated_video.video.save(file_patt)
@@ -429,7 +429,7 @@ def generate_video_proposal(topic):
                 # b64_vid = base64.b64encode(vid_bytes).decode('utf-8')
                 video_data['video_url'] = f"/api/v1/contentHub/media/{video_filename}"
                 # video_data['video_base64'] = f"data:video/mp4;base64,{b64_vid}"
-                video_data['saved_filename'] = saved_filename
+                video_data['saved_filename'] = video_filename
             
             except Exception as e:
                 logging.error(f"Media generation error: {e}")
