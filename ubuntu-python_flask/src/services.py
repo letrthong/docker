@@ -600,6 +600,23 @@ def delete_hotel(hotel_id):
         except Exception as e:
             return jsonify({HotelField.ERROR: f"Lỗi khi ghi file: {str(e)}"}), 500
 
+        # --- START: XÓA BÁO CÁO LIÊN QUAN KHI XÓA VĨNH VIỄN LỮ QUÁN ---
+        # 1. Xóa các báo cáo đang chờ xử lý trong hotel_reports.json (nếu có)
+        with reports_lock:
+            reports = read_reports()
+            new_reports = [r for r in reports if r.get(HotelField.HOTEL_ID) != hotel_id]
+            if len(reports) != len(new_reports):
+                write_reports(new_reports)
+                
+        # 2. Xóa file lịch sử báo cáo (hotel_report_<hotel_id>.json)
+        history_file = os.path.join(CONFIG_DIR, f"hotel_report_{hotel_id}.json")
+        if os.path.exists(history_file):
+            try:
+                os.remove(history_file)
+            except Exception as e:
+                logging.error(f"Lỗi khi xóa file lịch sử {history_file}: {e}")
+        # --- END: XÓA BÁO CÁO LIÊN QUAN ---
+
     return jsonify({HotelField.SUCCESS: True, HotelField.MESSAGE: "Xóa khách sạn thành công"})
 
 @app.route('/api/hotelconnect/v1/config/<filename>', methods=['GET'])
