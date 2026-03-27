@@ -1,0 +1,24 @@
+{
+    "id": "1d442ec4-e180-45d5-b220-155e1f45d5fe",
+    "body": "c3p6",
+    "contact": "",
+    "comments": [],
+    "history": [
+        {
+            "date": "2026-03-19T17:38:51.162Z",
+            "user": "auditor",
+            "action": "Tạo bài viết mới"
+        },
+        {
+            "date": "2026-03-19T17:39:38.624Z",
+            "user": "auditor",
+            "action": "Chuyển trạng thái: Nháp ➔ Chờ duyệt"
+        },
+        {
+            "date": "2026-03-19T17:45:44.530Z",
+            "user": "auditor",
+            "action": "Chuyển trạng thái: Chờ duyệt ➔ Chạy thử"
+        }
+    ],
+    "image": ""
+}

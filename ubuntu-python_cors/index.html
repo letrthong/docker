@@ -1,0 +1,87 @@
+﻿﻿﻿﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Lữ Quán - Kết nối Trực tiếp Khách sạn </title>
+    <!-- Tailwind CSS for Styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel for JSX Transpilation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A==" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js" integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA==" crossorigin=""></script>
+    <!-- Leaflet MarkerCluster Plugin -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Be+Vietnam+Pro:wght@400;700;900&display=swap');
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            height: 100dvh;
+        }
+        #root {
+            width: 100%;
+            height: 100%;
+        }
+        body { 
+            font-family: 'Be Vietnam Pro', 'Inter', sans-serif; 
+            overscroll-behavior-y: contain; /* Ngăn chặn pull-to-refresh ngoài ý muốn trên trình duyệt di động */
+        }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.05); }
+        }
+        .animate-pulse-soft { animation: pulse-soft 2s infinite; }
+        
+        .bg-moss { background-color: #36453b; }
+        .text-moss { color: #36453b; }
+        .bg-earth { background-color: #c2410c; }
+        .border-earth { border-color: #c2410c; }
+        
+        /* Custom Map Picker Styles */
+        .map-picker-grid {
+            background-image: radial-gradient(#d1d5db 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        /* Safe area handling for modern mobile screens */
+        .pb-safe {
+            padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+        }
+        .pt-safe {
+            padding-top: max(env(safe-area-inset-top), 0.5rem);
+        }
+    </style>
+</head>
+<body class="bg-stone-50 overflow-hidden m-0 p-0">
+    <div id="root"></div>
+
+    <!-- API Service: Xử lý gọi data từ Backend -->
+    <script src="./js/api.js"></script>
+    
+    <!-- {% raw %} -->
+    <script type="text/babel" src="./js/components/Icon.js"></script>
+    <script type="text/babel" src="./js/components/MapComponents.js"></script>
+    <script type="text/babel" src="./js/components/SchemaManager.js"></script>
+    <script type="text/babel" src="./js/components/HotelRequestForm.js"></script>
+    <script type="text/babel" src="./js/components/HotelEditForm.js"></script>
+    <script type="text/babel" src="./js/components/ReportManager.js"></script>
+    <script type="text/babel" src="./js/components/ReportForm.js"></script>
+    <script type="text/babel" src="./js/hotel_connect.js"></script>
+    <script type="text/babel" src="./js/components/HotelDetail.js"></script>
+    <!-- {% endraw %} -->
+</body>
+</html>

@@ -20,4 +20,4 @@ COPY *.sh /app/
 # Expose the port the app runs on
 EXPOSE 5000
 # Run the application
-CMD ["python", "/app/services.py"]
+CMD ["python", "/app/src/services.py"]
