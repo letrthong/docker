@@ -233,15 +233,104 @@ def _find_hotel_details_by_id(hotel_id):
 
 ## Business logic moved to hotel_helpers.py
 
+@app.route('/api/hotelconnect/v1/hotels/reports', methods=['POST'])
+@cross_origin()
+def submit_hotel_report():
+    req_data = request.json
+    if not req_data:
+        return jsonify({HotelField.ERROR: "Dữ liệu không hợp lệ"}), 400
+        
+    hotel_id = req_data.get(HotelField.HOTEL_ID)
+    reason = req_data.get(HotelField.REASON)
+    
+    if not hotel_id or not reason:
+        return jsonify({HotelField.ERROR: "Thiếu ID khách sạn hoặc lý do"}), 400
+        
+    new_report = {
+        HotelField.REPORT_ID: str(uuid.uuid4()),
+        HotelField.HOTEL_ID: hotel_id,
+        HotelField.REASON: reason,
+        HotelField.DETAILS: req_data.get(HotelField.DETAILS, ""),
+        HotelField.REPORTED_AT: datetime.now(timezone.utc).isoformat(),
+        HotelField.REPORTER_IP: request.remote_addr,
+        HotelField.STATUS: HotelStatus.PENDING.value
+    }
+    
+    with reports_lock:
+        reports = read_reports()
+        reports.append(new_report)
+        write_reports(reports)
+
+    # --- START: Update hotel status to 'reported' ---
+    hotel_to_update = None
+    target_file = None
+    city_hotels = None
+
+    with schema_lock:
+        schemas = read_schema()
+        # Find hotel in all config files
+        for schema in schemas:
+            file_path = os.path.join(CONFIG_DIR, schema.get(HotelField.FILE_PATH_ID))
+            if os.path.exists(file_path):
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        hotels_in_file = json.load(f)
+                    for hotel in hotels_in_file:
+                        if hotel.get(HotelField.ID) == hotel_id:
+                            hotel_to_update = hotel
+                            target_file = file_path
+                            city_hotels = hotels_in_file
+                            break
+                except Exception as e:
+                    logging.error(f"Error reading or parsing file {file_path}: {e}")
+            if hotel_to_update:
+                break
+    
+    if hotel_to_update and target_file and city_hotels:
+        try:
+            hotel_to_update[HotelField.STATUS] = HotelStatus.REPORTED.value
+            hotel_to_update[HotelField.UPDATED_AT] = datetime.now().strftime("%Y-%m-%d")
+            with open(target_file, 'w', encoding='utf-8') as f:
+                json.dump(city_hotels, f, ensure_ascii=False, indent=4)
+        except Exception as e:
+            logging.error(f"Failed to write updated hotel status for {hotel_id} to {target_file}: {e}")
+    # --- END: Update hotel status ---
+        
+    return jsonify({HotelField.SUCCESS: True, HotelField.MESSAGE: "Gửi báo cáo lỗi thành công", HotelField.DATA: new_report}), 201
+
 @app.route('/api/hotelconnect/v1/hotels/reports', methods=['GET'])
 @cross_origin()
 def get_hotel_reports():
     with reports_lock:
         reports = read_reports()
     
-    # Enrich reports with hotel names
+    # Group reports by hotel_id
+    grouped_by_hotel = {}
+    for report in reports:
+        hotel_id = report.get(HotelField.HOTEL_ID)
+        if not hotel_id:
+            continue
+        if hotel_id not in grouped_by_hotel:
+            grouped_by_hotel[hotel_id] = []
+        grouped_by_hotel[hotel_id].append(report)
+
+    # For each group, find the latest report and add a count
+    unique_reports = []
+    for hotel_id, hotel_reports in grouped_by_hotel.items():
+        if not hotel_reports:
+            continue
+        
+        # Sort reports for this hotel to find the latest
+        hotel_reports.sort(key=lambda r: r.get('reportedAt', ''), reverse=True)
+        latest_report = hotel_reports[0]
+        
+        # Add the count
+        latest_report['reportCount'] = len(hotel_reports)
+        unique_reports.append(latest_report)
+
+    # Enrich the unique reports with hotel names
     with schema_lock:
-        for report in reports:
+        for report in unique_reports:
             details = _find_hotel_details_by_id(report.get(HotelField.HOTEL_ID))
             if details:
                 report[HotelField.HOTEL_NAME] = details['name']
@@ -250,8 +339,48 @@ def get_hotel_reports():
                 report[HotelField.HOTEL_NAME] = f"Không tìm thấy (ID: {report.get(HotelField.HOTEL_ID)})"
                 report[HotelField.LOCATION] = "Không rõ"
 
-    reports.sort(key=lambda r: r.get('reportedAt', ''), reverse=True)
-    return jsonify(reports)
+    # Sort the final list by the date of the latest report
+    unique_reports.sort(key=lambda r: r.get('reportedAt', ''), reverse=True)
+    return jsonify(unique_reports)
+
+@app.route('/api/hotelconnect/v1/hotels/<hotel_id>/reports', methods=['GET'])
+@cross_origin()
+def get_all_reports_for_hotel(hotel_id):
+    with reports_lock:
+        all_reports = read_reports()
+    
+    hotel_reports = [r for r in all_reports if r.get(HotelField.HOTEL_ID) == hotel_id]
+    
+    if not hotel_reports:
+        return jsonify([])
+
+    # Enrich with hotel name (it will be the same for all)
+    with schema_lock:
+        details = _find_hotel_details_by_id(hotel_id)
+        hotel_name = "Không tìm thấy"
+        if details:
+            hotel_name = details.get('name', "Không tìm thấy")
+
+    for report in hotel_reports:
+        report[HotelField.HOTEL_NAME] = hotel_name
+
+    hotel_reports.sort(key=lambda r: r.get('reportedAt', ''), reverse=True)
+    
+    return jsonify(hotel_reports)
+
+@app.route('/api/hotelconnect/v1/hotels/reports/<report_id>', methods=['DELETE'])
+@cross_origin()
+def delete_hotel_report(report_id):
+    with reports_lock:
+        reports = read_reports()
+        new_reports = [r for r in reports if r.get(HotelField.REPORT_ID) != report_id]
+        if len(reports) == len(new_reports):
+            return jsonify({HotelField.ERROR: "Không tìm thấy báo cáo"}), 404
+        write_reports(new_reports)
+        
+    return jsonify({HotelField.SUCCESS: True, HotelField.MESSAGE: "Xóa báo cáo thành công"})
+
+    
 @app.route('/api/hotelconnect/v1/hotels/<hotel_id>', methods=['PUT'])
 @cross_origin()
 def update_hotel(hotel_id):

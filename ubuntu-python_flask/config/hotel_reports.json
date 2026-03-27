@@ -7,5 +7,32 @@
         "reportedAt": "2026-03-27T02:46:53.845448+00:00",
         "reporterIp": "192.168.124.1",
         "status": "new"
+    },
+    {
+        "reportId": "35e2b4f0-2391-48cf-b452-a71dba5b1796",
+        "hotelId": "33fe241a-f3b0-46ff-8118-100cdf2d8685",
+        "reason": "wrong_hotel_name",
+        "details": "x",
+        "reportedAt": "2026-03-27T10:12:20.631647+00:00",
+        "reporterIp": "192.168.124.1",
+        "status": "pending"
+    },
+    {
+        "reportId": "deaa049c-c488-492b-b94d-73ce89956663",
+        "hotelId": "33fe241a-f3b0-46ff-8118-100cdf2d8685",
+        "reason": "wrong_phone",
+        "details": "x",
+        "reportedAt": "2026-03-27T10:15:22.104239+00:00",
+        "reporterIp": "192.168.124.1",
+        "status": "pending"
+    },
+    {
+        "reportId": "07398266-1ee1-4245-b49e-49698c79f47d",
+        "hotelId": "33fe241a-f3b0-46ff-8118-100cdf2d8685",
+        "reason": "wrong_address",
+        "details": "x",
+        "reportedAt": "2026-03-27T10:26:33.865593+00:00",
+        "reporterIp": "192.168.124.1",
+        "status": "pending"
     }
 ]

@@ -7,10 +7,10 @@
 | `rejected`    | Đã bị admin từ chối yêu cầu đăng ký                            |
 | `inactive`    | Không hoạt động (do quá lâu không cập nhật hoặc bị khóa)        |
 | `reported`    | Đang bị báo lỗi, cần admin kiểm tra                            |
-| `pending_review` | Bị report nhiều, tạm ẩn chờ admin kiểm tra lại              |
+| `pending_review` | Bị report nhiều > 10 lần trong 1 tuần, tạm ẩn chờ admin kiểm tra lại              |
 
 ## Lưu ý
 - Trạng thái mặc định khi đăng ký mới là `pending`.
-- Chỉ khách sạn `approved` mới hiển thị public.
+- Chỉ khách sạn `approved` mới hiển thị public hoặc `reported`.
 - Admin có thể chuyển trạng thái giữa các giá trị trên qua API/phần quản trị.
 - Có thể bổ sung trạng thái khác nếu nghiệp vụ phát sinh thêm.

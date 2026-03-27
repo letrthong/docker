@@ -279,6 +279,14 @@ const App = () => {
             });
     };
 
+    const refreshReports = () => {
+        if (isAdmin) {
+            HotelAPI.fetchReports()
+                .then(data => setReports(data))
+                .catch(err => console.error("Lỗi tải lại báo cáo:", err));
+        }
+    };
+
     const formatDate = (dateStr) => {
         if (!dateStr) return "Chưa rõ";
         const [year, month, day] = dateStr.split('-');
@@ -412,7 +420,7 @@ const App = () => {
 
                     <div className="flex-1 overflow-y-auto bg-stone-50 scrollbar-hide pb-24">
                         {isAdmin && adminTab === 'reports' ? (
-                            <ReportManager reports={reports} setFilterCity={setFilterCity} onToast={setToastMessage} />
+                        <ReportManager reports={reports} setFilterCity={setFilterCity} onToast={setToastMessage} onReportDeleted={refreshReports} />
                         ) : (
                             <div className="p-3 space-y-3">
                                 {isLoading ? (

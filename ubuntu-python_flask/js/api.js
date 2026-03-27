@@ -116,7 +116,7 @@ const HotelAPI = {
     // Gửi báo cáo lỗi cho một khách sạn
     submitReport: async (reportData) => {
         if (!HotelAPI.baseUrl) await HotelAPI.init();
-        const response = await fetch(`${HotelAPI.baseUrl}/api/hotelconnect/v1/hotels/report`, {
+        const response = await fetch(`${HotelAPI.baseUrl}/api/hotelconnect/v1/hotels/reports`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(reportData)
@@ -134,6 +134,29 @@ const HotelAPI = {
         const response = await fetch(`${HotelAPI.baseUrl}/api/hotelconnect/v1/hotels/reports`);
         if (!response.ok) {
             throw new Error("Lỗi khi tải danh sách báo cáo");
+        }
+        return await response.json();
+    },
+
+    // Lấy tất cả báo cáo lỗi cho một khách sạn cụ thể
+    fetchReportsForHotel: async (hotelId) => {
+        if (!HotelAPI.baseUrl) await HotelAPI.init();
+        const response = await fetch(`${HotelAPI.baseUrl}/api/hotelconnect/v1/hotels/${hotelId}/reports`);
+        if (!response.ok) {
+            throw new Error(`Lỗi khi tải chi tiết báo cáo cho khách sạn ${hotelId}`);
+        }
+        return await response.json();
+    },
+
+    // Xóa một báo cáo lỗi
+    deleteReport: async (reportId) => {
+        if (!HotelAPI.baseUrl) await HotelAPI.init();
+        const response = await fetch(`${HotelAPI.baseUrl}/api/hotelconnect/v1/hotels/reports/${reportId}`, {
+            method: 'DELETE'
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({ error: "Lỗi không xác định" }));
+            throw new Error(err.error || "Lỗi khi xóa báo cáo");
         }
         return await response.json();
     },
