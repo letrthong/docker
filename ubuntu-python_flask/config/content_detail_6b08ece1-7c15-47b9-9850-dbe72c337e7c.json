@@ -1,0 +1,91 @@
+{
+    "id": "6b08ece1-7c15-47b9-9850-dbe72c337e7c",
+    "body": "ZA==",
+    "contact": "",
+    "comments": [
+        {
+            "id": "b3859b00-6bd8-4487-ba32-731fa0f5bf59",
+            "date": "2026-03-14T08:25:34.001Z",
+            "userId": "admin",
+            "content": "eHh4eHh4"
+        },
+        {
+            "id": "60909099-c2c2-4850-ae1a-2f7dba7585ba",
+            "date": "2026-03-14T08:25:38.352Z",
+            "userId": "admin",
+            "content": "eHh4eHh4eHh4",
+            "parentId": "b3859b00-6bd8-4487-ba32-731fa0f5bf59"
+        },
+        {
+            "id": "e6618cc9-d440-4ce7-a7a6-296a4f9e6d9e",
+            "date": "2026-03-14T08:25:43.784Z",
+            "userId": "admin",
+            "content": "eHh4eHh4eHh4eA==",
+            "parentId": "b3859b00-6bd8-4487-ba32-731fa0f5bf59"
+        },
+        {
+            "id": "81149130-d4c2-4d78-8929-caeddd2bfa44",
+            "date": "2026-03-14T08:25:48.769Z",
+            "userId": "admin",
+            "content": "eHg="
+        }
+    ],
+    "history": [
+        {
+            "date": "2026-03-13T02:42:36.496Z",
+            "user": "admin",
+            "action": "Lưu thay đổi"
+        },
+        {
+            "date": "2026-03-13T16:01:07.135Z",
+            "user": "admin",
+            "action": "Lưu thay đổi"
+        },
+        {
+            "date": "2026-03-14T03:19:48.350Z",
+            "user": "view",
+            "action": "Lưu thay đổi"
+        },
+        {
+            "date": "2026-03-14T03:27:13.579Z",
+            "user": "admin",
+            "action": "Chuyển trạng thái: Chạy thử ➔ Đã đăng"
+        },
+        {
+            "date": "2026-03-14T03:50:37.915Z",
+            "user": "view",
+            "action": "Chuyển trạng thái: Đã đăng ➔ Nháp"
+        },
+        {
+            "date": "2026-03-14T06:01:04.313Z",
+            "user": "admin",
+            "action": "Chuyển trạng thái: Nháp ➔ Chạy thử"
+        },
+        {
+            "date": "2026-03-14T06:10:19.842Z",
+            "user": "admin",
+            "action": "Cập nhật bài viết"
+        },
+        {
+            "date": "2026-03-14T08:25:34.002Z",
+            "user": "admin",
+            "action": "Thêm bình luận mới"
+        },
+        {
+            "date": "2026-03-14T08:25:38.360Z",
+            "user": "admin",
+            "action": "Trả lời bình luận"
+        },
+        {
+            "date": "2026-03-14T08:25:43.792Z",
+            "user": "admin",
+            "action": "Trả lời bình luận"
+        },
+        {
+            "date": "2026-03-14T08:25:48.770Z",
+            "user": "admin",
+            "action": "Thêm bình luận mới"
+        }
+    ],
+    "image": ""
+}

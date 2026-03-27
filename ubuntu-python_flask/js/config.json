@@ -1,0 +1,4 @@
+{
+    "local_api_base": "http://192.168.124.129:5000",
+    "production_api_base": "https://telua.vn"
+}

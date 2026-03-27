@@ -1,0 +1,59 @@
+{
+    "id": "9281853e-129a-4c34-bd06-5c689fb5140c",
+    "body": "",
+    "contact": "",
+    "comments": [],
+    "history": [
+        {
+            "date": "2026-03-17T15:31:38.088Z",
+            "user": "view",
+            "action": "Tạo bài viết mới"
+        },
+        {
+            "date": "2026-03-17T15:35:30.672Z",
+            "user": "view",
+            "action": "Cập nhật bài viết"
+        },
+        {
+            "date": "2026-03-17T16:17:28.227Z",
+            "user": "view",
+            "action": "Cập nhật bài viết"
+        },
+        {
+            "date": "2026-03-17T16:27:36.979Z",
+            "user": "admin",
+            "action": "Xóa bài viết liên kết (Đích: 123)"
+        },
+        {
+            "date": "2026-03-17T16:27:38.684Z",
+            "user": "admin",
+            "action": "Cập nhật bài viết"
+        },
+        {
+            "date": "2026-03-17T16:30:45.362Z",
+            "user": "admin",
+            "action": "Thêm bài viết liên kết (Đích: x)"
+        },
+        {
+            "date": "2026-03-17T16:30:49.203Z",
+            "user": "admin",
+            "action": "Xóa bài viết liên kết (Đích: x)"
+        },
+        {
+            "date": "2026-03-17T16:30:50.196Z",
+            "user": "admin",
+            "action": "Cập nhật bài viết"
+        },
+        {
+            "date": "2026-03-18T14:26:30.950Z",
+            "user": "admin",
+            "action": "Cập nhật bài viết"
+        },
+        {
+            "date": "2026-03-18T14:36:33.720Z",
+            "user": "admin",
+            "action": "Cập nhật bài viết"
+        }
+    ],
+    "image": ""
+}

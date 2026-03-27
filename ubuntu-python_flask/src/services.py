@@ -1,0 +1,396 @@
+
+from operator import index
+import os
+import json
+from json_utils import read_json_file, write_json_file
+from hotel_schema_service import read_schema, write_schema, create_schema_item, update_schema_item, delete_schema_item
+import logging
+import sys
+import threading
+from flask import Flask, render_template, jsonify, request, abort, send_from_directory
+from flask_cors import cross_origin # Import đúng tên thư viện
+import uuid
+from math import radians, sin, cos, sqrt, atan2
+from geo_utils import haversine
+from datetime import datetime, timezone
+
+# Import all constants from hotel_constants.py
+from hotel_constants import CONFIG_DIR, HotelField, HotelStatus
+from hotel_helpers import get_hotel_file_path, read_requests, write_requests, read_reports, write_reports, validate_hotel_request, update_status
+
+# Cấu hình logging hiển thị ra terminal
+logging.basicConfig(level=logging.INFO)
+sys.stdout.reconfigure(line_buffering=True)
+
+app = Flask(__name__, template_folder='/app')
+
+
+# Đảm bảo đường dẫn này đúng với cấu trúc thư mục của bạn
+template_dir = "/app/"
+template_dir_base = "./"
+
+
+
+## All constants are now imported from hotel_constants.py
+
+
+# --- API Quản lý hotel_schema.json ---
+schema_lock = threading.Lock()
+
+
+@app.route('/api/hotelconnect/v1/schema', methods=['GET'])
+@cross_origin()
+def get_schema():
+    with schema_lock:
+        data = read_schema()
+    return jsonify(data)
+
+@app.route('/api/hotelconnect/v1/schema', methods=['POST'])
+@cross_origin()
+def add_schema():
+    req_data = request.json
+    if not req_data:
+        return jsonify({HotelField.ERROR: "Dữ liệu không hợp lệ"}), 400
+    try:
+        new_item = create_schema_item(req_data)
+    except Exception as e:
+        return jsonify({HotelField.ERROR: str(e)}), 400
+    with schema_lock:
+        data = read_schema()
+        data.append(new_item)
+        write_schema(data)
+    return jsonify({HotelField.MESSAGE: "Thêm mới thành công", HotelField.DATA: new_item}), 201
+
+@app.route('/api/hotelconnect/v1/schema/<item_id>', methods=['PUT'])
+@cross_origin()
+def update_schema(item_id):
+    req_data = request.json
+    if not req_data:
+        return jsonify({HotelField.ERROR: "Dữ liệu không hợp lệ"}), 400
+    with schema_lock:
+        data = read_schema()
+        for item in data:
+            if item.get("id") == item_id:
+                try:
+                    updated = update_schema_item(item, req_data)
+                except Exception as e:
+                    return jsonify({HotelField.ERROR: str(e)}), 400
+                write_schema(data)
+                return jsonify({HotelField.MESSAGE: "Cập nhật thành công", HotelField.DATA: updated}), 200
+    return jsonify({HotelField.ERROR: "Không tìm thấy item"}), 404
+
+@app.route('/api/hotelconnect/v1/schema/<item_id>', methods=['DELETE'])
+@cross_origin()
+def delete_schema(item_id):
+    with schema_lock:
+        data = read_schema()
+        new_data = delete_schema_item(data, item_id)
+        if len(data) == len(new_data):
+            return jsonify({HotelField.ERROR: "Không tìm thấy item"}), 404
+        write_schema(new_data)
+        return jsonify({HotelField.MESSAGE: "Xóa thành công"}), 200
+
+# --- API Quản lý Yêu cầu Đăng ký Khách sạn ---
+requests_lock = threading.Lock()
+
+## Business logic moved to hotel_helpers.py
+
+## Business logic moved to hotel_helpers.py
+
+## Business logic moved to hotel_helpers.py
+
+@app.route('/api/hotelconnect/v1/hotels/request', methods=['POST'])
+@cross_origin()
+def submit_hotel_request():
+    req_data = request.json
+    if not req_data:
+        return jsonify({HotelField.ERROR: "Dữ liệu không hợp lệ"}), 400
+    
+    # --- START VALIDATION: Kiểm tra khoảng cách vị trí đăng ký so với trung tâm khu vực ---
+    hotel_lat = req_data.get(HotelField.LAT)
+    hotel_lng = req_data.get(HotelField.LNG)
+    location_name = req_data.get(HotelField.LOCATION)
+
+    # Đảm bảo có đủ thông tin vị trí
+    valid, error = validate_hotel_request(req_data)
+    if not valid:
+        return jsonify({HotelField.ERROR: error}), 400
+
+    # Lấy tọa độ trung tâm của khu vực từ schema
+    with schema_lock:
+        schemas = read_schema()
+    area_center = next((s for s in schemas if s.get(HotelField.LOCATION) == location_name), None)
+
+    # Kiểm tra xem khu vực có tồn tại và có tọa độ không
+    if not area_center or HotelField.LAT not in area_center or HotelField.LNG not in area_center:
+        return jsonify({HotelField.ERROR: f"Không tìm thấy thông tin vị trí cho khu vực: {location_name}"}), 400
+
+    area_lat = area_center[HotelField.LAT]
+    area_lng = area_center[HotelField.LNG]
+
+    # Tính khoảng cách bằng công thức Haversine
+    distance = haversine(hotel_lat, hotel_lng, area_lat, area_lng)
+
+    # Áp dụng quy tắc: khoảng cách không quá 2km
+    if distance > 2:
+        error_message = f"Vị trí khách sạn phải cách trung tâm {location_name} không quá 2km. Khoảng cách hiện tại là {distance:.2f}km."
+        return jsonify({HotelField.ERROR: error_message}), 400
+    # --- END VALIDATION ---
+
+    with requests_lock:
+        data = read_requests()
+        data.append(req_data)
+        write_requests(data)
+    return jsonify({HotelField.SUCCESS: True, HotelField.MESSAGE: "Gửi yêu cầu đăng ký thành công", HotelField.DATA: req_data}), 201
+
+@app.route('/api/hotelconnect/v1/hotels/request', methods=['GET'])
+@cross_origin()
+def get_hotel_requests():
+    with requests_lock:
+        data = read_requests()
+    return jsonify(data)
+
+@app.route('/api/hotelconnect/v1/requests/<request_id>/approve', methods=['POST'])
+@cross_origin()
+def approve_hotel_request(request_id):
+    with requests_lock:
+        all_requests = read_requests()
+        hotel_to_approve = None
+        other_requests = []
+        for req in all_requests:
+            if req.get('id') == request_id:
+                hotel_to_approve = req
+            else:
+                other_requests.append(req)
+
+        if not hotel_to_approve:
+            return jsonify({HotelField.ERROR: "Không tìm thấy yêu cầu"}), 404
+
+        location_name = hotel_to_approve.get(HotelField.LOCATION)
+        if not location_name:
+            return jsonify({HotelField.ERROR: "Yêu cầu thiếu thông tin Tỉnh/Thành phố"}), 400
+
+        target_file = get_hotel_file_path(location_name, read_schema())
+        if not target_file:
+            return jsonify({HotelField.ERROR: f"Không tìm thấy cấu hình cho Tỉnh/Thành phố: {location_name}"}), 400
+
+        # Cập nhật trạng thái và ngày tháng trước khi lưu
+        hotel_to_approve = update_status(hotel_to_approve, HotelStatus.APPROVED)
+        
+        try:
+            city_hotels = []
+            if os.path.exists(target_file):
+                with open(target_file, 'r', encoding='utf-8') as f:
+                    city_hotels = json.load(f)
+            
+            city_hotels.append(hotel_to_approve)
+            
+            with open(target_file, 'w', encoding='utf-8') as f:
+                json.dump(city_hotels, f, ensure_ascii=False, indent=4)
+        except Exception as e:
+            return jsonify({HotelField.ERROR: f"Lỗi khi ghi file khách sạn: {str(e)}"}), 500
+
+        # Nếu ghi file thành công, cập nhật lại danh sách chờ duyệt
+        write_requests(other_requests)
+
+    return jsonify({HotelField.SUCCESS: True, HotelField.MESSAGE: "Phê duyệt khách sạn thành công", HotelField.DATA: hotel_to_approve})
+
+@app.route('/api/hotelconnect/v1/requests/<request_id>/reject', methods=['POST'])
+@cross_origin()
+def reject_hotel_request(request_id):
+    with requests_lock:
+        all_requests = read_requests()
+        remaining_requests = [req for req in all_requests if req.get('id') != request_id]
+        if len(remaining_requests) == len(all_requests):
+            return jsonify({HotelField.ERROR: "Không tìm thấy yêu cầu"}), 404
+        write_requests(remaining_requests)
+    return jsonify({HotelField.SUCCESS: True, HotelField.MESSAGE: "Từ chối yêu cầu thành công"})
+
+
+# --- API Quản lý Báo cáo Lỗi ---
+HOTEL_REPORTS_FILE_PATH = os.path.join(CONFIG_DIR, "hotel_reports.json")
+reports_lock = threading.Lock()
+
+def _find_hotel_details_by_id(hotel_id):
+    """Helper to find hotel details (name, locationName) across all hotel files."""
+    schemas = read_schema()
+    for schema in schemas:
+        file_path = os.path.join(CONFIG_DIR, schema.get(HotelField.FILE_PATH_ID))
+        if os.path.exists(file_path):
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    hotels_in_file = json.load(f)
+                    for hotel in hotels_in_file:
+                        if hotel.get(HotelField.ID) == hotel_id:
+                            return {
+                                "name": hotel.get("name", 'N/A'),
+                                HotelField.LOCATION: hotel.get(HotelField.LOCATION, 'N/A')
+                            }
+            except Exception:
+                continue
+    return None
+
+
+## Business logic moved to hotel_helpers.py
+
+@app.route('/api/hotelconnect/v1/hotels/reports', methods=['GET'])
+@cross_origin()
+def get_hotel_reports():
+    with reports_lock:
+        reports = read_reports()
+    
+    # Enrich reports with hotel names
+    with schema_lock:
+        for report in reports:
+            details = _find_hotel_details_by_id(report.get(HotelField.HOTEL_ID))
+            if details:
+                report[HotelField.HOTEL_NAME] = details['name']
+                report[HotelField.LOCATION] = details.get(HotelField.LOCATION, "Không rõ")
+            else:
+                report[HotelField.HOTEL_NAME] = f"Không tìm thấy (ID: {report.get(HotelField.HOTEL_ID)})"
+                report[HotelField.LOCATION] = "Không rõ"
+
+    reports.sort(key=lambda r: r.get('reportedAt', ''), reverse=True)
+    return jsonify(reports)
+@app.route('/api/hotelconnect/v1/hotels/<hotel_id>', methods=['PUT'])
+@cross_origin()
+def update_hotel(hotel_id):
+    req_data = request.json
+    if not req_data:
+        return jsonify({HotelField.ERROR: "Dữ liệu không hợp lệ"}), 400
+
+    with schema_lock:
+        schemas = read_schema()
+        hotel_found = False
+        target_file = None
+        city_hotels = []
+
+        # Tìm khách sạn trong toàn bộ các tệp cấu hình
+        for schema in schemas:
+            file_path = os.path.join(CONFIG_DIR, schema.get(HotelField.FILE_PATH_ID))
+            if os.path.exists(file_path):
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    try:
+                        hotels = json.load(f)
+                        for i, h in enumerate(hotels):
+                            if h.get(HotelField.ID) == hotel_id:
+                                hotel_found = True
+                                target_file = file_path
+                                city_hotels = hotels
+                                # Cập nhật các trường thông tin cho phép
+                                for k, v in req_data.items():
+                                    if k not in [HotelField.ID, HotelField.CREATED_AT, HotelField.STATUS]:
+                                        city_hotels[i][k] = v
+                                city_hotels[i][HotelField.UPDATED_AT] = datetime.now().strftime("%Y-%m-%d")
+                                updated_hotel = city_hotels[i]
+                                break
+                    except Exception:
+                        pass
+            if hotel_found:
+                break
+        
+        if not hotel_found:
+            return jsonify({HotelField.ERROR: "Không tìm thấy khách sạn"}), 404
+
+        try:
+            with open(target_file, 'w', encoding='utf-8') as f:
+                json.dump(city_hotels, f, ensure_ascii=False, indent=4)
+        except Exception as e:
+            return jsonify({HotelField.ERROR: f"Lỗi khi ghi file: {str(e)}"}), 500
+
+    return jsonify({HotelField.SUCCESS: True, HotelField.MESSAGE: "Cập nhật khách sạn thành công", HotelField.DATA: updated_hotel})
+
+@app.route('/api/hotelconnect/v1/hotels/<hotel_id>', methods=['DELETE'])
+@cross_origin()
+def delete_hotel(hotel_id):
+    with schema_lock:
+        schemas = read_schema()
+        hotel_found = False
+        target_file = None
+        city_hotels = []
+
+        # Tìm và xóa khách sạn trong các tệp cấu hình
+        for schema in schemas:
+            file_path = os.path.join(CONFIG_DIR, schema.get(HotelField.FILE_PATH_ID))
+            if os.path.exists(file_path):
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    try:
+                        hotels = json.load(f)
+                        for i, h in enumerate(hotels):
+                            if h.get(HotelField.ID) == hotel_id:
+                                hotel_found = True
+                                target_file = file_path
+                                city_hotels = hotels
+                                city_hotels.pop(i) # Loại bỏ khách sạn khỏi danh sách
+                                break
+                    except Exception:
+                        pass
+            if hotel_found:
+                break
+        
+        if not hotel_found:
+            return jsonify({HotelField.ERROR: "Không tìm thấy khách sạn"}), 404
+
+        try:
+            with open(target_file, 'w', encoding='utf-8') as f:
+                json.dump(city_hotels, f, ensure_ascii=False, indent=4)
+        except Exception as e:
+            return jsonify({HotelField.ERROR: f"Lỗi khi ghi file: {str(e)}"}), 500
+
+    return jsonify({HotelField.SUCCESS: True, HotelField.MESSAGE: "Xóa khách sạn thành công"})
+
+@app.route('/api/hotelconnect/v1/config/<filename>', methods=['GET'])
+@cross_origin()
+def get_config_file(filename):
+    # Đảm bảo chỉ phục vụ file JSON để tránh lỗi bảo mật (Directory Traversal)
+    if '.json' not in filename:
+        return jsonify({HotelField.ERROR: "Chỉ hỗ trợ tải file JSON"}), 400
+        
+    directory = CONFIG_DIR
+    full_path = os.path.join(directory, filename)
+    if not os.path.exists(full_path):
+        logging.warning(f"File không tồn tại (404): {full_path}")
+        return jsonify([]), 404
+        
+    return send_from_directory(directory, filename)
+
+@app.route('/luquan/')
+@app.route('/luquan/<path:page_name>')
+@cross_origin()
+def hotel_connect_resource_sub(page_name=None):
+    # 1. Xử lý mặc định cho index
+    if not page_name or page_name.strip() == "/":
+        return render_template("index.html")
+
+    # Đường dẫn gốc tới thư mục hotel_connect
+    # Đảm bảo template_dir của bạn trỏ đúng vào thư mục templates
+    directory = os.path.join(template_dir, "")
+
+    try:
+        # 2. Xử lý các file tài nguyên tĩnh (js, json, css, png, v.v.)
+        static_extensions = ('.js', '.json', '.css', '.png', '.jpg', '.svg', '.ico')
+
+        # Kiểm tra xem page_name có kết thúc bằng đuôi file tĩnh không
+        if any(page_name.endswith(ext) for ext in static_extensions):
+            # page_name lúc này sẽ là "js/components/Icon.js" (nhờ có <path:>)
+            # send_from_directory sẽ tìm đúng file trong sub-folder
+            return send_from_directory(directory, page_name)
+
+        # 3. Xử lý các route điều hướng (không có dấu chấm - giả định là page .html)
+        if '.' not in page_name:
+            return render_template(f"{page_name}.html")
+
+        # 4. Nếu có đuôi file khác (như .html cụ thể)
+        return render_template(f"{page_name}")
+
+    except Exception as e:
+        print(f"Lỗi truy cập file: {page_name} - Error: {e}")
+        abort(404)
+
+
+   
+
+
+if __name__ == "__main__":
+    # Tắt debug để tránh Werkzeug Reloader quét file liên tục gây tràn RAM
+    app.run(host="0.0.0.0", port=5000, threaded=True)
