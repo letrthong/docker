@@ -42,7 +42,7 @@ const App = () => {
     const [reports, setReports] = useState([]);
     const [editingHotel, setEditingHotel] = useState(null);
     const [toastMessage, setToastMessage] = useState("");
-    const [reviewConfirm, setReviewConfirm] = useState(null); // { action: 'approve' | 'reject', hotel: object }
+    const [reviewConfirm, setReviewConfirm] = useState(null); // { action: 'approve' | 'reject' | 'restore', hotel: object }
 
     // Tự động Load dữ liệu từ Backend khi ứng dụng khởi chạy
     useEffect(() => {
@@ -321,8 +321,7 @@ const App = () => {
             });
     };
 
-    const handleRestoreHotel = (hotel, e) => {
-        e.stopPropagation();
+    const handleRestoreHotel = (hotel) => {
         HotelAPI.setHotelStatus(hotel.id, 'approved')
             .then((response) => {
                 setHotels(prev => prev.map(h => h.id === response.data.id ? response.data : h));
@@ -622,13 +621,13 @@ const App = () => {
                                             {isAdmin && adminTab === 'inactive' && (
                                                 <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 flex gap-1">
                                                     <button onClick={(e) => startEditHotel(hotel, e)} className="bg-blue-600 text-white p-2 rounded-lg shadow-lg" title="Sửa thông tin"><Icon name="edit" size={12} /></button>
-                                                    <button onClick={(e) => handleRestoreHotel(hotel, e)} className="bg-emerald-600 text-white p-2 rounded-lg shadow-lg" title="Khôi phục hiển thị"><Icon name="refresh-cw" size={12} /></button>
+                                                    <button onClick={(e) => { e.stopPropagation(); setReviewConfirm({ action: 'restore', hotel }); }} className="bg-emerald-600 text-white p-2 rounded-lg shadow-lg" title="Khôi phục hiển thị"><Icon name="refresh-cw" size={12} /></button>
                                                     <button onClick={(e) => deleteHotel(hotel.id, e)} className="bg-red-700 text-white p-2 rounded-lg shadow-lg" title="Đưa vào thùng rác"><Icon name="trash-2" size={12} /></button>
                                                 </div>
                                             )}
                                             {isAdmin && adminTab === 'deleted' && (
                                                 <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 flex gap-1">
-                                                    <button onClick={(e) => handleRestoreHotel(hotel, e)} className="bg-emerald-600 text-white p-2 rounded-lg shadow-lg" title="Khôi phục hiển thị"><Icon name="refresh-cw" size={12} /></button>
+                                                    <button onClick={(e) => { e.stopPropagation(); setReviewConfirm({ action: 'restore', hotel }); }} className="bg-emerald-600 text-white p-2 rounded-lg shadow-lg" title="Khôi phục hiển thị"><Icon name="refresh-cw" size={12} /></button>
                                                     <button onClick={(e) => permanentlyDeleteHotel(hotel.id, e)} className="bg-red-800 text-white p-2 rounded-lg shadow-lg" title="Xóa vĩnh viễn"><Icon name="shield-x" size={12} /></button>
                                                 </div>
                                             )}
@@ -774,54 +773,103 @@ const App = () => {
                 {/* Review Confirm Dialog Modal */}
                 {reviewConfirm && (
                     <div className="fixed inset-0 bg-stone-950/90 backdrop-blur-xl z-[200] flex items-center justify-center p-6">
-                        <div className="bg-white w-full max-w-md rounded-[40px] shadow-2xl p-6 sm:p-8 flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
-                            <div className={`w-16 h-16 rounded-3xl flex items-center justify-center mx-auto mb-4 transform ${reviewConfirm.action === 'approve' ? 'bg-emerald-50 text-emerald-600 rotate-3' : 'bg-purple-50 text-purple-600 -rotate-3'}`}>
-                                <Icon name={reviewConfirm.action === 'approve' ? 'check-circle' : 'eye-off'} size={32} />
-                            </div>
-                            <h3 className="text-xl font-black text-stone-900 uppercase mb-2 tracking-tight text-center">
-                                {reviewConfirm.action === 'approve' ? 'Xác nhận Duyệt Lại' : 'Xác nhận Tạm Ẩn'}
-                            </h3>
-                            <p className="text-center text-sm font-bold text-stone-600 mb-6">{reviewConfirm.hotel.name}</p>
-                            
-                            <div className="bg-stone-50 rounded-2xl p-4 mb-6 overflow-y-auto flex-1 border border-stone-200 scrollbar-hide">
-                                <p className="text-[10px] font-black uppercase text-stone-400 mb-2 tracking-widest">Trạng thái hiện tại</p>
-                                <div className="mb-5">
-                                    <span className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider text-white shadow-sm ${reviewConfirm.hotel.status === 'pending_review' ? 'bg-purple-600' : 'bg-red-600'}`}>
-                                        {reviewConfirm.hotel.status === 'pending_review' ? 'Cần Review Gấp' : 'Đang bị báo lỗi'}
-                                    </span>
-                                </div>
+                        {(() => {
+                            const { action, hotel } = reviewConfirm;
+                            const isRestore = action === 'restore';
+                            const isApprove = action === 'approve';
 
-                                <p className="text-[10px] font-black uppercase text-stone-400 mb-2 tracking-widest">Danh sách báo lỗi từ người dùng</p>
-                                <div className="space-y-3">
-                                    {reports.filter(r => r.hotelId === reviewConfirm.hotel.id).length > 0 ? (
-                                        reports.filter(r => r.hotelId === reviewConfirm.hotel.id).map((r, idx) => (
-                                            <div key={idx} className="bg-white p-3 rounded-xl border border-red-100 shadow-sm relative overflow-hidden">
-                                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500"></div>
-                                                <p className="text-xs font-bold text-red-700">{getReasonText(r.reason)}</p>
-                                                {r.details && <p className="text-[11px] text-stone-600 mt-1.5 italic">"{r.details}"</p>}
-                                                <p className="text-[8px] text-stone-400 font-bold mt-2 uppercase tracking-wider">{new Date(r.reportedAt).toLocaleString('vi-VN')}</p>
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <p className="text-xs text-stone-500 italic bg-white p-3 rounded-xl border border-stone-200">Không có báo cáo nào hoặc đã được dọn dẹp.</p>
-                                    )}
-                                </div>
-                            </div>
+                            const iconMap = {
+                                approve: { name: 'check-circle', color: 'bg-emerald-50 text-emerald-600 rotate-3' },
+                                reject: { name: 'eye-off', color: 'bg-purple-50 text-purple-600 -rotate-3' },
+                                restore: { name: 'refresh-cw', color: 'bg-blue-50 text-blue-600' }
+                            };
+                            const titleMap = {
+                                approve: 'Xác nhận Duyệt Lại',
+                                reject: 'Xác nhận Tạm Ẩn',
+                                restore: 'Xác nhận Khôi Phục'
+                            };
 
-                            <div className="flex gap-3 shrink-0">
-                                <button onClick={() => setReviewConfirm(null)} className="flex-1 py-3.5 bg-stone-200 text-stone-700 rounded-2xl font-black uppercase text-[11px] tracking-widest active:scale-95 transition-all hover:bg-stone-300">Hủy</button>
-                                <button 
-                                    onClick={() => {
-                                        if (reviewConfirm.action === 'approve') handleReviewApprove(reviewConfirm.hotel);
-                                        else handleReviewReject(reviewConfirm.hotel);
-                                        setReviewConfirm(null);
-                                    }} 
-                                    className={`flex-1 py-3.5 text-white rounded-2xl font-black shadow-xl active:scale-95 transition-all uppercase text-[11px] tracking-widest hover:brightness-110 ${reviewConfirm.action === 'approve' ? 'bg-emerald-600' : 'bg-purple-600'}`}
-                                >
-                                    Xác nhận
-                                </button>
-                            </div>
-                        </div>
+                            return (
+                                <div className="bg-white w-full max-w-md rounded-[40px] shadow-2xl p-6 sm:p-8 flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+                                    <div className={`w-16 h-16 rounded-3xl flex items-center justify-center mx-auto mb-4 transform ${iconMap[action].color}`}>
+                                        <Icon name={iconMap[action].name} size={32} />
+                                    </div>
+                                    <h3 className="text-xl font-black text-stone-900 uppercase mb-2 tracking-tight text-center">
+                                        {titleMap[action]}
+                                    </h3>
+                                    <p className="text-center text-sm font-bold text-stone-600 mb-6">{hotel.name}</p>
+                                    
+                                    <div className="bg-stone-50 rounded-2xl p-4 mb-6 overflow-y-auto flex-1 border border-stone-200 scrollbar-hide">
+                                        {isRestore ? (
+                                            <>
+                                                <p className="text-[10px] font-black uppercase text-stone-400 mb-2 tracking-widest">Thay đổi trạng thái</p>
+                                                <div className="flex items-center flex-wrap gap-2 mb-2">
+                                                    <span className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider text-white shadow-sm ${hotel.status === 'inactive' ? 'bg-stone-500' : 'bg-red-700'}`}>
+                                                        {hotel.status === 'inactive' ? 'Đã Ẩn' : 'Trong rác'}
+                                                    </span>
+                                                    <Icon name="arrow-right" size={14} className="text-stone-400" />
+                                                    <span className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider text-white shadow-sm bg-emerald-600">
+                                                        Approved
+                                                    </span>
+                                                </div>
+                                                <p className="text-[10px] text-stone-500 italic mt-3 leading-relaxed">
+                                                    * Lữ quán sẽ được khôi phục và hiển thị công khai trở lại trên bản đồ.
+                                                </p>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <p className="text-[10px] font-black uppercase text-stone-400 mb-2 tracking-widest">Thay đổi trạng thái</p>
+                                                <div className="flex items-center flex-wrap gap-2 mb-2">
+                                                    <span className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider text-white shadow-sm ${hotel.status === 'pending_review' ? 'bg-purple-600' : 'bg-red-600'}`}>
+                                                        {hotel.status === 'pending_review' ? 'Cần Review Gấp' : 'Đang bị báo lỗi'}
+                                                    </span>
+                                                    <Icon name="arrow-right" size={14} className="text-stone-400" />
+                                                    <span className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider text-white shadow-sm ${isApprove ? 'bg-emerald-600' : 'bg-stone-500'}`}>
+                                                        {isApprove ? 'Approved (Khôi phục)' : 'Inactive (Tạm ẩn)'}
+                                                    </span>
+                                                </div>
+                                                <p className="text-[10px] text-stone-500 italic mb-5 leading-relaxed">
+                                                    {isApprove 
+                                                        ? '* Lữ quán sẽ được hiển thị công khai trên bản đồ và các báo cáo cũ sẽ được dọn dẹp.'
+                                                        : '* Lữ quán sẽ bị ẩn khỏi hệ thống công khai nhưng dữ liệu vẫn được giữ lại để kiểm tra.'}
+                                                </p>
+
+                                                <p className="text-[10px] font-black uppercase text-stone-400 mb-2 tracking-widest">Danh sách báo lỗi từ người dùng</p>
+                                                <div className="space-y-3">
+                                                    {reports.filter(r => r.hotelId === hotel.id).length > 0 ? (
+                                                        reports.filter(r => r.hotelId === hotel.id).map((r, idx) => (
+                                                            <div key={idx} className="bg-white p-3 rounded-xl border border-red-100 shadow-sm relative overflow-hidden">
+                                                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500"></div>
+                                                                <p className="text-xs font-bold text-red-700">{getReasonText(r.reason)}</p>
+                                                                {r.details && <p className="text-[11px] text-stone-600 mt-1.5 italic">"{r.details}"</p>}
+                                                                <p className="text-[8px] text-stone-400 font-bold mt-2 uppercase tracking-wider">{new Date(r.reportedAt).toLocaleString('vi-VN')}</p>
+                                                            </div>
+                                                        ))
+                                                    ) : (
+                                                        <p className="text-xs text-stone-500 italic bg-white p-3 rounded-xl border border-stone-200">Không có báo cáo nào hoặc đã được dọn dẹp.</p>
+                                                    )}
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+
+                                    <div className="flex gap-3 shrink-0">
+                                        <button onClick={() => setReviewConfirm(null)} className="flex-1 py-3.5 bg-stone-200 text-stone-700 rounded-2xl font-black uppercase text-[11px] tracking-widest active:scale-95 transition-all hover:bg-stone-300">Hủy</button>
+                                        <button 
+                                            onClick={() => {
+                                                if (action === 'approve') handleReviewApprove(hotel);
+                                                else if (action === 'restore') handleRestoreHotel(hotel);
+                                                else handleReviewReject(hotel);
+                                                setReviewConfirm(null);
+                                            }} 
+                                            className={`flex-1 py-3.5 text-white rounded-2xl font-black shadow-xl active:scale-95 transition-all uppercase text-[11px] tracking-widest hover:brightness-110 ${isApprove || isRestore ? 'bg-emerald-600' : 'bg-purple-600'}`}
+                                        >
+                                            Xác nhận
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })()}
                     </div>
                 )}
             </main>
