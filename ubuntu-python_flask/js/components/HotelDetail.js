@@ -1,5 +1,29 @@
 const { useState, useCallback } = React; // Import useCallback
 
+const StatusBadge = ({ status }) => {
+    switch (status) {
+        case 'reported':
+            return (
+                <div className="absolute bottom-4 left-4 bg-red-600 text-white px-3 py-1 rounded-xl text-[8px] font-black shadow-xl flex items-center gap-2 uppercase tracking-widest">
+                    <Icon name="flag" size={12} /> Đang bị báo lỗi
+                </div>
+            );
+        case 'pending_review':
+            return (
+                <div className="absolute bottom-4 left-4 bg-purple-600 text-white px-3 py-1 rounded-xl text-[8px] font-black shadow-xl flex items-center gap-2 uppercase tracking-widest animate-pulse">
+                    <Icon name="shield-alert" size={12} /> Cần Review Gấp
+                </div>
+            );
+        case 'approved':
+        default:
+            return (
+                <div className="absolute bottom-4 left-4 bg-orange-700 text-white px-3 py-1 rounded-xl text-[8px] font-black shadow-xl flex items-center gap-2 uppercase tracking-widest">
+                    <Icon name="check-circle" size={12} /> Đã xác thực
+                </div>
+            );
+    }
+};
+
 const HotelDetail = ({ hotel, onClose, onShare, formatDate, handleImageError, onToast }) => {
     if (!hotel) return null;
 
@@ -23,9 +47,7 @@ const HotelDetail = ({ hotel, onClose, onShare, formatDate, handleImageError, on
                     <button onClick={onClose} className="absolute top-3 right-3 sm:top-4 sm:right-4 z-[60] bg-stone-900/60 backdrop-blur-md text-white p-2 sm:p-2.5 rounded-full hover:bg-stone-900/80 active:scale-90 transition-all shadow-xl border border-white/20">
                         <Icon name="x" size={20} />
                     </button>
-                    <div className="absolute bottom-4 left-4 bg-orange-700 text-white px-3 py-1 rounded-xl text-[8px] font-black shadow-xl flex items-center gap-2 uppercase tracking-widest">
-                        <Icon name="check-circle" size={12} /> Đã xác thực
-                    </div>
+                    <StatusBadge status={hotel.status} />
                 </div>
                 
                 <div id="hotel-detail-content" className="p-6 sm:p-8 flex-1 overflow-y-auto bg-white scrollbar-hide">

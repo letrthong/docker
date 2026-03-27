@@ -206,10 +206,36 @@ def reject_hotel_request(request_id):
         write_requests(remaining_requests)
     return jsonify({HotelField.SUCCESS: True, HotelField.MESSAGE: "Từ chối yêu cầu thành công"})
 
+@app.route('/api/hotelconnect/v1/requests/<request_id>', methods=['PUT'])
+@cross_origin()
+def update_hotel_request(request_id):
+    req_data = request.json
+    if not req_data:
+        return jsonify({HotelField.ERROR: "Dữ liệu không hợp lệ"}), 400
+
+    with requests_lock:
+        all_requests = read_requests()
+        found = False
+        updated_request = None
+        for i, req in enumerate(all_requests):
+            if req.get('id') == request_id:
+                for k, v in req_data.items():
+                    if k not in [HotelField.ID, HotelField.CREATED_AT]:
+                        all_requests[i][k] = v
+                all_requests[i][HotelField.UPDATED_AT] = datetime.now().strftime("%Y-%m-%d")
+                found = True
+                updated_request = all_requests[i]
+                break
+        if not found:
+            return jsonify({HotelField.ERROR: "Không tìm thấy yêu cầu"}), 404
+        write_requests(all_requests)
+
+    return jsonify({HotelField.SUCCESS: True, HotelField.MESSAGE: "Cập nhật yêu cầu thành công", HotelField.DATA: updated_request})
 
 # --- API Quản lý Báo cáo Lỗi ---
 HOTEL_REPORTS_FILE_PATH = os.path.join(CONFIG_DIR, "hotel_reports.json")
 reports_lock = threading.Lock()
+history_lock = threading.Lock()
 
 def _find_hotel_details_by_id(hotel_id):
     """Helper to find hotel details (name, locationName) across all hotel files."""
@@ -256,10 +282,13 @@ def submit_hotel_report():
         HotelField.STATUS: HotelStatus.PENDING.value
     }
     
+    report_count_for_hotel = 0
     with reports_lock:
         reports = read_reports()
         reports.append(new_report)
         write_reports(reports)
+        # Đếm tổng số báo cáo cho khách sạn này
+        report_count_for_hotel = sum(1 for r in reports if r.get(HotelField.HOTEL_ID) == hotel_id)
 
     # --- START: Update hotel status to 'reported' ---
     hotel_to_update = None
@@ -288,7 +317,12 @@ def submit_hotel_report():
     
     if hotel_to_update and target_file and city_hotels:
         try:
-            hotel_to_update[HotelField.STATUS] = HotelStatus.REPORTED.value
+            # Tự động chuyển sang PENDING_REVIEW nếu có từ 5 báo cáo trở lên
+            if report_count_for_hotel >= 5:
+                hotel_to_update[HotelField.STATUS] = HotelStatus.PENDING_REVIEW.value
+            else:
+                hotel_to_update[HotelField.STATUS] = HotelStatus.REPORTED.value
+
             hotel_to_update[HotelField.UPDATED_AT] = datetime.now().strftime("%Y-%m-%d")
             with open(target_file, 'w', encoding='utf-8') as f:
                 json.dump(city_hotels, f, ensure_ascii=False, indent=4)
@@ -380,7 +414,107 @@ def delete_hotel_report(report_id):
         
     return jsonify({HotelField.SUCCESS: True, HotelField.MESSAGE: "Xóa báo cáo thành công"})
 
+@app.route('/api/hotelconnect/v1/hotels/status/<status_name>', methods=['GET'])
+@cross_origin()
+def get_hotels_by_status(status_name):
+    valid_statuses = [s.value for s in HotelStatus]
+    if status_name not in valid_statuses:
+        return jsonify({HotelField.ERROR: "Trạng thái không hợp lệ"}), 400
+
+    hotels_with_status = []
+    with schema_lock:
+        schemas = read_schema()
+        for schema in schemas:
+            file_path = os.path.join(CONFIG_DIR, schema.get(HotelField.FILE_PATH_ID))
+            if os.path.exists(file_path):
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        hotels_in_file = json.load(f)
+                    for hotel in hotels_in_file:
+                        if hotel.get(HotelField.STATUS) == status_name:
+                            hotels_with_status.append(hotel)
+                except Exception as e:
+                    logging.error(f"Error processing file {file_path} for status '{status_name}': {e}")
     
+    hotels_with_status.sort(key=lambda h: h.get(HotelField.UPDATED_AT, ''), reverse=True)
+    return jsonify(hotels_with_status)
+    
+@app.route('/api/hotelconnect/v1/hotels/<hotel_id>/status', methods=['POST'])
+@cross_origin()
+def set_hotel_status(hotel_id):
+    req_data = request.json
+    new_status = req_data.get(HotelField.STATUS)
+    if not new_status:
+        return jsonify({HotelField.ERROR: "Thiếu trạng thái mới"}), 400
+    
+    valid_statuses = [s.value for s in HotelStatus]
+    if new_status not in valid_statuses:
+        return jsonify({HotelField.ERROR: "Trạng thái không hợp lệ"}), 400
+
+    with schema_lock:
+        schemas = read_schema()
+        hotel_found, target_file, city_hotels, updated_hotel = False, None, [], None
+
+        for schema in schemas:
+            file_path = os.path.join(CONFIG_DIR, schema.get(HotelField.FILE_PATH_ID))
+            if os.path.exists(file_path):
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    hotels = json.load(f)
+                for i, h in enumerate(hotels):
+                    if h.get(HotelField.ID) == hotel_id:
+                        hotel_found, target_file, city_hotels = True, file_path, hotels
+                        city_hotels[i][HotelField.STATUS] = new_status
+                        city_hotels[i][HotelField.UPDATED_AT] = datetime.now().strftime("%Y-%m-%d")
+                        updated_hotel = city_hotels[i]
+                        break
+            if hotel_found: break
+        
+        if not hotel_found:
+            return jsonify({HotelField.ERROR: "Không tìm thấy khách sạn"}), 404
+
+        try:
+            with open(target_file, 'w', encoding='utf-8') as f:
+                json.dump(city_hotels, f, ensure_ascii=False, indent=4)
+        except Exception as e:
+            return jsonify({HotelField.ERROR: f"Lỗi khi ghi file: {str(e)}"}), 500
+
+        # --- START: TỰ ĐỘNG LƯU TRỮ VÀ XÓA BÁO CÁO CŨ KHI DUYỆT LẠI ---
+        if new_status == HotelStatus.APPROVED.value:
+            with reports_lock:
+                reports = read_reports()
+                reports_to_keep = []
+                reports_to_archive = []
+                for r in reports:
+                    if r.get(HotelField.HOTEL_ID) == hotel_id:
+                        r['archivedAt'] = datetime.now(timezone.utc).isoformat()
+                        r['resolution'] = 'approved_by_admin'
+                        reports_to_archive.append(r)
+                    else:
+                        reports_to_keep.append(r)
+                
+                if reports_to_archive:
+                    write_reports(reports_to_keep) # Cập nhật lại file chính
+                    
+                    # Backup sang file history
+                    with history_lock:
+                        history = []
+                        history_file = os.path.join(CONFIG_DIR, "hotel_reports_history.json")
+                        if os.path.exists(history_file):
+                            try:
+                                with open(history_file, 'r', encoding='utf-8') as f:
+                                    history = json.load(f)
+                            except Exception:
+                                pass
+                        history.extend(reports_to_archive)
+                        try:
+                            with open(history_file, 'w', encoding='utf-8') as f:
+                                json.dump(history, f, ensure_ascii=False, indent=4)
+                        except Exception as e:
+                            logging.error(f"Failed to write history: {e}")
+        # --- END: TỰ ĐỘNG LƯU TRỮ ---
+
+    return jsonify({HotelField.SUCCESS: True, HotelField.MESSAGE: f"Cập nhật trạng thái thành công sang '{new_status}'", HotelField.DATA: updated_hotel})
+
 @app.route('/api/hotelconnect/v1/hotels/<hotel_id>', methods=['PUT'])
 @cross_origin()
 def update_hotel(hotel_id):
@@ -408,7 +542,7 @@ def update_hotel(hotel_id):
                                 city_hotels = hotels
                                 # Cập nhật các trường thông tin cho phép
                                 for k, v in req_data.items():
-                                    if k not in [HotelField.ID, HotelField.CREATED_AT, HotelField.STATUS]:
+                                    if k not in [HotelField.ID, HotelField.CREATED_AT]: # Cho phép cập nhật status
                                         city_hotels[i][k] = v
                                 city_hotels[i][HotelField.UPDATED_AT] = datetime.now().strftime("%Y-%m-%d")
                                 updated_hotel = city_hotels[i]

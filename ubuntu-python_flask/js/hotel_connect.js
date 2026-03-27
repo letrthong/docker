@@ -38,6 +38,7 @@ const App = () => {
     const [adminPass, setAdminPass] = useState("");
     const [adminError, setAdminError] = useState("");
     const [adminTab, setAdminTab] = useState('approved');
+    const [pendingReviewHotels, setPendingReviewHotels] = useState([]);
     const [reports, setReports] = useState([]);
     const [editingHotel, setEditingHotel] = useState(null);
     const [toastMessage, setToastMessage] = useState("");
@@ -77,6 +78,12 @@ const App = () => {
                     console.error("Lỗi khi tải danh sách báo cáo:", err);
                     setToastMessage(err.message || "Không thể tải báo cáo.");
                 });
+            HotelAPI.fetchHotelsByStatus('pending_review')
+                .then(data => setPendingReviewHotels(data))
+                .catch(err => {
+                    console.error("Lỗi khi tải danh sách cần review:", err);
+                    setToastMessage(err.message || "Không thể tải danh sách cần review.");
+                });
         }
     }, [isAdmin]);
 
@@ -112,7 +119,8 @@ const App = () => {
 
                 if (savedHotelId) {
                     const hotelToSelect = hotelsData.find(h => h.id === savedHotelId);
-                    if (hotelToSelect) {
+                    const isPubliclyVisible = hotelToSelect && (hotelToSelect.status === 'approved' || hotelToSelect.status === 'reported');
+                    if (hotelToSelect && isPubliclyVisible) {
                         setSelectedHotel(hotelToSelect);
                     } else {
                         // Nếu không tìm thấy (VD: người dùng đã đổi sang tỉnh khác hoặc hotel đã bị xóa), 
@@ -179,7 +187,15 @@ const App = () => {
     }, [selectedHotel, filterCity]);
 
     const filteredHotels = useMemo(() => {
-        const list = isAdmin && adminTab === 'pending' ? pendingRequests : (hotels || []);
+        let list;
+        if (isAdmin) {
+            if (adminTab === 'pending') list = pendingRequests;
+            else if (adminTab === 'pending_review') list = pendingReviewHotels;
+            else list = hotels || [];
+        } else {
+            list = (hotels || []).filter(h => h.status === 'approved' || h.status === 'reported');
+        }
+
         const normalizedSearchTerm = removeVietnameseTones(searchTerm); // Không cần toLowerCase() nữa vì hàm trên đã tự xử lý
         
         const searchResults = list.filter(hotel => {
@@ -199,7 +215,7 @@ const App = () => {
             }
         }
         return searchResults;
-    }, [hotels, pendingRequests, searchTerm, filterCity, isAdmin, adminTab, selectedHotel]);
+    }, [hotels, pendingRequests, pendingReviewHotels, searchTerm, filterCity, isAdmin, adminTab, selectedHotel]);
 
     // Tự động ẩn Toast thông báo sau 3 giây
     useEffect(() => {
@@ -249,16 +265,67 @@ const App = () => {
             });
     };
 
+    const handleReviewApprove = (hotel) => {
+        HotelAPI.setHotelStatus(hotel.id, 'approved')
+            .then((response) => {
+                setPendingReviewHotels(prev => prev.filter(h => h.id !== hotel.id));
+                // Thêm khách sạn lại vào danh sách đã duyệt nếu đang xem khu vực đó
+                if (response.data.locationName === filterCity) {
+                    setHotels(prev => [...prev, response.data]);
+                }
+                refreshReports(); // Tự động làm mới danh sách báo cáo
+                setToastMessage(`Đã duyệt lại "${hotel.name}" và dọn dẹp các báo cáo cũ.`);
+            })
+            .catch(err => {
+                setToastMessage(err.message || "Có lỗi xảy ra khi duyệt lại.");
+            });
+    };
+
+    const handleReviewReject = (hotel) => {
+        HotelAPI.setHotelStatus(hotel.id, 'inactive')
+            .then(() => {
+                setPendingReviewHotels(prev => prev.filter(h => h.id !== hotel.id));
+                setToastMessage(`Đã tạm ẩn "${hotel.name}".`);
+            })
+            .catch(err => {
+                setToastMessage(err.message || "Có lỗi xảy ra khi tạm ẩn.");
+            });
+    };
+
+    const onProcessReport = (hotelId) => {
+        // Tìm khách sạn từ tất cả các danh sách có thể có để lấy thông tin đầy đủ nhất
+        const hotelToEdit = hotels.find(h => h.id === hotelId) || 
+                            pendingRequests.find(h => h.id === hotelId) ||
+                            pendingReviewHotels.find(h => h.id === hotelId);
+        
+        if (hotelToEdit) {
+            setEditingHotel(hotelToEdit);
+        } else {
+            setToastMessage("Không tìm thấy thông tin chi tiết của lữ quán này.");
+        }
+    };
+
     const startEditHotel = (hotel, e) => {
         e.stopPropagation();
         setEditingHotel(hotel);
     };
 
     const handleEditSuccess = (updatedHotel) => {
-        setHotels(prev => prev.map(h => h.id === updatedHotel.id ? updatedHotel : h));
+        if (updatedHotel.status === 'pending') {
+            setPendingRequests(prev => prev.map(h => h.id === updatedHotel.id ? updatedHotel : h));
+        } else {
+            setHotels(prev => prev.map(h => h.id === updatedHotel.id ? updatedHotel : h));
+            if (updatedHotel.status === 'pending_review') {
+                setPendingReviewHotels(prev => prev.map(h => h.id === updatedHotel.id ? updatedHotel : h));
+            }
+        }
+
         if (selectedHotel?.id === updatedHotel.id) {
             setSelectedHotel(updatedHotel);
         }
+
+        // Tải lại danh sách báo cáo và cần review để cập nhật giao diện
+        refreshReports();
     };
 
     const deleteHotel = (id, e) => {
@@ -340,6 +407,9 @@ const App = () => {
                                 <button onClick={() => setAdminTab('pending')} className={`px-2 py-1 md:px-3 md:py-1.5 rounded text-[8px] md:text-[10px] lg:text-xs font-bold uppercase transition-all relative ${adminTab === 'pending' ? 'bg-white text-stone-900 shadow' : 'text-white/60 hover:text-white'}`}>
                                     Chờ Duyệt {pendingRequests.length > 0 && <span className="ml-1 opacity-70">({pendingRequests.length})</span>}
                                 </button>
+                                <button onClick={() => setAdminTab('pending_review')} className={`px-2 py-1 md:px-3 md:py-1.5 rounded text-[8px] md:text-[10px] lg:text-xs font-bold uppercase transition-all relative ${adminTab === 'pending_review' ? 'bg-purple-600 text-white shadow' : 'text-white/60 hover:text-white'}`}>
+                                    Cần Review {pendingReviewHotels.length > 0 && <span className="ml-1 opacity-70">({pendingReviewHotels.length})</span>}
+                                </button>
                                 <button onClick={() => setAdminTab('reports')} className={`px-2 py-1 md:px-3 md:py-1.5 rounded text-[8px] md:text-[10px] lg:text-xs font-bold uppercase transition-all relative ${adminTab === 'reports' ? 'bg-white text-stone-900 shadow' : 'text-white/60 hover:text-white'}`}>Báo cáo {reports.length > 0 && <span className="ml-1 opacity-70">({reports.length})</span>}</button>
                             </div>
                         </>
@@ -413,6 +483,7 @@ const App = () => {
                             <div className="flex gap-2 mt-2 sm:hidden">
                                 <button onClick={() => setAdminTab('approved')} className={`flex-1 py-1.5 rounded-lg text-[9px] font-bold uppercase transition-all ${adminTab === 'approved' ? 'bg-moss text-white shadow' : 'bg-stone-200 text-stone-600'}`}>Đã Duyệt</button>
                                 <button onClick={() => setAdminTab('pending')} className={`flex-1 py-1.5 rounded-lg text-[9px] font-bold uppercase transition-all ${adminTab === 'pending' ? 'bg-orange-700 text-white shadow' : 'bg-stone-200 text-stone-600'}`}>Chờ Duyệt {pendingRequests.length > 0 && `(${pendingRequests.length})`}</button>
+                                <button onClick={() => setAdminTab('pending_review')} className={`flex-1 py-1.5 rounded-lg text-[9px] font-bold uppercase transition-all ${adminTab === 'pending_review' ? 'bg-purple-700 text-white shadow' : 'bg-stone-200 text-stone-600'}`}>Cần Review {pendingReviewHotels.length > 0 && `(${pendingReviewHotels.length})`}</button>
                                 <button onClick={() => setAdminTab('reports')} className={`flex-1 py-1.5 rounded-lg text-[9px] font-bold uppercase transition-all ${adminTab === 'reports' ? 'bg-red-700 text-white shadow' : 'bg-stone-200 text-stone-600'}`}>Báo cáo {reports.length > 0 && `(${reports.length})`}</button>
                             </div>
                         )}
@@ -420,7 +491,7 @@ const App = () => {
 
                     <div className="flex-1 overflow-y-auto bg-stone-50 scrollbar-hide pb-24">
                         {isAdmin && adminTab === 'reports' ? (
-                        <ReportManager reports={reports} setFilterCity={setFilterCity} onToast={setToastMessage} onReportDeleted={refreshReports} />
+                        <ReportManager reports={reports} setFilterCity={setFilterCity} onToast={setToastMessage} onReportDeleted={refreshReports} onProcessReport={onProcessReport} />
                         ) : (
                             <div className="p-3 space-y-3">
                                 {isLoading ? (
@@ -464,8 +535,16 @@ const App = () => {
 
                                             {isAdmin && adminTab === 'pending' && (
                                                 <div className="absolute top-2 right-2 flex gap-1">
+                                                    <button onClick={(e) => startEditHotel(hotel, e)} className="bg-blue-600 text-white p-2 rounded-lg shadow-lg" title="Sửa thông tin"><Icon name="edit" size={12} /></button>
                                                     <button onClick={(e) => { e.stopPropagation(); approveRequest(hotel); }} className="bg-emerald-700 text-white p-2 rounded-lg shadow-lg"><Icon name="check" size={12} /></button>
                                                     <button onClick={(e) => { e.stopPropagation(); rejectRequest(hotel.id, hotel.name); }} className="bg-red-700 text-white p-2 rounded-lg shadow-lg"><Icon name="trash-2" size={12} /></button>
+                                                </div>
+                                            )}
+                                            {isAdmin && adminTab === 'pending_review' && (
+                                                <div className="absolute top-2 right-2 flex gap-1">
+                                                    <button onClick={(e) => startEditHotel(hotel, e)} className="bg-blue-600 text-white p-2 rounded-lg shadow-lg" title="Sửa thông tin"><Icon name="edit" size={12} /></button>
+                                                    <button onClick={(e) => { e.stopPropagation(); handleReviewApprove(hotel); }} className="bg-emerald-700 text-white p-2 rounded-lg shadow-lg" title="Duyệt lại"><Icon name="check" size={12} /></button>
+                                                    <button onClick={(e) => { e.stopPropagation(); handleReviewReject(hotel); }} className="bg-purple-700 text-white p-2 rounded-lg shadow-lg" title="Tạm ẩn"><Icon name="eye-off" size={12} /></button>
                                                 </div>
                                             )}
                                             {isAdmin && adminTab === 'approved' && (

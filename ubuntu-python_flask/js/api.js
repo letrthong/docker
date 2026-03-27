@@ -113,6 +113,21 @@ const HotelAPI = {
         return await response.json();
     },
 
+    // Cập nhật một yêu cầu khách sạn đang chờ duyệt
+    updateHotelRequest: async (requestId, requestData) => {
+        if (!HotelAPI.baseUrl) await HotelAPI.init();
+        const response = await fetch(`${HotelAPI.baseUrl}/api/hotelconnect/v1/requests/${requestId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestData)
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({ error: "Lỗi không xác định" }));
+            throw new Error(err.error || "Lỗi khi cập nhật yêu cầu");
+        }
+        return await response.json();
+    },
+
     // Gửi báo cáo lỗi cho một khách sạn
     submitReport: async (reportData) => {
         if (!HotelAPI.baseUrl) await HotelAPI.init();
@@ -157,6 +172,31 @@ const HotelAPI = {
         if (!response.ok) {
             const err = await response.json().catch(() => ({ error: "Lỗi không xác định" }));
             throw new Error(err.error || "Lỗi khi xóa báo cáo");
+        }
+        return await response.json();
+    },
+
+    // Lấy danh sách khách sạn theo trạng thái
+    fetchHotelsByStatus: async (status) => {
+        if (!HotelAPI.baseUrl) await HotelAPI.init();
+        const response = await fetch(`${HotelAPI.baseUrl}/api/hotelconnect/v1/hotels/status/${status}`);
+        if (!response.ok) {
+            throw new Error(`Lỗi khi tải danh sách khách sạn với trạng thái ${status}`);
+        }
+        return await response.json();
+    },
+
+    // Cập nhật trạng thái của khách sạn
+    setHotelStatus: async (hotelId, status) => {
+        if (!HotelAPI.baseUrl) await HotelAPI.init();
+        const response = await fetch(`${HotelAPI.baseUrl}/api/hotelconnect/v1/hotels/${hotelId}/status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: status })
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({ error: "Lỗi không xác định" }));
+            throw new Error(err.error || "Lỗi khi cập nhật trạng thái");
         }
         return await response.json();
     },

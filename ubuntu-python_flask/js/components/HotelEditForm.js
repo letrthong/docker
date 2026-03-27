@@ -83,7 +83,11 @@ const HotelEditForm = ({ hotel, onClose, onSaveSuccess, onToast }) => {
             lng: pickerPos.lng
         };
 
-        HotelAPI.updateHotel(hotel.id, updatedData)
+        const updatePromise = hotel.status === 'pending'
+            ? HotelAPI.updateHotelRequest(hotel.id, updatedData)
+            : HotelAPI.updateHotel(hotel.id, updatedData);
+
+        updatePromise
             .then(response => {
                 onSaveSuccess(response.data);
                 onClose();
