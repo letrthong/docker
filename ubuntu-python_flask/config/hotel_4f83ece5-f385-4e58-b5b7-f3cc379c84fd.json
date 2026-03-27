@@ -6,29 +6,13 @@
         "phone": "0356148008",
         "website": "",
         "locationName": "Đà Lạt",
-        "status": "approved",
+        "status": "deleted",
         "rating": 5,
         "createdAt": "2026-03-26",
         "updatedAt": "2026-03-27",
-        "description": "Do chủ động làm đơn tố giác, 10 giám đốc, đại diện nhà thầu tại dự án Bệnh viện Bạch Mai 2, Việt Đức 2 được miễn truy cứu trách nhiệm hình sự với hành vi đưa hối lộ 100 tỷ đồng.",
+        "description": "PHỐ CỔ QUÁN – ĐIỂM HẸN NHẬU CHUẨN VỊ HÀ NỘI GIỮA LÒNG SÀI GÒN!!!\nAnh em đang tìm chỗ lai rai chill tới bến, đồ ăn ngon – giá hợp lý – không khí rộn ràng?\n👉 Phố Cổ Quán chính là điểm hẹn không thể bỏ lỡ!\n🌆 Không gian đậm chất Hà Nội xưa – vừa cổ kính vừa ấm cúng, ngồi lai rai cùng bạn bè là quên lối về.\n💥 Món ăn ngon đúng vị – không gian đậm chất Hà Nội xưa\n💥 Nhân viên thân thiện – phục vụ nhanh\n💥 Bia hơi mát lạnh, giá cực dễ chịu\n👉ĐẶC BIỆT: UỐNG 6 BOM - TẶNG 1 BOM\n📍 Ghé ngay Phố Cổ Quán để “uống hết mình – chill hết cỡ”!",
         "image": "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&q=80&w=600",
         "lat": 11.926593963097336,
         "lng": 108.44377040863039
-    },
-    {
-        "id": "8cd1f1ab-0d34-446f-97dc-a29aa3203e2f",
-        "name": "fdfdfsdfds",
-        "address": "xxx",
-        "phone": "sss",
-        "website": "xxx",
-        "locationName": "Đà Lạt",
-        "status": "approved",
-        "rating": 5,
-        "createdAt": "2026-03-26",
-        "updatedAt": "2026-03-27",
-        "description": "xx",
-        "image": "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&q=80&w=600",
-        "lat": 11.853082385870477,
-        "lng": 108.4288787841797
     }
 ]

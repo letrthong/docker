@@ -448,7 +448,7 @@ const App = () => {
     return (
         <div className="absolute inset-0 flex flex-col bg-stone-50 text-stone-900 overflow-hidden font-sans select-none">
             {/* Header */}
-            <header className={`shrink-0 px-4 md:px-8 lg:px-10 pt-[max(env(safe-area-inset-top),1.25rem)] pb-3 md:py-4 shadow-sm flex items-center justify-between z-30 transition-all duration-300 ${isAdmin ? 'bg-stone-800' : 'bg-moss'} text-white`}>
+            <header className={`shrink-0 px-4 md:px-8 lg:px-10 pt-[max(env(safe-area-inset-top),1.25rem)] pb-3 md:pt-8 md:pb-4 shadow-sm flex items-center justify-between z-30 transition-all duration-300 ${isAdmin ? 'bg-stone-800' : 'bg-moss'} text-white`}>
                 <div className="flex items-center gap-2">
                     <div className="p-1.5 bg-white/10 rounded-lg backdrop-blur-md">
                         <Icon name="home" size={22} />
@@ -457,7 +457,7 @@ const App = () => {
                         <h1 className="text-base md:text-xl lg:text-2xl font-black tracking-tight flex items-center gap-1.5 leading-normal py-0.5">
                             Lữ Quán {isAdmin && <span className="text-[8px] md:text-[10px] bg-red-500 px-1.5 py-0.5 rounded tracking-widest font-bold uppercase">Admin</span>}
                         </h1>
-                        <p className="text-[7px] md:text-[10px] lg:text-xs opacity-80 font-bold uppercase tracking-widest mt-0.5 md:mt-1">Luquan.vn - Kết nối trực tiếp khách sạn</p>
+                        <p className="text-[7px] md:text-[10px] lg:text-xs opacity-80 font-bold  tracking-widest mt-0.5 md:mt-1">Luquan.vn - Kết nối trực tiếp khách sạn</p>
                     </div>
                 </div>
                 
@@ -876,28 +876,28 @@ const App = () => {
 
             {/* Footer - Optimized for Desktop & Mobile */}
             <footer className="absolute bottom-0 left-0 w-full z-40 bg-white/80 backdrop-blur-md border-t border-white/50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-                <div className="hidden md:flex py-3 px-6 md:px-8 lg:px-10 items-center justify-center gap-4">
-                    <button onClick={() => setShowAboutDialog(true)} className="text-stone-500 hover:text-stone-800 p-1 transition-all duration-200 hover:-translate-y-1" title="Thông tin">
-                        <Icon name="info" size={22} />
+                <div className="hidden md:flex py-1.5 px-6 md:px-8 lg:px-10 items-center justify-center gap-4">
+                    <button onClick={() => setShowAboutDialog(true)} className="text-stone-500 hover:text-stone-800 p-0.5 transition-all duration-200 hover:-translate-y-1" title="Thông tin">
+                        <Icon name="info" size={18} />
                     </button>
-                    <a href="https://nongtrang.vn/" target="_blank" className="inline-flex items-center gap-1.5 px-2 py-0.5 md:px-3 md:py-1 bg-blue-50/90 backdrop-blur text-blue-700 rounded-md text-[10px] md:text-xs font-black hover:bg-blue-100 hover:text-blue-900 transition-colors border border-blue-200/50">
-                        Vận hành bởi nongtrang.vn <Icon name="external-link" size={12} />
+                    <a href="https://nongtrang.vn/" target="_blank" className="inline-flex items-center gap-1.5 px-2 py-0.5 md:px-2 md:py-0.5 bg-blue-50/90 backdrop-blur text-blue-700 rounded-md text-[9px] md:text-[10px] font-black hover:bg-blue-100 hover:text-blue-900 transition-colors border border-blue-200/50">
+                        Vận hành bởi nongtrang.vn <Icon name="external-link" size={10} />
                     </a>
-                    <a href="https://github.com/letrthong/telua_open_hotel_connect" target="_blank" className="text-stone-500 hover:text-stone-800 p-1 transition-all duration-200 hover:-translate-y-1" title="Mã nguồn mở">
-                        <Icon name="github" size={22} />
+                    <a href="https://github.com/letrthong/telua_open_hotel_connect" target="_blank" className="text-stone-500 hover:text-stone-800 p-0.5 transition-all duration-200 hover:-translate-y-1" title="Mã nguồn mở">
+                        <Icon name="github" size={18} />
                     </a>
                 </div>
 
                 {/* Mobile Footer Area (Always visible text) */}
-                <div className="md:hidden px-3 py-2 pb-safe border-t border-white/30 flex justify-center items-center gap-4">
-                    <button onClick={() => setShowAboutDialog(true)} className="text-stone-500 hover:text-stone-800 p-1 transition-all duration-200 hover:-translate-y-1" title="Thông tin">
-                        <Icon name="info" size={24} />
+                <div className="md:hidden px-3 py-1 pb-safe border-t border-white/30 flex justify-center items-center gap-4">
+                    <button onClick={() => setShowAboutDialog(true)} className="text-stone-500 hover:text-stone-800 p-0.5 transition-all duration-200 hover:-translate-y-1" title="Thông tin">
+                        <Icon name="info" size={20} />
                     </button>
-                    <a href="https://nongtrang.vn/" target="_blank" className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50/90 backdrop-blur text-blue-700 rounded-lg text-[10px] font-black uppercase tracking-tight hover:bg-blue-100 hover:text-blue-900 transition-colors shadow-sm border border-blue-200/50">
-                        Vận hành bởi nongtrang.vn <Icon name="external-link" size={12} />
+                    <a href="https://nongtrang.vn/" target="_blank" className="inline-flex items-center gap-1.5 px-2 py-1 bg-blue-50/90 backdrop-blur text-blue-700 rounded-lg text-[9px] font-black uppercase tracking-tight hover:bg-blue-100 hover:text-blue-900 transition-colors shadow-sm border border-blue-200/50">
+                        Vận hành bởi nongtrang.vn <Icon name="external-link" size={10} />
                     </a>
-                    <a href="https://github.com/letrthong/telua_open_hotel_connect" target="_blank" className="text-stone-500 hover:text-stone-800 p-1 transition-all duration-200 hover:-translate-y-1" title="Mã nguồn mở">
-                        <Icon name="github" size={24} />
+                    <a href="https://github.com/letrthong/telua_open_hotel_connect" target="_blank" className="text-stone-500 hover:text-stone-800 p-0.5 transition-all duration-200 hover:-translate-y-1" title="Mã nguồn mở">
+                        <Icon name="github" size={20} />
                     </a>
                 </div>
             </footer>
