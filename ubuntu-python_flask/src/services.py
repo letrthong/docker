@@ -417,7 +417,7 @@ def delete_hotel_report(report_id):
 @app.route('/api/hotelconnect/v1/hotels/status/<status_name>', methods=['GET'])
 @cross_origin()
 def get_hotels_by_status(status_name):
-    valid_statuses = [s.value for s in HotelStatus]
+    valid_statuses = [s.value for s in HotelStatus] + ["deleted"]
     if status_name not in valid_statuses:
         return jsonify({HotelField.ERROR: "Trạng thái không hợp lệ"}), 400
 
@@ -447,7 +447,7 @@ def set_hotel_status(hotel_id):
     if not new_status:
         return jsonify({HotelField.ERROR: "Thiếu trạng thái mới"}), 400
     
-    valid_statuses = [s.value for s in HotelStatus]
+    valid_statuses = [s.value for s in HotelStatus] + ["deleted"]
     if new_status not in valid_statuses:
         return jsonify({HotelField.ERROR: "Trạng thái không hợp lệ"}), 400
 
@@ -478,8 +478,8 @@ def set_hotel_status(hotel_id):
         except Exception as e:
             return jsonify({HotelField.ERROR: f"Lỗi khi ghi file: {str(e)}"}), 500
 
-        # --- START: TỰ ĐỘNG LƯU TRỮ VÀ XÓA BÁO CÁO CŨ KHI DUYỆT LẠI ---
-        if new_status == HotelStatus.APPROVED.value:
+        # --- START: TỰ ĐỘNG LƯU TRỮ VÀ XÓA BÁO CÁO CŨ KHI REVIEW ---
+        if new_status in [HotelStatus.APPROVED.value, HotelStatus.INACTIVE.value, "deleted"]:
             with reports_lock:
                 reports = read_reports()
                 reports_to_keep = []
@@ -487,7 +487,7 @@ def set_hotel_status(hotel_id):
                 for r in reports:
                     if r.get(HotelField.HOTEL_ID) == hotel_id:
                         r['archivedAt'] = datetime.now(timezone.utc).isoformat()
-                        r['resolution'] = 'approved_by_admin'
+                        r['resolution'] = f'{new_status}_by_admin'
                         reports_to_archive.append(r)
                     else:
                         reports_to_keep.append(r)
@@ -495,10 +495,10 @@ def set_hotel_status(hotel_id):
                 if reports_to_archive:
                     write_reports(reports_to_keep) # Cập nhật lại file chính
                     
-                    # Backup sang file history
+                    # Backup sang file history riêng cho khách sạn
                     with history_lock:
                         history = []
-                        history_file = os.path.join(CONFIG_DIR, "hotel_reports_history.json")
+                        history_file = os.path.join(CONFIG_DIR, f"hotel_report_{hotel_id}.json")
                         if os.path.exists(history_file):
                             try:
                                 with open(history_file, 'r', encoding='utf-8') as f:

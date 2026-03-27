@@ -42,6 +42,7 @@ const App = () => {
     const [reports, setReports] = useState([]);
     const [editingHotel, setEditingHotel] = useState(null);
     const [toastMessage, setToastMessage] = useState("");
+    const [reviewConfirm, setReviewConfirm] = useState(null); // { action: 'approve' | 'reject', hotel: object }
 
     // Tự động Load dữ liệu từ Backend khi ứng dụng khởi chạy
     useEffect(() => {
@@ -78,12 +79,16 @@ const App = () => {
                     console.error("Lỗi khi tải danh sách báo cáo:", err);
                     setToastMessage(err.message || "Không thể tải báo cáo.");
                 });
-            HotelAPI.fetchHotelsByStatus('pending_review')
-                .then(data => setPendingReviewHotels(data))
-                .catch(err => {
-                    console.error("Lỗi khi tải danh sách cần review:", err);
-                    setToastMessage(err.message || "Không thể tải danh sách cần review.");
-                });
+            Promise.all([
+                HotelAPI.fetchHotelsByStatus('pending_review'),
+                HotelAPI.fetchHotelsByStatus('reported')
+            ]).then(([pending, reported]) => {
+                const combined = [...pending, ...reported].sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+                setPendingReviewHotels(combined);
+            }).catch(err => {
+                console.error("Lỗi khi tải danh sách cần review:", err);
+                setToastMessage(err.message || "Không thể tải danh sách cần review.");
+            });
         }
     }, [isAdmin]);
 
@@ -191,7 +196,9 @@ const App = () => {
         if (isAdmin) {
             if (adminTab === 'pending') list = pendingRequests;
             else if (adminTab === 'pending_review') list = pendingReviewHotels;
-            else list = hotels || [];
+            else if (adminTab === 'inactive') list = (hotels || []).filter(h => h.status === 'inactive');
+            else if (adminTab === 'deleted') list = (hotels || []).filter(h => h.status === 'deleted');
+            else list = (hotels || []).filter(h => h.status !== 'inactive' && h.status !== 'deleted');
         } else {
             list = (hotels || []).filter(h => h.status === 'approved' || h.status === 'reported');
         }
@@ -224,6 +231,20 @@ const App = () => {
             return () => clearTimeout(timer);
         }
     }, [toastMessage]);
+
+    const getReasonText = (reason) => {
+        const reasons = {
+            "wrong_phone": "Số điện thoại sai",
+            "wrong_hotel_name": "Tên lữ quán sai",
+            "wrong_map_location": "Vị trí trên bản đồ sai",
+            "wrong_address": "Địa chỉ không đúng",
+            "website_broken": "Website không hoạt động",
+            "hotel_closed": "Lữ quán đã đóng cửa",
+            "spam_or_fake": "Thông tin giả mạo/Spam",
+            "other": "Lý do khác"
+        };
+        return reasons[reason] || reason;
+    };
 
     const handleAdminLogin = (e) => {
         e.preventDefault();
@@ -271,7 +292,12 @@ const App = () => {
                 setPendingReviewHotels(prev => prev.filter(h => h.id !== hotel.id));
                 // Thêm khách sạn lại vào danh sách đã duyệt nếu đang xem khu vực đó
                 if (response.data.locationName === filterCity) {
-                    setHotels(prev => [...prev, response.data]);
+                    setHotels(prev => {
+                        if (prev.some(h => h.id === response.data.id)) {
+                            return prev.map(h => h.id === response.data.id ? response.data : h);
+                        }
+                        return [...prev, response.data];
+                    });
                 }
                 refreshReports(); // Tự động làm mới danh sách báo cáo
                 setToastMessage(`Đã duyệt lại "${hotel.name}" và dọn dẹp các báo cáo cũ.`);
@@ -283,12 +309,44 @@ const App = () => {
 
     const handleReviewReject = (hotel) => {
         HotelAPI.setHotelStatus(hotel.id, 'inactive')
-            .then(() => {
+            .then((response) => {
                 setPendingReviewHotels(prev => prev.filter(h => h.id !== hotel.id));
+                if (response.data && response.data.locationName === filterCity) {
+                    setHotels(prev => prev.map(h => h.id === response.data.id ? response.data : h));
+                }
                 setToastMessage(`Đã tạm ẩn "${hotel.name}".`);
             })
             .catch(err => {
                 setToastMessage(err.message || "Có lỗi xảy ra khi tạm ẩn.");
+            });
+    };
+
+    const handleRestoreHotel = (hotel, e) => {
+        e.stopPropagation();
+        HotelAPI.setHotelStatus(hotel.id, 'approved')
+            .then((response) => {
+                setHotels(prev => prev.map(h => h.id === response.data.id ? response.data : h));
+                setToastMessage(`Đã khôi phục hiển thị cho "${hotel.name}".`);
+            })
+            .catch(err => {
+                setToastMessage(err.message || "Có lỗi xảy ra khi khôi phục.");
+            });
+    };
+
+    const permanentlyDeleteHotel = (id, e) => {
+        e.stopPropagation();
+        if (!window.confirm("HÀNH ĐỘNG NÀY KHÔNG THỂ HOÀN TÁC! Bạn có chắc chắn muốn XÓA VĨNH VIỄN khách sạn này?")) {
+            return;
+        }
+        
+        HotelAPI.deleteHotel(id) // This calls the original DELETE endpoint
+            .then(() => {
+                setHotels(prev => prev.filter(h => h.id !== id));
+                setToastMessage("Đã xóa vĩnh viễn khách sạn!");
+            })
+            .catch(err => {
+                console.error("Lỗi khi xóa vĩnh viễn:", err);
+                setToastMessage(err.message || "Có lỗi xảy ra khi xóa vĩnh viễn.");
             });
     };
 
@@ -315,8 +373,15 @@ const App = () => {
             setPendingRequests(prev => prev.map(h => h.id === updatedHotel.id ? updatedHotel : h));
         } else {
             setHotels(prev => prev.map(h => h.id === updatedHotel.id ? updatedHotel : h));
-            if (updatedHotel.status === 'pending_review') {
-                setPendingReviewHotels(prev => prev.map(h => h.id === updatedHotel.id ? updatedHotel : h));
+            if (updatedHotel.status === 'pending_review' || updatedHotel.status === 'reported') {
+                setPendingReviewHotels(prev => {
+                    if (prev.some(h => h.id === updatedHotel.id)) {
+                        return prev.map(h => h.id === updatedHotel.id ? updatedHotel : h);
+                    }
+                    return [updatedHotel, ...prev];
+                });
+            } else {
+                setPendingReviewHotels(prev => prev.filter(h => h.id !== updatedHotel.id));
             }
         }
 
@@ -330,19 +395,20 @@ const App = () => {
 
     const deleteHotel = (id, e) => {
         e.stopPropagation();
-        if (!window.confirm("Bạn có chắc chắn muốn xóa khách sạn này khỏi hệ thống vĩnh viễn?")) {
+        if (!window.confirm("Bạn có chắc chắn muốn đưa khách sạn này vào thùng rác? Lữ quán sẽ chuyển sang trạng thái 'deleted' và tự động xóa vĩnh viễn sau 6 tháng.")) {
             return;
         }
         
-        HotelAPI.deleteHotel(id)
+        HotelAPI.setHotelStatus(id, 'deleted')
             .then(() => {
-                setHotels(hotels.filter(h => h.id !== id));
+                setHotels(prev => prev.filter(h => h.id !== id));
+                setPendingReviewHotels(prev => prev.filter(h => h.id !== id));
                 if (selectedHotel?.id === id) setSelectedHotel(null);
-                setToastMessage("Đã xóa khách sạn thành công!");
+                setToastMessage("Đã đưa khách sạn vào danh sách chờ xóa!");
             })
             .catch(err => {
-                console.error("Lỗi khi xóa:", err);
-                setToastMessage(err.message || "Có lỗi xảy ra khi xóa khách sạn.");
+                console.error("Lỗi khi đưa vào thùng rác:", err);
+                setToastMessage(err.message || "Có lỗi xảy ra khi cập nhật trạng thái xóa.");
             });
     };
 
@@ -404,6 +470,10 @@ const App = () => {
                             </button>
                             <div className="flex bg-white/10 p-0.5 rounded-lg mr-1 hidden sm:flex">
                                 <button onClick={() => setAdminTab('approved')} className={`px-2 py-1 md:px-3 md:py-1.5 rounded text-[8px] md:text-[10px] lg:text-xs font-bold uppercase transition-all ${adminTab === 'approved' ? 'bg-white text-stone-900 shadow' : 'text-white/60 hover:text-white'}`}>Đã Duyệt</button>
+                                <button onClick={() => setAdminTab('deleted')} className={`px-2 py-1 md:px-3 md:py-1.5 rounded text-[8px] md:text-[10px] lg:text-xs font-bold uppercase transition-all ${adminTab === 'deleted' ? 'bg-red-700 text-white shadow' : 'text-white/60 hover:text-white'}`}>
+                                    Thùng rác
+                                </button>
+                                <button onClick={() => setAdminTab('inactive')} className={`px-2 py-1 md:px-3 md:py-1.5 rounded text-[8px] md:text-[10px] lg:text-xs font-bold uppercase transition-all ${adminTab === 'inactive' ? 'bg-stone-500 text-white shadow' : 'text-white/60 hover:text-white'}`}>Đã Ẩn</button>
                                 <button onClick={() => setAdminTab('pending')} className={`px-2 py-1 md:px-3 md:py-1.5 rounded text-[8px] md:text-[10px] lg:text-xs font-bold uppercase transition-all relative ${adminTab === 'pending' ? 'bg-white text-stone-900 shadow' : 'text-white/60 hover:text-white'}`}>
                                     Chờ Duyệt {pendingRequests.length > 0 && <span className="ml-1 opacity-70">({pendingRequests.length})</span>}
                                 </button>
@@ -480,11 +550,13 @@ const App = () => {
                         </div>
 
                         {isAdmin && (
-                            <div className="flex gap-2 mt-2 sm:hidden">
-                                <button onClick={() => setAdminTab('approved')} className={`flex-1 py-1.5 rounded-lg text-[9px] font-bold uppercase transition-all ${adminTab === 'approved' ? 'bg-moss text-white shadow' : 'bg-stone-200 text-stone-600'}`}>Đã Duyệt</button>
-                                <button onClick={() => setAdminTab('pending')} className={`flex-1 py-1.5 rounded-lg text-[9px] font-bold uppercase transition-all ${adminTab === 'pending' ? 'bg-orange-700 text-white shadow' : 'bg-stone-200 text-stone-600'}`}>Chờ Duyệt {pendingRequests.length > 0 && `(${pendingRequests.length})`}</button>
-                                <button onClick={() => setAdminTab('pending_review')} className={`flex-1 py-1.5 rounded-lg text-[9px] font-bold uppercase transition-all ${adminTab === 'pending_review' ? 'bg-purple-700 text-white shadow' : 'bg-stone-200 text-stone-600'}`}>Cần Review {pendingReviewHotels.length > 0 && `(${pendingReviewHotels.length})`}</button>
-                                <button onClick={() => setAdminTab('reports')} className={`flex-1 py-1.5 rounded-lg text-[9px] font-bold uppercase transition-all ${adminTab === 'reports' ? 'bg-red-700 text-white shadow' : 'bg-stone-200 text-stone-600'}`}>Báo cáo {reports.length > 0 && `(${reports.length})`}</button>
+                            <div className="grid grid-cols-3 gap-2 mt-2 sm:hidden">
+                                <button onClick={() => setAdminTab('approved')} className={`py-1.5 rounded-lg text-[9px] font-bold uppercase transition-all ${adminTab === 'approved' ? 'bg-moss text-white shadow' : 'bg-stone-200 text-stone-600'}`}>Đã Duyệt</button>
+                                <button onClick={() => setAdminTab('deleted')} className={`py-1.5 rounded-lg text-[9px] font-bold uppercase transition-all ${adminTab === 'deleted' ? 'bg-red-700 text-white shadow' : 'bg-stone-200 text-stone-600'}`}>Thùng rác</button>
+                                <button onClick={() => setAdminTab('inactive')} className={`py-1.5 rounded-lg text-[9px] font-bold uppercase transition-all ${adminTab === 'inactive' ? 'bg-stone-500 text-white shadow' : 'bg-stone-200 text-stone-600'}`}>Đã Ẩn</button>
+                                <button onClick={() => setAdminTab('pending')} className={`py-1.5 rounded-lg text-[9px] font-bold uppercase transition-all ${adminTab === 'pending' ? 'bg-orange-700 text-white shadow' : 'bg-stone-200 text-stone-600'}`}>Chờ Duyệt {pendingRequests.length > 0 && `(${pendingRequests.length})`}</button>
+                                <button onClick={() => setAdminTab('pending_review')} className={`py-1.5 rounded-lg text-[9px] font-bold uppercase transition-all ${adminTab === 'pending_review' ? 'bg-purple-700 text-white shadow' : 'bg-stone-200 text-stone-600'}`}>Cần Review {pendingReviewHotels.length > 0 && `(${pendingReviewHotels.length})`}</button>
+                                <button onClick={() => setAdminTab('reports')} className={`py-1.5 rounded-lg text-[9px] font-bold uppercase transition-all ${adminTab === 'reports' ? 'bg-red-700 text-white shadow' : 'bg-stone-200 text-stone-600'}`}>Báo cáo {reports.length > 0 && `(${reports.length})`}</button>
                             </div>
                         )}
                     </div>
@@ -543,8 +615,21 @@ const App = () => {
                                             {isAdmin && adminTab === 'pending_review' && (
                                                 <div className="absolute top-2 right-2 flex gap-1">
                                                     <button onClick={(e) => startEditHotel(hotel, e)} className="bg-blue-600 text-white p-2 rounded-lg shadow-lg" title="Sửa thông tin"><Icon name="edit" size={12} /></button>
-                                                    <button onClick={(e) => { e.stopPropagation(); handleReviewApprove(hotel); }} className="bg-emerald-700 text-white p-2 rounded-lg shadow-lg" title="Duyệt lại"><Icon name="check" size={12} /></button>
-                                                    <button onClick={(e) => { e.stopPropagation(); handleReviewReject(hotel); }} className="bg-purple-700 text-white p-2 rounded-lg shadow-lg" title="Tạm ẩn"><Icon name="eye-off" size={12} /></button>
+                                                    <button onClick={(e) => { e.stopPropagation(); setReviewConfirm({ action: 'approve', hotel }); }} className="bg-emerald-700 text-white p-2 rounded-lg shadow-lg" title="Duyệt lại"><Icon name="check" size={12} /></button>
+                                                    <button onClick={(e) => { e.stopPropagation(); setReviewConfirm({ action: 'reject', hotel }); }} className="bg-purple-700 text-white p-2 rounded-lg shadow-lg" title="Tạm ẩn"><Icon name="eye-off" size={12} /></button>
+                                                </div>
+                                            )}
+                                            {isAdmin && adminTab === 'inactive' && (
+                                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 flex gap-1">
+                                                    <button onClick={(e) => startEditHotel(hotel, e)} className="bg-blue-600 text-white p-2 rounded-lg shadow-lg" title="Sửa thông tin"><Icon name="edit" size={12} /></button>
+                                                    <button onClick={(e) => handleRestoreHotel(hotel, e)} className="bg-emerald-600 text-white p-2 rounded-lg shadow-lg" title="Khôi phục hiển thị"><Icon name="refresh-cw" size={12} /></button>
+                                                    <button onClick={(e) => deleteHotel(hotel.id, e)} className="bg-red-700 text-white p-2 rounded-lg shadow-lg" title="Đưa vào thùng rác"><Icon name="trash-2" size={12} /></button>
+                                                </div>
+                                            )}
+                                            {isAdmin && adminTab === 'deleted' && (
+                                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 flex gap-1">
+                                                    <button onClick={(e) => handleRestoreHotel(hotel, e)} className="bg-emerald-600 text-white p-2 rounded-lg shadow-lg" title="Khôi phục hiển thị"><Icon name="refresh-cw" size={12} /></button>
+                                                    <button onClick={(e) => permanentlyDeleteHotel(hotel.id, e)} className="bg-red-800 text-white p-2 rounded-lg shadow-lg" title="Xóa vĩnh viễn"><Icon name="shield-x" size={12} /></button>
                                                 </div>
                                             )}
                                             {isAdmin && adminTab === 'approved' && (
@@ -682,6 +767,60 @@ const App = () => {
                             <button onClick={() => setShowAboutDialog(false)} className="w-full py-4 bg-stone-900 text-white rounded-2xl font-black shadow-xl active:scale-95 transition-all uppercase text-[11px] tracking-widest">
                                 Đã hiểu
                             </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Review Confirm Dialog Modal */}
+                {reviewConfirm && (
+                    <div className="fixed inset-0 bg-stone-950/90 backdrop-blur-xl z-[200] flex items-center justify-center p-6">
+                        <div className="bg-white w-full max-w-md rounded-[40px] shadow-2xl p-6 sm:p-8 flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+                            <div className={`w-16 h-16 rounded-3xl flex items-center justify-center mx-auto mb-4 transform ${reviewConfirm.action === 'approve' ? 'bg-emerald-50 text-emerald-600 rotate-3' : 'bg-purple-50 text-purple-600 -rotate-3'}`}>
+                                <Icon name={reviewConfirm.action === 'approve' ? 'check-circle' : 'eye-off'} size={32} />
+                            </div>
+                            <h3 className="text-xl font-black text-stone-900 uppercase mb-2 tracking-tight text-center">
+                                {reviewConfirm.action === 'approve' ? 'Xác nhận Duyệt Lại' : 'Xác nhận Tạm Ẩn'}
+                            </h3>
+                            <p className="text-center text-sm font-bold text-stone-600 mb-6">{reviewConfirm.hotel.name}</p>
+                            
+                            <div className="bg-stone-50 rounded-2xl p-4 mb-6 overflow-y-auto flex-1 border border-stone-200 scrollbar-hide">
+                                <p className="text-[10px] font-black uppercase text-stone-400 mb-2 tracking-widest">Trạng thái hiện tại</p>
+                                <div className="mb-5">
+                                    <span className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider text-white shadow-sm ${reviewConfirm.hotel.status === 'pending_review' ? 'bg-purple-600' : 'bg-red-600'}`}>
+                                        {reviewConfirm.hotel.status === 'pending_review' ? 'Cần Review Gấp' : 'Đang bị báo lỗi'}
+                                    </span>
+                                </div>
+
+                                <p className="text-[10px] font-black uppercase text-stone-400 mb-2 tracking-widest">Danh sách báo lỗi từ người dùng</p>
+                                <div className="space-y-3">
+                                    {reports.filter(r => r.hotelId === reviewConfirm.hotel.id).length > 0 ? (
+                                        reports.filter(r => r.hotelId === reviewConfirm.hotel.id).map((r, idx) => (
+                                            <div key={idx} className="bg-white p-3 rounded-xl border border-red-100 shadow-sm relative overflow-hidden">
+                                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500"></div>
+                                                <p className="text-xs font-bold text-red-700">{getReasonText(r.reason)}</p>
+                                                {r.details && <p className="text-[11px] text-stone-600 mt-1.5 italic">"{r.details}"</p>}
+                                                <p className="text-[8px] text-stone-400 font-bold mt-2 uppercase tracking-wider">{new Date(r.reportedAt).toLocaleString('vi-VN')}</p>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p className="text-xs text-stone-500 italic bg-white p-3 rounded-xl border border-stone-200">Không có báo cáo nào hoặc đã được dọn dẹp.</p>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 shrink-0">
+                                <button onClick={() => setReviewConfirm(null)} className="flex-1 py-3.5 bg-stone-200 text-stone-700 rounded-2xl font-black uppercase text-[11px] tracking-widest active:scale-95 transition-all hover:bg-stone-300">Hủy</button>
+                                <button 
+                                    onClick={() => {
+                                        if (reviewConfirm.action === 'approve') handleReviewApprove(reviewConfirm.hotel);
+                                        else handleReviewReject(reviewConfirm.hotel);
+                                        setReviewConfirm(null);
+                                    }} 
+                                    className={`flex-1 py-3.5 text-white rounded-2xl font-black shadow-xl active:scale-95 transition-all uppercase text-[11px] tracking-widest hover:brightness-110 ${reviewConfirm.action === 'approve' ? 'bg-emerald-600' : 'bg-purple-600'}`}
+                                >
+                                    Xác nhận
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}
