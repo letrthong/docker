@@ -9,6 +9,8 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - ./:/app/
+      - ./config:/app/config
+      - ./key:/app/key
+      - ./video:/app/video
     stdin_open: true
     tty: true
