@@ -20,7 +20,7 @@ const Header = ({
                     <h1 className="text-base md:text-xl lg:text-2xl font-black tracking-tight flex items-center gap-1.5 leading-normal py-0.5">
                         Lữ Quán {isAdmin && <span className="text-[8px] md:text-[10px] bg-red-500 px-1.5 py-0.5 rounded tracking-widest font-bold uppercase">Admin</span>}
                     </h1>
-                    <p className="text-[7px] md:text-[10px] lg:text-xs opacity-80 font-bold  tracking-widest mt-0.5 md:mt-1">Luquan.vn - Kết nối trực tiếp khách sạn</p>
+                    <p className="text-[7px] md:text-[10px] lg:text-xs opacity-80 font-bold  tracking-widest mt-0.5 md:mt-1">Luquan.vn - Miễn Phí Kết nối trực tiếp khách sạn</p>
                 </div>
             </div>
             

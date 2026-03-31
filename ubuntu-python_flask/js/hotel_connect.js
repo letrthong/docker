@@ -727,15 +727,18 @@ const App = () => {
                 {/* About Dialog Modal */}
                 {showAboutDialog && (
                     <div className="fixed inset-0 bg-stone-950/90 backdrop-blur-xl z-[200] flex items-center justify-center p-6">
-                        <div className="bg-white w-full max-w-sm rounded-[40px] shadow-2xl p-10 text-center animate-in zoom-in-95 duration-200">
-                            <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-6 transform rotate-3">
+                        <div className="bg-white w-full max-w-md rounded-[40px] shadow-2xl p-8 text-center animate-in zoom-in-95 duration-200">
+                            <div className="w-16 h-16 bg-red-50 text-red-600 rounded-3xl flex items-center justify-center mx-auto mb-6 transform rotate-3">
                                 <Icon name="info" size={32} />
                             </div>
-                            <h3 className="text-xl font-black text-stone-900 uppercase mb-4 tracking-tight">Thông báo</h3>
-                            <p className="text-sm text-stone-600 font-bold mb-8 leading-relaxed">
-                                Website miễn phí, <br/> không chịu trách nhiệm chất lượng dịch vụ.
-                            </p>
-                            <button onClick={() => setShowAboutDialog(false)} className="w-full py-4 bg-stone-900 text-white rounded-2xl font-black shadow-xl active:scale-95 transition-all uppercase text-[11px] tracking-widest">
+                            <h3 className="text-xl font-black text-stone-900 uppercase mb-4 tracking-tight">Thông tin dự án</h3>
+                            <div className="text-sm text-stone-600 font-medium mb-8 leading-relaxed text-left space-y-3">
+                                <p><strong>1.</strong> Lữ Quán là một website hoàn toàn miễn phí và toàn bộ dữ liệu được công khai mã nguồn mở trên Github.</p>
+                                <p><strong>2.</strong> Nếu một chủ khách sạn muốn đưa thông tin của mình lên bản đồ thì nhấp vào nút <strong>"Đăng ký khách sạn"</strong>.</p>
+                                <p><strong>3.</strong> Chúng tôi hoạt động như một danh bạ du lịch trên bản đồ, vì vậy bạn cần truy cập thông tin liên hệ của khách sạn để kiểm tra trực tiếp.</p>
+                                <p className="text-red-600 italic"><strong>4.</strong> Lưu ý: Chúng tôi sẽ không chịu trách nhiệm về chất lượng dịch vụ của các khách sạn.</p>
+                            </div>
+                            <button onClick={() => setShowAboutDialog(false)} className="w-full py-4 bg-stone-900 text-white rounded-2xl font-black shadow-xl active:scale-95 transition-all uppercase text-[11px] tracking-widest hover:bg-stone-800">
                                 Đã hiểu
                             </button>
                         </div>
