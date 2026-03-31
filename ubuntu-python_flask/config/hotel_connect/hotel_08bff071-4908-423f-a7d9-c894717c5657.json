@@ -1,0 +1,18 @@
+[
+    {
+        "id": "cdf57165-a46a-4577-ab18-9a31e133a232",
+        "name": "sf df",
+        "address": "xx x ",
+        "phone": "0356148008",
+        "website": "https://nongtrang.vn/FarmMarket",
+        "locationName": "Đà Lạt",
+        "status": "approved",
+        "rating": 5,
+        "createdAt": "2026-03-31",
+        "updatedAt": "2026-03-31",
+        "description": "Thịt gia cầm chứa cả chất béo bão hòa và không bão hòa, song lượng chất béo bão hòa thấp, nhất là ở phần ức gà, thịt trắng không da. Thịt gà giàu protein nạc giúp no lâu, không gây tích tụ mỡ thừa. Ăn thịt gà 2-4 bữa trong tuần có thể hỗ trợ giảm cân, tăng cơ. Nên ưu tiên món luộc, hấp, áp chảo để không làm tăng tổng lượng calo của món ăn.",
+        "image": "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&q=80&w=600",
+        "lat": 11.930172796804658,
+        "lng": 108.44638824462892
+    }
+]

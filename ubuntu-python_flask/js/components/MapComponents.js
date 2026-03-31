@@ -426,23 +426,50 @@ const LocationPickerMap = ({ position, onPositionChange, areaCenter, locationNam
     return (
         <div className="relative w-full h-full">
             <div className="absolute top-2 left-12 right-2 z-[400] flex flex-col gap-2">
-                <div className="flex-1 flex bg-white rounded-lg shadow-md overflow-hidden pointer-events-auto border border-stone-200">
-                    <input 
-                        type="text" 
-                        placeholder="Tìm địa chỉ, địa danh..." 
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                                e.preventDefault();
-                                handleSearch();
-                            }
-                        }}
-                        className="flex-1 px-3 py-2 text-xs font-bold text-stone-700 focus:outline-none"
-                    />
-                    <button type="button" onClick={handleSearch} disabled={isSearching} className="px-3 py-2 bg-stone-100 text-stone-600 hover:bg-stone-200 border-l border-stone-200 text-xs font-black disabled:opacity-50">
-                        {isSearching ? '...' : 'TÌM'}
-                    </button>
+                {/* Container cho các công cụ điều khiển bản đồ */}
+                <div className="bg-white rounded-lg shadow-md overflow-hidden pointer-events-auto border border-stone-200 p-2 space-y-2">
+                    {/* Thanh tìm kiếm */}
+                    <div className="flex-1 flex overflow-hidden">
+                        <input 
+                            type="text" 
+                            placeholder="Tìm địa chỉ, địa danh..." 
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    handleSearch();
+                                }
+                            }}
+                            className="flex-1 px-3 py-2 text-xs font-bold text-stone-700 focus:outline-none bg-stone-50 rounded-l-md border border-stone-200 focus:border-moss"
+                        />
+                        <button type="button" onClick={handleSearch} disabled={isSearching} className="px-3 py-2 bg-stone-100 text-stone-600 hover:bg-stone-200 border-y border-r border-stone-200 text-xs font-black disabled:opacity-50 rounded-r-md">
+                            {isSearching ? '...' : 'TÌM'}
+                        </button>
+                    </div>
+                    {/* Ô nhập Vĩ độ / Kinh độ thủ công */}
+                    <div className="flex gap-2">
+                        <div className="flex-1">
+                            <label className="text-[9px] font-bold text-stone-500 uppercase tracking-wider">Vĩ độ (Lat)</label>
+                            <input
+                                type="number"
+                                step="any"
+                                value={position.lat || ''}
+                                onChange={(e) => onPositionChange({ ...position, lat: e.target.value })}
+                                className="w-full px-2 py-1.5 text-xs font-bold text-stone-700 bg-stone-50 rounded-md border border-stone-200 focus:outline-none focus:border-moss"
+                            />
+                        </div>
+                        <div className="flex-1">
+                            <label className="text-[9px] font-bold text-stone-500 uppercase tracking-wider">Kinh độ (Lng)</label>
+                            <input
+                                type="number"
+                                step="any"
+                                value={position.lng || ''}
+                                onChange={(e) => onPositionChange({ ...position, lng: e.target.value })}
+                                className="w-full px-2 py-1.5 text-xs font-bold text-stone-700 bg-stone-50 rounded-md border border-stone-200 focus:outline-none focus:border-moss"
+                            />
+                        </div>
+                    </div>
                 </div>
                 {/* Warning message display */}
                 {warning && (

@@ -7,7 +7,7 @@ Centralized constants for hotel_connect project.
 
 
 # --- Config directory and file paths (không hardcode) ---
-CONFIG_DIR = "/app/config"
+CONFIG_DIR = "/app/config/hotel_connect"
 HOTEL_SCHEMA_FILE_PATH = f"{CONFIG_DIR}/hotel_schema.json"
 
 # --- Data file names ---

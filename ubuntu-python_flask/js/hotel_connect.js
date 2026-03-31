@@ -1,5 +1,14 @@
 const { useState, useMemo, useEffect, useRef } = React;
 
+// Polyfill for crypto.randomUUID() in non-secure contexts or older browsers
+if (window.crypto && !window.crypto.randomUUID) {
+    window.crypto.randomUUID = () => {
+        return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+            (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+        );
+    };
+}
+
 const FALLBACK_IMAGE_URL = "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&q=80&w=600";
 const handleImageError = (e) => {
     // Prevent infinite loop if fallback image is also broken
@@ -447,54 +456,18 @@ const App = () => {
 
     return (
         <div className="absolute inset-0 flex flex-col bg-stone-50 text-stone-900 overflow-hidden font-sans select-none">
-            {/* Header */}
-            <header className={`shrink-0 px-4 md:px-8 lg:px-10 pt-[max(env(safe-area-inset-top),1.25rem)] pb-3 md:pt-8 md:pb-4 shadow-sm flex items-center justify-between z-30 transition-all duration-300 ${isAdmin ? 'bg-stone-800' : 'bg-moss'} text-white`}>
-                <div className="flex items-center gap-2">
-                    <div className="p-1.5 bg-white/10 rounded-lg backdrop-blur-md">
-                        <Icon name="home" size={22} />
-                    </div>
-                    <div className="flex flex-col justify-center">
-                        <h1 className="text-base md:text-xl lg:text-2xl font-black tracking-tight flex items-center gap-1.5 leading-normal py-0.5">
-                            Lữ Quán {isAdmin && <span className="text-[8px] md:text-[10px] bg-red-500 px-1.5 py-0.5 rounded tracking-widest font-bold uppercase">Admin</span>}
-                        </h1>
-                        <p className="text-[7px] md:text-[10px] lg:text-xs opacity-80 font-bold  tracking-widest mt-0.5 md:mt-1">Luquan.vn - Kết nối trực tiếp khách sạn</p>
-                    </div>
-                </div>
-                
-                <div className="flex items-center gap-1.5 md:gap-3">
-                    {isAdmin ? (
-                        <>
-                            <button onClick={() => setShowSchemaManager(true)} className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 px-2 py-1.5 md:px-3 md:py-2 rounded-lg transition-all text-[9px] md:text-xs font-black uppercase tracking-wider shadow-sm text-white mr-1 sm:mr-0">
-                                <Icon name="map" size={14} /> <span className="hidden sm:inline">Khu vực</span>
-                            </button>
-                            <div className="flex bg-white/10 p-0.5 rounded-lg mr-1 hidden sm:flex">
-                                <button onClick={() => setAdminTab('approved')} className={`px-2 py-1 md:px-3 md:py-1.5 rounded text-[8px] md:text-[10px] lg:text-xs font-bold uppercase transition-all ${adminTab === 'approved' ? 'bg-white text-stone-900 shadow' : 'text-white/60 hover:text-white'}`}>Đã Duyệt</button>
-                                <button onClick={() => setAdminTab('deleted')} className={`px-2 py-1 md:px-3 md:py-1.5 rounded text-[8px] md:text-[10px] lg:text-xs font-bold uppercase transition-all ${adminTab === 'deleted' ? 'bg-red-700 text-white shadow' : 'text-white/60 hover:text-white'}`}>
-                                    Thùng rác
-                                </button>
-                                <button onClick={() => setAdminTab('inactive')} className={`px-2 py-1 md:px-3 md:py-1.5 rounded text-[8px] md:text-[10px] lg:text-xs font-bold uppercase transition-all ${adminTab === 'inactive' ? 'bg-stone-500 text-white shadow' : 'text-white/60 hover:text-white'}`}>Đã Ẩn</button>
-                                <button onClick={() => setAdminTab('pending')} className={`px-2 py-1 md:px-3 md:py-1.5 rounded text-[8px] md:text-[10px] lg:text-xs font-bold uppercase transition-all relative ${adminTab === 'pending' ? 'bg-white text-stone-900 shadow' : 'text-white/60 hover:text-white'}`}>
-                                    Chờ Duyệt {pendingRequests.length > 0 && <span className="ml-1 opacity-70">({pendingRequests.length})</span>}
-                                </button>
-                                <button onClick={() => setAdminTab('pending_review')} className={`px-2 py-1 md:px-3 md:py-1.5 rounded text-[8px] md:text-[10px] lg:text-xs font-bold uppercase transition-all relative ${adminTab === 'pending_review' ? 'bg-purple-600 text-white shadow' : 'text-white/60 hover:text-white'}`}>
-                                    Cần Review {pendingReviewHotels.length > 0 && <span className="ml-1 opacity-70">({pendingReviewHotels.length})</span>}
-                                </button>
-                                <button onClick={() => setAdminTab('reports')} className={`px-2 py-1 md:px-3 md:py-1.5 rounded text-[8px] md:text-[10px] lg:text-xs font-bold uppercase transition-all relative ${adminTab === 'reports' ? 'bg-white text-stone-900 shadow' : 'text-white/60 hover:text-white'}`}>Báo cáo {reports.length > 0 && <span className="ml-1 opacity-70">({reports.length})</span>}</button>
-                            </div>
-                        </>
-                    ) : (
-                        <button onClick={() => setShowRequestForm(true)} className="flex items-center gap-1 bg-orange-700 hover:bg-orange-800 px-3 py-1.5 md:px-4 md:py-2 rounded-lg transition-all text-[9px] md:text-xs font-black uppercase tracking-wider">
-                            <Icon name="plus" size={14} /> <span className="hidden sm:inline">Đăng ký khách sạn</span><span className="sm:hidden">Đăng ký</span>
-                        </button>
-                    )}
-
-                    {isAdmin ? (
-                        <button onClick={() => setIsAdmin(false)} className="p-1.5 md:p-2 bg-white/10 rounded-lg"><Icon name="unlock" size={18} /></button>
-                    ) : (
-                        <button onClick={() => setShowAdminLogin(true)} className="p-1.5 md:p-2 bg-white/10 rounded-lg"><Icon name="lock" size={18} /></button>
-                    )}
-                </div>
-            </header>
+            <Header
+                isAdmin={isAdmin}
+                onShowSchemaManager={() => setShowSchemaManager(true)}
+                onSetAdminTab={setAdminTab}
+                adminTab={adminTab}
+                pendingRequestsCount={pendingRequests.length}
+                pendingReviewHotelsCount={pendingReviewHotels.length}
+                reportsCount={reports.length}
+                onShowRequestForm={() => setShowRequestForm(true)}
+                onLogoutAdmin={() => setIsAdmin(false)}
+                onShowAdminLogin={() => setShowAdminLogin(true)}
+            />
 
             <main className="flex flex-1 overflow-hidden relative min-h-0">
                 {/* Sidebar / Danh sách: Fullscreen on mobile when active */}
@@ -724,7 +697,6 @@ const App = () => {
                         </div>
                     </div>
                 )}
-
                 {/* Admin Login Modal */}
                 {showAdminLogin && (
                     <div className="fixed inset-0 bg-stone-950/90 backdrop-blur-xl z-[200] flex items-center justify-center p-6">
@@ -875,32 +847,7 @@ const App = () => {
             </main>
 
             {/* Footer - Optimized for Desktop & Mobile */}
-            <footer className="absolute bottom-0 left-0 w-full z-40 bg-white/80 backdrop-blur-md border-t border-white/50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-                <div className="hidden md:flex py-1.5 px-6 md:px-8 lg:px-10 items-center justify-center gap-4">
-                    <button onClick={() => setShowAboutDialog(true)} className="text-stone-500 hover:text-stone-800 p-0.5 transition-all duration-200 hover:-translate-y-1" title="Thông tin">
-                        <Icon name="info" size={18} />
-                    </button>
-                    <a href="https://nongtrang.vn/" target="_blank" className="inline-flex items-center gap-1.5 px-2 py-0.5 md:px-2 md:py-0.5 bg-blue-50/90 backdrop-blur text-blue-700 rounded-md text-[9px] md:text-[10px] font-black hover:bg-blue-100 hover:text-blue-900 transition-colors border border-blue-200/50">
-                        Vận hành bởi nongtrang.vn <Icon name="external-link" size={10} />
-                    </a>
-                    <a href="https://github.com/letrthong/telua_open_hotel_connect" target="_blank" className="text-stone-500 hover:text-stone-800 p-0.5 transition-all duration-200 hover:-translate-y-1" title="Mã nguồn mở">
-                        <Icon name="github" size={18} />
-                    </a>
-                </div>
-
-                {/* Mobile Footer Area (Always visible text) */}
-                <div className="md:hidden px-3 py-1 pb-safe border-t border-white/30 flex justify-center items-center gap-4">
-                    <button onClick={() => setShowAboutDialog(true)} className="text-stone-500 hover:text-stone-800 p-0.5 transition-all duration-200 hover:-translate-y-1" title="Thông tin">
-                        <Icon name="info" size={20} />
-                    </button>
-                    <a href="https://nongtrang.vn/" target="_blank" className="inline-flex items-center gap-1.5 px-2 py-1 bg-blue-50/90 backdrop-blur text-blue-700 rounded-lg text-[9px] font-black uppercase tracking-tight hover:bg-blue-100 hover:text-blue-900 transition-colors shadow-sm border border-blue-200/50">
-                        Vận hành bởi nongtrang.vn <Icon name="external-link" size={10} />
-                    </a>
-                    <a href="https://github.com/letrthong/telua_open_hotel_connect" target="_blank" className="text-stone-500 hover:text-stone-800 p-0.5 transition-all duration-200 hover:-translate-y-1" title="Mã nguồn mở">
-                        <Icon name="github" size={20} />
-                    </a>
-                </div>
-            </footer>
+            <Footer onAboutClick={() => setShowAboutDialog(true)} />
 
             {/* Global Toast Notification */}
             {toastMessage && (

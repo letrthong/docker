@@ -6,10 +6,10 @@ from json_utils import read_json_file, write_json_file
 from hotel_schema_service import read_schema, write_schema, create_schema_item, update_schema_item, delete_schema_item
 import logging
 import sys
+import os
 import threading
 from flask import Flask, render_template, jsonify, request, abort, send_from_directory
-from hotel_admin_auth import admin_auth
-from flask_cors import cross_origin # Import đúng tên thư viện
+from flask_cors import cross_origin  # Import đúng tên thư viện
 import uuid
 from math import radians, sin, cos, sqrt, atan2
 from geo_utils import haversine
@@ -24,12 +24,12 @@ logging.basicConfig(level=logging.INFO)
 sys.stdout.reconfigure(line_buffering=True)
 
 app = Flask(__name__, template_folder='/app')
-app.register_blueprint(admin_auth)
 
 
 # Đảm bảo đường dẫn này đúng với cấu trúc thư mục của bạn
 template_dir = "/app/"
 template_dir_base = "./"
+os.makedirs(CONFIG_DIR, exist_ok=True)
 
 
 
