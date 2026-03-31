@@ -69,22 +69,63 @@
 <body class="bg-stone-50 overflow-hidden m-0 p-0">
     <div id="root"></div>
 
-    <!-- API Service: Xử lý gọi data từ Backend -->
-    <script src="./js/api.js"></script>
-    
+    <!-- Nạp JS động dựa trên version trong config.json -->
     <!-- {% raw %} -->
-    <script type="text/babel" src="./js/components/Header.js"></script>
-    <script type="text/babel" src="./js/components/Icon.js"></script>
-    <script type="text/babel" src="./js/components/MapComponents.js"></script>
-    <script type="text/babel" src="./js/components/SchemaManager.js"></script>
-    <script type="text/babel" src="./js/components/HotelRequestForm.js"></script>
-    <script type="text/babel" src="./js/components/HotelEditForm.js"></script>
-    <script type="text/babel" src="./js/components/ReportManager.js"></script>
-    <script type="text/babel" src="./js/components/ReportForm.js"></script>
-    <script type="text/babel" src="./js/components/AdminTabs.js"></script>
-    <script type="text/babel" src="./js/components/Footer.js"></script>
-    <script type="text/babel" src="./js/hotel_connect.js"></script>
-    <script type="text/babel" src="./js/components/HotelDetail.js"></script>
+    <script>
+        async function loadAppWithVersion() {
+            try {
+                // Thêm timestamp để bypass cache trình duyệt khi lấy file config
+                const res = await fetch('./js/config.json?t=' + new Date().getTime());
+                const config = await res.json();
+                const version = config.app_version || '1.0.0';
+                
+                // Sử dụng localStorage (giống Cookie nhưng tối ưu hơn cho ứng dụng client-side)
+                const savedVersion = localStorage.getItem('luquan_app_version');
+                if (savedVersion !== version) {
+                    console.log(`Cập nhật phiên bản: ${savedVersion} -> ${version}. Bỏ qua cache cũ...`);
+                    localStorage.setItem('luquan_app_version', version);
+                }
+
+                // 1. Nạp api.js trước tiên
+                const apiScript = document.createElement('script');
+                apiScript.src = `./js/api.js?v=${version}`;
+                apiScript.onload = () => {
+                    // 2. Nạp các file React/Babel sau khi api.js đã load
+                    const babelScripts = [
+                        "./js/components/Header.js",
+                        "./js/components/Icon.js",
+                        "./js/components/MapComponents.js",
+                        "./js/components/SchemaManager.js",
+                        "./js/components/HotelRequestForm.js",
+                        "./js/components/HotelEditForm.js",
+                        "./js/components/ReportManager.js",
+                        "./js/components/ReportForm.js",
+                        "./js/components/AdminTabs.js",
+                        "./js/components/Footer.js",
+                        "./js/hotel_connect.js",
+                        "./js/components/HotelDetail.js"
+                    ];
+
+                    babelScripts.forEach(src => {
+                        const script = document.createElement('script');
+                        script.type = 'text/babel';
+                        script.src = `${src}?v=${version}`;
+                        document.body.appendChild(script);
+                    });
+
+                    // 3. Kích hoạt Babel xử lý các file vừa được thêm vào DOM
+                    setTimeout(() => {
+                        if (window.Babel) window.Babel.transformScriptTags();
+                    }, 50);
+                };
+                document.body.appendChild(apiScript);
+            } catch (err) {
+                console.error("Lỗi khi tải config hoặc khởi tạo ứng dụng:", err);
+            }
+        }
+
+        loadAppWithVersion();
+    </script>
     <!-- {% endraw %} -->
 </body>
 </html>
