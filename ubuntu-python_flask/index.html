@@ -67,7 +67,20 @@
     </style>
 </head>
 <body class="bg-stone-50 overflow-hidden m-0 p-0">
-    <div id="root"></div>
+    <div id="root">
+        <!-- Màn hình chờ (Loading) sẽ hiển thị trong lúc tải và biên dịch JS -->
+        <div class="fixed inset-0 bg-stone-50 flex flex-col items-center justify-center z-[9999]">
+            <div class="relative w-20 h-20 mb-6">
+                <div class="absolute inset-0 border-4 border-stone-200 rounded-full"></div>
+                <div class="absolute inset-0 border-4 border-orange-600 rounded-full border-t-transparent animate-spin"></div>
+                <div class="absolute inset-0 flex items-center justify-center text-orange-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                </div>
+            </div>
+            <h2 class="text-stone-800 font-black text-xl uppercase tracking-widest mb-2">Lữ Quán</h2>
+            <p class="text-stone-500 text-xs font-bold uppercase tracking-widest animate-pulse">Đang tải dữ liệu, vui lòng chờ...</p>
+        </div>
+    </div>
 
     <!-- Nạp JS động dựa trên version trong config.json -->
     <!-- {% raw %} -->
@@ -81,53 +94,83 @@
                 
                 const savedVersion = localStorage.getItem('luquan_app_version');
 
-                // Nếu phát hiện phiên bản mới, xóa phiên bản cũ trong localStorage và tải lại trang.
-                // Việc tải lại trang sẽ buộc trình duyệt lấy file JS mới từ server thay vì từ cache.
                 if (savedVersion && savedVersion !== version) {
-                    console.log(`Phát hiện phiên bản mới: ${savedVersion} -> ${version}. Tải lại trang để áp dụng...`);
+                    console.log(`Phát hiện phiên bản mới: ${savedVersion} -> ${version}. Cập nhật cache...`);
                     localStorage.removeItem('luquan_app_version');
-                    window.location.reload();
-                    return; // Dừng thực thi để chờ trang tải lại.
+                    localStorage.removeItem('luquan_cached_scripts');
                 }
 
-                // Nếu phiên bản không đổi hoặc là lần đầu tiên, lưu phiên bản hiện tại và tải các script.
-                if (savedVersion !== version) {
-                    localStorage.setItem('luquan_app_version', version);
+                const cachedScripts = localStorage.getItem('luquan_cached_scripts');
+
+                if (cachedScripts && savedVersion === version) {
+                    console.log("Sử dụng JS từ cache localStorage...");
+                    const script = document.createElement('script');
+                    script.innerHTML = cachedScripts;
+                    document.body.appendChild(script);
+                    return;
                 }
 
-                // 1. Nạp api.js trước tiên
-                const apiScript = document.createElement('script');
-                apiScript.src = './js/api.js'; // Không còn version trên URL
-                apiScript.onload = () => {
-                    // 2. Nạp các file React/Babel sau khi api.js đã load
-                    const babelScripts = [
-                        "./js/components/Header.js",
-                        "./js/components/Icon.js",
-                        "./js/components/MapComponents.js",
-                        "./js/components/SchemaManager.js",
-                        "./js/components/HotelRequestForm.js",
-                        "./js/components/HotelEditForm.js",
-                        "./js/components/ReportManager.js",
-                        "./js/components/ReportForm.js",
-                        "./js/components/AdminTabs.js",
-                        "./js/components/Footer.js",
-                        "./js/components/HotelDetail.js",
-                        "./js/hotel_connect.js" // File chính nên ở cuối
-                    ];
+                console.log("Tải và biên dịch JS mới...");
+                localStorage.setItem('luquan_app_version', version);
 
-                    babelScripts.forEach(src => {
-                        const script = document.createElement('script');
-                        script.type = 'text/babel';
-                        script.src = src; // Không còn version trên URL
-                        document.body.appendChild(script);
-                    });
+                // 1. Tải api.js
+                const apiPromise = fetch('./js/api.js?v=' + version).then(r => r.text());
 
-                    // 3. Kích hoạt Babel để xử lý các file vừa được thêm vào
-                    setTimeout(() => {
-                        if (window.Babel) window.Babel.transformScriptTags();
+                // 2. Tải các file React/JSX song song
+                const babelScripts = [
+                    "./js/components/Header.js",
+                    "./js/components/Icon.js",
+                    "./js/components/MapComponents.js",
+                    "./js/components/SchemaManager.js",
+                    "./js/components/HotelRequestForm.js",
+                    "./js/components/HotelEditForm.js",
+                    "./js/components/ReportManager.js",
+                    "./js/components/ReportForm.js",
+                    "./js/components/AdminTabs.js",
+                    "./js/components/Footer.js",
+                    "./js/components/HotelDetail.js",
+                    "./js/hotel_connect.js" // File chính nên ở cuối
+                ];
+
+                const babelPromises = babelScripts.map(src => fetch(src + '?v=' + version).then(r => r.text()));
+
+                const [apiCode, ...babelCodes] = await Promise.all([apiPromise, ...babelPromises]);
+                
+                // Tự động loại bỏ các khai báo trùng lặp (vd: const { useState } = React;) từ các file con
+                const cleanedBabelCodes = babelCodes.map(code => code.replace(/const\s+\{[^}]+\}\s*=\s*React\s*;/g, ''));
+                // Gom chung 1 khai báo React Hooks duy nhất lên đầu file gộp
+                const masterReactDecl = "const { useState, useEffect, useRef, useMemo, useCallback } = React;\n";
+                const combinedBabelCode = masterReactDecl + cleanedBabelCodes.join('\n');
+
+                const waitForBabel = () => new Promise(resolve => {
+                    if (window.Babel) return resolve();
+                    const interval = setInterval(() => {
+                        if (window.Babel) {
+                            clearInterval(interval);
+                            resolve();
+                        }
                     }, 50);
-                };
-                document.body.appendChild(apiScript);
+                });
+                await waitForBabel();
+
+                // 3. Biên dịch JSX sang JS thuần bằng Babel
+                const transpiledCode = Babel.transform(combinedBabelCode, { presets: ['react'] }).code;
+                
+                // Gộp code API và code đã biên dịch
+                const finalCode = apiCode + '\n' + transpiledCode;
+                
+                // 4. Lưu vào localStorage cache
+                try {
+                    localStorage.setItem('luquan_cached_scripts', finalCode);
+                } catch (e) {
+                    console.warn("Không thể lưu cache vào localStorage (có thể quá dung lượng):", e);
+                }
+
+                // Thực thi script
+                const script = document.createElement('script');
+                script.innerHTML = finalCode;
+                document.body.appendChild(script);
+
             } catch (err) {
                 console.error("Lỗi khi tải config hoặc khởi tạo ứng dụng:", err);
             }
