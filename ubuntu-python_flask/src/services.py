@@ -8,6 +8,7 @@ import logging
 import sys
 import threading
 from flask import Flask, render_template, jsonify, request, abort, send_from_directory
+from hotel_admin_auth import admin_auth
 from flask_cors import cross_origin # Import đúng tên thư viện
 import uuid
 from math import radians, sin, cos, sqrt, atan2
@@ -23,6 +24,7 @@ logging.basicConfig(level=logging.INFO)
 sys.stdout.reconfigure(line_buffering=True)
 
 app = Flask(__name__, template_folder='/app')
+app.register_blueprint(admin_auth)
 
 
 # Đảm bảo đường dẫn này đúng với cấu trúc thư mục của bạn
