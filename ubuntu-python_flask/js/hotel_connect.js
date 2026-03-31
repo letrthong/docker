@@ -710,7 +710,7 @@ const App = () => {
                             <form onSubmit={handleAdminLogin} className="space-y-5">
                                 <input 
                                     type="password" 
-                                    placeholder="MẬT MÃ (1234)"
+                                    placeholder="MẬT MÃ"
                                     className="w-full px-6 py-4 rounded-2xl bg-stone-50 border-2 border-stone-100 focus:border-orange-700 outline-none text-center font-black text-lg tracking-[0.5em]"
                                     value={adminPass}
                                     onChange={(e) => setAdminPass(e.target.value)}

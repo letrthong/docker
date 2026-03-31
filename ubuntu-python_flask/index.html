@@ -74,21 +74,30 @@
     <script>
         async function loadAppWithVersion() {
             try {
-                // Thêm timestamp để bypass cache trình duyệt khi lấy file config
+                // Luôn lấy file config mới nhất từ server, không dùng cache
                 const res = await fetch('./js/config.json?t=' + new Date().getTime());
                 const config = await res.json();
                 const version = config.app_version || '1.0.0';
                 
-                // Sử dụng localStorage (giống Cookie nhưng tối ưu hơn cho ứng dụng client-side)
                 const savedVersion = localStorage.getItem('luquan_app_version');
+
+                // Nếu phát hiện phiên bản mới, xóa phiên bản cũ trong localStorage và tải lại trang.
+                // Việc tải lại trang sẽ buộc trình duyệt lấy file JS mới từ server thay vì từ cache.
+                if (savedVersion && savedVersion !== version) {
+                    console.log(`Phát hiện phiên bản mới: ${savedVersion} -> ${version}. Tải lại trang để áp dụng...`);
+                    localStorage.removeItem('luquan_app_version');
+                    window.location.reload();
+                    return; // Dừng thực thi để chờ trang tải lại.
+                }
+
+                // Nếu phiên bản không đổi hoặc là lần đầu tiên, lưu phiên bản hiện tại và tải các script.
                 if (savedVersion !== version) {
-                    console.log(`Cập nhật phiên bản: ${savedVersion} -> ${version}. Bỏ qua cache cũ...`);
                     localStorage.setItem('luquan_app_version', version);
                 }
 
                 // 1. Nạp api.js trước tiên
                 const apiScript = document.createElement('script');
-                apiScript.src = `./js/api.js?v=${version}`;
+                apiScript.src = './js/api.js'; // Không còn version trên URL
                 apiScript.onload = () => {
                     // 2. Nạp các file React/Babel sau khi api.js đã load
                     const babelScripts = [
@@ -102,18 +111,18 @@
                         "./js/components/ReportForm.js",
                         "./js/components/AdminTabs.js",
                         "./js/components/Footer.js",
-                        "./js/hotel_connect.js",
-                        "./js/components/HotelDetail.js"
+                        "./js/components/HotelDetail.js",
+                        "./js/hotel_connect.js" // File chính nên ở cuối
                     ];
 
                     babelScripts.forEach(src => {
                         const script = document.createElement('script');
                         script.type = 'text/babel';
-                        script.src = `${src}?v=${version}`;
+                        script.src = src; // Không còn version trên URL
                         document.body.appendChild(script);
                     });
 
-                    // 3. Kích hoạt Babel xử lý các file vừa được thêm vào DOM
+                    // 3. Kích hoạt Babel để xử lý các file vừa được thêm vào
                     setTimeout(() => {
                         if (window.Babel) window.Babel.transformScriptTags();
                     }, 50);
