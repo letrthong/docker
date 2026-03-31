@@ -1,11 +1,99 @@
-const { useState } = React;
+const { useState, useMemo } = React;
 
 const HotelEditForm = ({ hotel, onClose, onSaveSuccess, onToast }) => {
     // Quản lý vị trí bản đồ độc lập, khởi tạo với tọa độ hiện tại của khách sạn
     const [pickerPos, setPickerPos] = useState({ lat: hotel.lat || 11.9404, lng: hotel.lng || 108.4583 });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [apiError, setApiError] = useState(null);
-    const [websiteUrl, setWebsiteUrl] = useState(hotel.website || "");
+
+    const decodedWebsite = useMemo(() => {
+        if (!hotel.website) return "";
+        try {
+            return decodeURIComponent(escape(atob(hotel.website)));
+        } catch (e) {
+            return hotel.website;
+        }
+    }, [hotel.website]);
+
+    const decodedAddress = useMemo(() => {
+        if (!hotel.address) return "";
+        try {
+            return decodeURIComponent(escape(atob(hotel.address)));
+        } catch (e) {
+            return hotel.address;
+        }
+    }, [hotel.address]);
+
+    const [websiteUrl, setWebsiteUrl] = useState(decodedWebsite || "");
+    const [imageBase64, setImageBase64] = useState(hotel.image || "");
+
+    // Giải mã Base64 sang chuỗi UTF-8 để tải vào giá trị mặc định của form
+    const decodedDescription = useMemo(() => {
+        if (!hotel.description) return "";
+        try {
+            return decodeURIComponent(escape(atob(hotel.description)));
+        } catch (e) {
+            return hotel.description; // Tương thích ngược với các file JSON cũ chưa encode Base64
+        }
+    }, [hotel.description]);
+
+    const decodedPhone = useMemo(() => {
+        if (!hotel.phone) return "";
+        try {
+            return decodeURIComponent(escape(atob(hotel.phone)));
+        } catch (e) {
+            return hotel.phone;
+        }
+    }, [hotel.phone]);
+
+    const handleImageUpload = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            setApiError("Vui lòng chọn một tệp hình ảnh hợp lệ.");
+            return;
+        }
+
+        setApiError(null);
+
+        const img = new Image();
+        const objectUrl = URL.createObjectURL(file);
+        
+        img.onload = () => {
+            URL.revokeObjectURL(objectUrl);
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            const MAX_SIZE = 800;
+
+            if (width > height && width > MAX_SIZE) {
+                height = Math.round((height * MAX_SIZE) / width);
+                width = MAX_SIZE;
+            } else if (height > MAX_SIZE) {
+                width = Math.round((width * MAX_SIZE) / height);
+                height = MAX_SIZE;
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            const dataUrl = canvas.toDataURL('image/webp', 0.8);
+            setImageBase64(dataUrl);
+        };
+        
+        img.onerror = () => {
+            URL.revokeObjectURL(objectUrl);
+            setApiError("Không thể xử lý hình ảnh này. Vui lòng thử ảnh khác.");
+        };
+
+        img.src = objectUrl;
+        
+        e.target.value = '';
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -14,6 +102,7 @@ const HotelEditForm = ({ hotel, onClose, onSaveSuccess, onToast }) => {
 
         const formData = new FormData(e.target);
         const name = formData.get('name').trim();
+        const type = formData.get('type');
         const phone = formData.get('phone').trim();
         const website = formData.get('website').trim();
         const description = formData.get('description').trim();
@@ -73,12 +162,19 @@ const HotelEditForm = ({ hotel, onClose, onSaveSuccess, onToast }) => {
         }
         // --- END VALIDATION ---
         
+        const base64Description = btoa(unescape(encodeURIComponent(description)));
+        const base64Phone = btoa(unescape(encodeURIComponent(phone)));
+        const base64Address = btoa(unescape(encodeURIComponent(formData.get('address').trim())));
+        const base64Website = processedWebsite ? btoa(unescape(encodeURIComponent(processedWebsite))) : "";
+
         const updatedData = {
             name: name,
-            address: formData.get('address'),
-            phone: phone,
-            website: processedWebsite,
-            description: description,
+            type: type,
+            address: base64Address,
+            phone: base64Phone,
+            website: base64Website,
+            description: base64Description,
+            image: imageBase64,
             lat: pickerPos.lat, 
             lng: pickerPos.lng
         };
@@ -118,9 +214,21 @@ const HotelEditForm = ({ hotel, onClose, onSaveSuccess, onToast }) => {
                             <label className="text-[10px] font-black text-stone-400 mb-1 block tracking-widest"><span className="uppercase">Tên</span> Lữ Quán</label>
                             <input required name="name" defaultValue={hotel.name} className="w-full px-4 py-3 rounded-xl bg-stone-100 border-2 border-transparent focus:border-blue-700 outline-none font-bold text-sm" />
                         </div>
-                        <div className="col-span-2">
+                        <div className="col-span-1">
+                            <label className="text-[10px] font-black text-stone-400 uppercase mb-1 block tracking-widest">Loại hình</label>
+                            <select required name="type" defaultValue={hotel.type || ""} className="w-full px-4 py-3 rounded-xl bg-stone-100 border-2 border-transparent focus:border-blue-700 outline-none font-bold text-sm appearance-none cursor-pointer">
+                                <option value="">-- Chọn --</option>
+                                <option value="hotel">Khách sạn</option>
+                                <option value="homestay">Homestay</option>
+                                <option value="resort">Resort</option>
+                                <option value="motel">Nhà nghỉ</option>
+                                <option value="villa">Biệt thự</option>
+                                <option value="other">Khác</option>
+                            </select>
+                        </div>
+                        <div className="col-span-1">
                             <label className="text-[10px] font-black text-stone-400 uppercase mb-1 block tracking-widest">Số điện thoại chính</label>
-                            <input required name="phone" defaultValue={hotel.phone} className="w-full px-4 py-3 rounded-xl bg-stone-100 border-2 border-transparent focus:border-blue-700 outline-none font-bold text-sm" />
+                            <input required name="phone" defaultValue={decodedPhone} className="w-full px-4 py-3 rounded-xl bg-stone-100 border-2 border-transparent focus:border-blue-700 outline-none font-bold text-sm" />
                         </div>
                     </div>
 
@@ -176,12 +284,30 @@ const HotelEditForm = ({ hotel, onClose, onSaveSuccess, onToast }) => {
                         </div>
                         <div>
                             <label className="text-[10px] font-black text-stone-400 uppercase mb-1 block tracking-widest">Địa chỉ chi tiết</label>
-                            <input required name="address" defaultValue={hotel.address} className="w-full px-4 py-3 rounded-xl bg-stone-100 border-2 border-transparent focus:border-blue-700 outline-none font-bold text-sm" />
+                            <input required name="address" defaultValue={decodedAddress} className="w-full px-4 py-3 rounded-xl bg-stone-100 border-2 border-transparent focus:border-blue-700 outline-none font-bold text-sm" />
                         </div>
                     </div>
                     <div>
                         <label className="text-[10px] font-black text-stone-400 uppercase mb-1 block tracking-widest">Mô tả đặc điểm</label>
-                        <textarea required minLength="20" name="description" defaultValue={hotel.description} rows="2" className="w-full px-4 py-3 rounded-xl bg-stone-100 border-2 border-transparent focus:border-blue-700 outline-none font-bold text-sm" placeholder="Mô tả ít nhất 20 ký tự về lữ quán..."></textarea>
+                        <textarea required minLength="20" name="description" defaultValue={decodedDescription} rows="2" className="w-full px-4 py-3 rounded-xl bg-stone-100 border-2 border-transparent focus:border-blue-700 outline-none font-bold text-sm" placeholder="Mô tả ít nhất 20 ký tự về lữ quán..."></textarea>
+                    </div>
+                    <div>
+                        <label className="text-[10px] font-black text-stone-400 uppercase mb-1 block tracking-widest">Ảnh đại diện</label>
+                        <div className="flex items-center gap-4">
+                            <div className="w-20 h-20 bg-stone-100 rounded-xl border-2 border-dashed border-stone-300 flex items-center justify-center overflow-hidden shrink-0 relative hover:bg-stone-200 transition-colors">
+                                {imageBase64 ? (
+                                    <img src={imageBase64} className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="flex items-center justify-center w-full h-full">
+                                        <Icon name="image-plus" size={24} className="text-stone-400" />
+                                    </div>
+                                )}
+                                <input type="file" accept="image/*" onChange={handleImageUpload} className="absolute inset-0 opacity-0 cursor-pointer" title="Chọn ảnh tải lên" />
+                            </div>
+                            <div className="text-[10px] text-stone-500 font-bold leading-relaxed">
+                                Nhấn vào khung bên cạnh để tải ảnh mới lên thay thế ảnh cũ. Ảnh sẽ tự động được nén và tối ưu hóa WebP.
+                            </div>
+                        </div>
                     </div>
                     {/* Hiển thị lỗi từ API */}
                     {apiError && (

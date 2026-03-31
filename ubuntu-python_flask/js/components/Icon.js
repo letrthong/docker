@@ -9,5 +9,12 @@ const Icon = ({ name, size = 20, className = "" }) => {
             </svg>
         );
     }
-    return <i data-lucide={name} style={{ width: size, height: size }} className={className}></i>;
+    // Dùng thẻ <span> bọc cùng dangerouslySetInnerHTML để chặn lỗi React "Node.removeChild".
+    // Việc này cô lập DOM khỏi React, cho phép Lucide tự do biến đổi <i> thành <svg> mà không làm React bị crash.
+    return (
+        <span 
+            style={{ display: 'contents' }}
+            dangerouslySetInnerHTML={{ __html: `<i data-lucide="${name}" class="${className}" style="width: ${size}px; height: ${size}px;"></i>` }}
+        />
+    );
 };

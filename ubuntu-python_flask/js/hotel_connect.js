@@ -27,6 +27,16 @@ const removeVietnameseTones = (str) => {
               .replace(/\s+/g, ' ').trim();
 };
 
+// Hàm tiện ích giải mã Base64
+const decodeBase64 = (str) => {
+    if (!str) return "";
+    try {
+        return decodeURIComponent(escape(atob(str)));
+    } catch (e) {
+        return str;
+    }
+};
+
 const App = () => {
     const [hotels, setHotels] = useState([]);
     const [provinces, setProvinces] = useState([]);
@@ -216,7 +226,7 @@ const App = () => {
         
         const searchResults = list.filter(hotel => {
             const matchSearch = removeVietnameseTones(hotel.name || "").includes(normalizedSearchTerm) ||
-                                removeVietnameseTones(hotel.address || "").includes(normalizedSearchTerm);
+                                removeVietnameseTones(decodeBase64(hotel.address) || "").includes(normalizedSearchTerm);
                                 
             // Việc lọc theo thành phố đã được xử lý ở bước tải dữ liệu
             return matchSearch;
@@ -566,7 +576,7 @@ const App = () => {
                                                 <div>
                                                     <h3 className="font-black text-stone-900 leading-tight truncate text-xs uppercase">{hotel.name}</h3>
                                                     <p className="text-[9px] text-stone-500 flex items-center gap-1 mt-0.5 font-bold truncate">
-                                                        <Icon name="map-pin" size={10} className="text-orange-700" /> {hotel.address}
+                                                        <Icon name="map-pin" size={10} className="text-orange-700" /> {decodeBase64(hotel.address)}
                                                     </p>
                                                 </div>
                                                 <div className="flex items-center justify-between mt-1">

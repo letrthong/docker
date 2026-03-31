@@ -1,4 +1,16 @@
-const { useState, useCallback } = React; // Import useCallback
+const { useState, useCallback, useMemo } = React; 
+
+const getTypeLabel = (type) => {
+    const types = {
+        'hotel': 'Khách sạn',
+        'homestay': 'Homestay',
+        'resort': 'Resort',
+        'motel': 'Nhà nghỉ',
+        'villa': 'Biệt thự',
+        'other': 'Khác'
+    };
+    return types[type] || type;
+};
 
 const StatusBadge = ({ status }) => {
     switch (status) {
@@ -33,6 +45,43 @@ const HotelDetail = ({ hotel, onClose, onShare, formatDate, handleImageError, on
         setShowReportForm(false);
     }, []);
 
+    // Giải mã Base64 sang chuỗi UTF-8, sử dụng fallback cho dữ liệu bản cũ
+    const decodedDescription = useMemo(() => {
+        if (!hotel.description) return "";
+        try {
+            return decodeURIComponent(escape(atob(hotel.description)));
+        } catch (e) {
+            return hotel.description;
+        }
+    }, [hotel.description]);
+
+    const decodedPhone = useMemo(() => {
+        if (!hotel.phone) return "";
+        try {
+            return decodeURIComponent(escape(atob(hotel.phone)));
+        } catch (e) {
+            return hotel.phone;
+        }
+    }, [hotel.phone]);
+
+    const decodedAddress = useMemo(() => {
+        if (!hotel.address) return "";
+        try {
+            return decodeURIComponent(escape(atob(hotel.address)));
+        } catch (e) {
+            return hotel.address;
+        }
+    }, [hotel.address]);
+
+    const decodedWebsite = useMemo(() => {
+        if (!hotel.website) return "";
+        try {
+            return decodeURIComponent(escape(atob(hotel.website)));
+        } catch (e) {
+            return hotel.website;
+        }
+    }, [hotel.website]);
+
     return (
         <div className={`
             fixed inset-0 z-50 flex items-end justify-center md:absolute md:inset-auto md:right-4 md:top-4 md:bottom-4 md:items-start
@@ -52,13 +101,20 @@ const HotelDetail = ({ hotel, onClose, onShare, formatDate, handleImageError, on
                 
                 <div id="hotel-detail-content" className="p-6 sm:p-8 flex-1 overflow-y-auto bg-white scrollbar-hide">
                     <div className="flex justify-between items-start gap-4 mb-2">
-                        <h2 className="text-xl sm:text-2xl font-black text-stone-900 leading-tight uppercase tracking-tight">{hotel.name}</h2>
+                        <div>
+                            {hotel.type && (
+                                <span className="inline-block px-2 py-1 bg-stone-100 text-stone-600 text-[8px] font-black uppercase tracking-widest rounded-md mb-1.5 border border-stone-200">
+                                    {getTypeLabel(hotel.type)}
+                                </span>
+                            )}
+                            <h2 className="text-xl sm:text-2xl font-black text-stone-900 leading-tight uppercase tracking-tight">{hotel.name}</h2>
+                        </div>
                         <button onClick={() => onShare(hotel)} className="p-2 bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-900 rounded-full transition-all shrink-0 active:scale-95" title="Chia sẻ">
                             <Icon name="share-2" size={18} />
                         </button>
                     </div>
                     <p className="text-stone-500 text-[10px] font-bold flex items-start gap-1 mb-6 uppercase leading-relaxed">
-                        <Icon name="map-pin" size={14} className="text-orange-700 shrink-0 mt-0.5" /> {hotel.address}
+                        <Icon name="map-pin" size={14} className="text-orange-700 shrink-0 mt-0.5" /> {decodedAddress}
                     </p>
 
                     <div className="grid grid-cols-2 gap-3 mb-6">
@@ -78,7 +134,7 @@ const HotelDetail = ({ hotel, onClose, onShare, formatDate, handleImageError, on
 
                     <div className="mb-6">
                         <p className="text-stone-600 text-[13px] leading-relaxed bg-stone-50 p-4 rounded-2xl border-2 border-dashed border-stone-200 italic font-medium">
-                            "{hotel.description}"
+                            "{decodedDescription}"
                         </p>
                     </div>
 
@@ -86,8 +142,8 @@ const HotelDetail = ({ hotel, onClose, onShare, formatDate, handleImageError, on
                         <p className="text-[10px] font-black text-orange-800 uppercase tracking-widest mb-4">
                             Liên hệ & Tiện ích
                         </p>
-                        {hotel.website && (
-                            <a href={hotel.website} target="_blank" className="w-full flex items-center justify-center gap-2 bg-stone-900 text-stone-100 py-4 rounded-2xl font-black active:scale-95 transition-all uppercase text-[10px] tracking-widest">
+                        {decodedWebsite && (
+                            <a href={decodedWebsite} target="_blank" className="w-full flex items-center justify-center gap-2 bg-stone-900 text-stone-100 py-4 rounded-2xl font-black active:scale-95 transition-all uppercase text-[10px] tracking-widest">
                                 <Icon name="external-link" size={16} /> Truy cập website
                             </a>
                         )}
@@ -100,7 +156,7 @@ const HotelDetail = ({ hotel, onClose, onShare, formatDate, handleImageError, on
                         </a>
                         <button disabled className="w-full flex flex-col items-center justify-center gap-1 bg-orange-700 text-white py-4 sm:py-5 rounded-2xl font-black opacity-50 cursor-not-allowed transition-all">
                                 <div className="flex items-center gap-2 text-sm uppercase"><Icon name="phone" size={18} /> Gọi Hotline</div>
-                                <span className="text-[9px] opacity-70 tracking-widest font-bold">{hotel.phone}</span>
+                                <span className="text-[9px] opacity-70 tracking-widest font-bold">{decodedPhone}</span>
                         </button>
                         <button 
                             onClick={() => setShowReportForm(true)} // Đây là hàm setter của useState, React đảm bảo nó ổn định
