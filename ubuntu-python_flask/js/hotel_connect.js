@@ -522,14 +522,14 @@ const App = () => {
                         </div>
 
                         {isAdmin && (
-                            <div className="grid grid-cols-3 gap-2 mt-2 sm:hidden">
-                                <button onClick={() => setAdminTab('approved')} className={`py-1.5 rounded-lg text-[9px] font-bold uppercase transition-all ${adminTab === 'approved' ? 'bg-moss text-white shadow' : 'bg-stone-200 text-stone-600'}`}>Đã Duyệt</button>
-                                <button onClick={() => setAdminTab('deleted')} className={`py-1.5 rounded-lg text-[9px] font-bold uppercase transition-all ${adminTab === 'deleted' ? 'bg-red-700 text-white shadow' : 'bg-stone-200 text-stone-600'}`}>Thùng rác</button>
-                                <button onClick={() => setAdminTab('inactive')} className={`py-1.5 rounded-lg text-[9px] font-bold uppercase transition-all ${adminTab === 'inactive' ? 'bg-stone-500 text-white shadow' : 'bg-stone-200 text-stone-600'}`}>Đã Ẩn</button>
-                                <button onClick={() => setAdminTab('pending')} className={`py-1.5 rounded-lg text-[9px] font-bold uppercase transition-all ${adminTab === 'pending' ? 'bg-orange-700 text-white shadow' : 'bg-stone-200 text-stone-600'}`}>Chờ Duyệt {pendingRequests.length > 0 && `(${pendingRequests.length})`}</button>
-                                <button onClick={() => setAdminTab('pending_review')} className={`py-1.5 rounded-lg text-[9px] font-bold uppercase transition-all ${adminTab === 'pending_review' ? 'bg-purple-700 text-white shadow' : 'bg-stone-200 text-stone-600'}`}>Cần Review {pendingReviewHotels.length > 0 && `(${pendingReviewHotels.length})`}</button>
-                                <button onClick={() => setAdminTab('reports')} className={`py-1.5 rounded-lg text-[9px] font-bold uppercase transition-all ${adminTab === 'reports' ? 'bg-red-700 text-white shadow' : 'bg-stone-200 text-stone-600'}`}>Báo cáo {reports.length > 0 && `(${reports.length})`}</button>
-                            </div>
+                            <AdminTabs
+                                adminTab={adminTab}
+                                onSetAdminTab={setAdminTab}
+                                pendingRequestsCount={pendingRequests.length}
+                                pendingReviewHotelsCount={pendingReviewHotels.length}
+                                reportsCount={reports.length}
+                                isMobile={true}
+                            />
                         )}
                     </div>
 

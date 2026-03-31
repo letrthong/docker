@@ -30,20 +30,14 @@ const Header = ({
                         <button onClick={onShowSchemaManager} className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 px-2 py-1.5 md:px-3 md:py-2 rounded-lg transition-all text-[9px] md:text-xs font-black uppercase tracking-wider shadow-sm text-white mr-1 sm:mr-0">
                             <Icon name="map" size={14} /> <span className="hidden sm:inline">Khu vực</span>
                         </button>
-                        <div className="flex bg-white/10 p-0.5 rounded-lg mr-1 hidden sm:flex">
-                            <button onClick={() => onSetAdminTab('approved')} className={`px-2 py-1 md:px-3 md:py-1.5 rounded text-[8px] md:text-[10px] lg:text-xs font-bold uppercase transition-all ${adminTab === 'approved' ? 'bg-white text-stone-900 shadow' : 'text-white/60 hover:text-white'}`}>Đã Duyệt</button>
-                            <button onClick={() => onSetAdminTab('deleted')} className={`px-2 py-1 md:px-3 md:py-1.5 rounded text-[8px] md:text-[10px] lg:text-xs font-bold uppercase transition-all ${adminTab === 'deleted' ? 'bg-red-700 text-white shadow' : 'text-white/60 hover:text-white'}`}>
-                                Thùng rác
-                            </button>
-                            <button onClick={() => onSetAdminTab('inactive')} className={`px-2 py-1 md:px-3 md:py-1.5 rounded text-[8px] md:text-[10px] lg:text-xs font-bold uppercase transition-all ${adminTab === 'inactive' ? 'bg-stone-500 text-white shadow' : 'text-white/60 hover:text-white'}`}>Đã Ẩn</button>
-                            <button onClick={() => onSetAdminTab('pending')} className={`px-2 py-1 md:px-3 md:py-1.5 rounded text-[8px] md:text-[10px] lg:text-xs font-bold uppercase transition-all relative ${adminTab === 'pending' ? 'bg-white text-stone-900 shadow' : 'text-white/60 hover:text-white'}`}>
-                                Chờ Duyệt {pendingRequestsCount > 0 && <span className="ml-1 opacity-70">({pendingRequestsCount})</span>}
-                            </button>
-                            <button onClick={() => onSetAdminTab('pending_review')} className={`px-2 py-1 md:px-3 md:py-1.5 rounded text-[8px] md:text-[10px] lg:text-xs font-bold uppercase transition-all relative ${adminTab === 'pending_review' ? 'bg-purple-600 text-white shadow' : 'text-white/60 hover:text-white'}`}>
-                                Cần Review {pendingReviewHotelsCount > 0 && <span className="ml-1 opacity-70">({pendingReviewHotelsCount})</span>}
-                            </button>
-                            <button onClick={() => onSetAdminTab('reports')} className={`px-2 py-1 md:px-3 md:py-1.5 rounded text-[8px] md:text-[10px] lg:text-xs font-bold uppercase transition-all relative ${adminTab === 'reports' ? 'bg-white text-stone-900 shadow' : 'text-white/60 hover:text-white'}`}>Báo cáo {reportsCount > 0 && <span className="ml-1 opacity-70">({reportsCount})</span>}</button>
-                        </div>
+                        <AdminTabs
+                            adminTab={adminTab}
+                            onSetAdminTab={onSetAdminTab}
+                            pendingRequestsCount={pendingRequestsCount}
+                            pendingReviewHotelsCount={pendingReviewHotelsCount}
+                            reportsCount={reportsCount}
+                            isMobile={false}
+                        />
                     </>
                 ) : (
                     <button onClick={onShowRequestForm} className="flex items-center gap-1 bg-orange-700 hover:bg-orange-800 px-3 py-1.5 md:px-4 md:py-2 rounded-lg transition-all text-[9px] md:text-xs font-black uppercase tracking-wider">
