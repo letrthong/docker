@@ -173,10 +173,11 @@ const HotelRequestForm = ({ provinces, onClose, onSubmitSuccess, onToast }) => {
                     <button type="button" onClick={onClose} className="p-2 bg-white/10 rounded-xl hover:bg-white/20 transition-colors"><Icon name="x" size={20} /></button>
                 </div>
                 
-                <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1 scrollbar-hide bg-white pb-safe">
-                    <div className="bg-amber-50 p-3 rounded-xl text-amber-900 text-[10px] font-bold border border-amber-100 mb-2">
+                <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+                    <div className="p-6 space-y-4 overflow-y-auto flex-1 bg-white">
+                        <div className="bg-amber-50 p-3 rounded-xl text-amber-900 text-[10px] font-bold border border-amber-100 mb-2">
                         Thông tin sẽ được chúng tôi phê duyệt thủ công để đảm bảo chất lượng lữ quán.
-                    </div>
+                        </div>
                     <div className="grid grid-cols-2 gap-3">
                         <div className="col-span-2">
                             <label className="text-[10px] font-black text-stone-400 uppercase mb-1 block tracking-widest">Tỉnh/Thành phố</label>
@@ -268,13 +269,16 @@ const HotelRequestForm = ({ provinces, onClose, onSubmitSuccess, onToast }) => {
                             <p>{apiError}</p>
                         </div>
                     )}
-                    <button 
-                        type="submit" 
-                        disabled={isOutside || isSubmitting}
-                        className={`w-full py-4 rounded-2xl font-black shadow-xl uppercase tracking-widest text-[11px] transition-all ${(isOutside || isSubmitting) ? 'bg-stone-300 text-stone-500 cursor-not-allowed' : 'bg-orange-700 text-white active:scale-95'}`}
-                    >
-                        {isSubmitting ? 'Đang gửi...' : (isOutside ? 'Vị trí ngoài vùng cho phép' : 'Gửi yêu cầu đăng ký')}
-                    </button>
+                    </div>
+                    <div className="p-4 border-t border-stone-100 bg-white shrink-0 pb-safe">
+                        <button 
+                            type="submit" 
+                            disabled={isOutside || isSubmitting}
+                            className={`w-full py-4 rounded-2xl font-black shadow-xl uppercase tracking-widest text-[11px] transition-all ${(isOutside || isSubmitting) ? 'bg-stone-300 text-stone-500 cursor-not-allowed' : 'bg-orange-700 text-white active:scale-95'}`}
+                        >
+                            {isSubmitting ? 'Đang gửi...' : (isOutside ? 'Vị trí ngoài vùng cho phép' : 'Gửi yêu cầu đăng ký')}
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>

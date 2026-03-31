@@ -691,7 +691,7 @@ const App = () => {
                                 <button onClick={() => setShowSchemaManager(false)} className="p-2 bg-white/10 rounded-xl hover:bg-white/20 transition-colors"><Icon name="x" size={20} /></button>
                             </div>
                             
-                            <div className="overflow-y-auto flex-1 scrollbar-hide bg-stone-50 pb-safe relative">
+                            <div className="overflow-y-auto flex-1 bg-stone-50 pb-safe relative">
                                 <SchemaManager api={HotelAPI} onToast={setToastMessage} />
                             </div>
                         </div>
