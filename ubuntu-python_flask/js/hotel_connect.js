@@ -727,7 +727,7 @@ const App = () => {
                 {/* About Dialog Modal */}
                 {showAboutDialog && (
                     <div className="fixed inset-0 bg-stone-950/90 backdrop-blur-xl z-[200] flex items-center justify-center p-6">
-                        <div className="bg-white w-full max-w-md rounded-[40px] shadow-2xl p-8 text-center animate-in zoom-in-95 duration-200">
+                        <div className="bg-white w-full max-w-md max-h-[95dvh] overflow-y-auto scrollbar-hide rounded-[40px] shadow-2xl p-8 text-center animate-in zoom-in-95 duration-200">
                             <div className="w-16 h-16 bg-red-50 text-red-600 rounded-3xl flex items-center justify-center mx-auto mb-6 transform rotate-3">
                                 <Icon name="info" size={32} />
                             </div>
@@ -737,6 +737,8 @@ const App = () => {
                                 <p><strong>2.</strong> Nếu một chủ khách sạn muốn đưa thông tin của mình lên bản đồ thì nhấp vào nút <strong>"Đăng ký khách sạn"</strong>.</p>
                                 <p><strong>3.</strong> Chúng tôi hoạt động như một danh bạ du lịch trên bản đồ, vì vậy bạn cần truy cập thông tin liên hệ của khách sạn để kiểm tra trực tiếp.</p>
                                 <p className="text-red-600 italic"><strong>4.</strong> Lưu ý: Chúng tôi sẽ không chịu trách nhiệm về chất lượng dịch vụ của các khách sạn.</p>
+                                <p><strong>5.</strong> Thông tin về đăng ký khách sạn sẽ được chúng tôi phê duyệt thủ công để đảm bảo chất lượng và cập nhật lại sau 6 tháng.</p>
+                                <p><strong>6.</strong> Nếu khách sạn có vấn đề không liên lạc được, sai địa chỉ... bạn có thể nhấp vào nút <strong>"Báo sai thông tin"</strong> để chúng tôi kiểm tra lại.</p>
                             </div>
                             <button onClick={() => setShowAboutDialog(false)} className="w-full py-4 bg-stone-900 text-white rounded-2xl font-black shadow-xl active:scale-95 transition-all uppercase text-[11px] tracking-widest hover:bg-stone-800">
                                 Đã hiểu
