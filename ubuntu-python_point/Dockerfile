@@ -22,6 +22,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY *.py /app/
 COPY *.sh /app/
 
+ 
+RUN  npm run dev
+
 # 5. EXPOSE PORT AND RUN THE APPLICATION
 # Expose the port the app runs on
 EXPOSE 5000
