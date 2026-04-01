@@ -1,0 +1,20 @@
+[
+    {
+        "username": "admin",
+        "pass": "MTM1MjQ2",
+        "role": "admin",
+        "name": "Administrator"
+    },
+    {
+        "username": "view",
+        "name": "view",
+        "pass": "MTIzNA==",
+        "role": "writer"
+    },
+    {
+        "username": "auditor",
+        "name": "auditor",
+        "pass": "YXVkaXRvcg==",
+        "role": "editor"
+    }
+]

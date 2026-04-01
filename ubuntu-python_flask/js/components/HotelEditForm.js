@@ -128,9 +128,8 @@ const HotelEditForm = ({ hotel, onClose, onSaveSuccess, onToast }) => {
         // --- END VALIDATION ---
 
         // --- START VALIDATION: Kiểm tra số điện thoại hợp lệ của Việt Nam ---
-        const phoneRegex = /^(0[3|5|7|8|9])+([0-9]{8})$/;
-        if (!phoneRegex.test(phone)) {
-            setApiError("Số điện thoại không hợp lệ. Vui lòng kiểm tra lại (gồm 10 số, bắt đầu bằng 03, 05, 07, 08, 09).");
+        if (!isValidPhoneNumber(phone)) {
+            setApiError("Số điện thoại không hợp lệ. Vui lòng kiểm tra lại (gồm 10-11 số).");
             setIsSubmitting(false);
             return;
         }

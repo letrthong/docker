@@ -37,6 +37,13 @@ const decodeBase64 = (str) => {
     }
 };
 
+// Hàm tiện ích kiểm tra số điện thoại hợp lệ của Việt Nam
+const isValidPhoneNumber = (phone) => {
+    if (!phone) return false;
+    const cleanPhone = phone.replace(/\s+/g, '');
+    return /^[0-9]{10,11}$/.test(cleanPhone);
+};
+
 const App = () => {
     const [hotels, setHotels] = useState([]);
     const [provinces, setProvinces] = useState([]);
@@ -411,6 +418,24 @@ const App = () => {
         refreshReports();
     };
 
+    const hideHotel = (hotel, e) => {
+        e.stopPropagation();
+        if (!window.confirm(`Bạn có chắc chắn muốn tạm ẩn khách sạn "${hotel.name}" khỏi bản đồ?`)) {
+            return;
+        }
+        
+        HotelAPI.setHotelStatus(hotel.id, 'inactive')
+            .then((response) => {
+                setHotels(prev => prev.map(h => h.id === hotel.id ? (response.data || { ...h, status: 'inactive' }) : h));
+                if (selectedHotel?.id === hotel.id) setSelectedHotel(null);
+                setToastMessage(`Đã tạm ẩn "${hotel.name}".`);
+            })
+            .catch(err => {
+                console.error("Lỗi khi tạm ẩn:", err);
+                setToastMessage(err.message || "Có lỗi xảy ra khi cập nhật trạng thái ẩn.");
+            });
+    };
+
     const deleteHotel = (id, e) => {
         e.stopPropagation();
         if (!window.confirm("Bạn có chắc chắn muốn đưa khách sạn này vào thùng rác? Lữ quán sẽ chuyển sang trạng thái 'deleted' và tự động xóa vĩnh viễn sau 6 tháng.")) {
@@ -418,8 +443,8 @@ const App = () => {
         }
         
         HotelAPI.setHotelStatus(id, 'deleted')
-            .then(() => {
-                setHotels(prev => prev.filter(h => h.id !== id));
+            .then((response) => {
+                setHotels(prev => prev.map(h => h.id === id ? (response.data || { ...h, status: 'deleted' }) : h));
                 setPendingReviewHotels(prev => prev.filter(h => h.id !== id));
                 if (selectedHotel?.id === id) setSelectedHotel(null);
                 setToastMessage("Đã đưa khách sạn vào danh sách chờ xóa!");
@@ -616,8 +641,9 @@ const App = () => {
                                             )}
                                             {isAdmin && adminTab === 'approved' && (
                                                 <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 flex gap-1">
-                                                    <button onClick={(e) => startEditHotel(hotel, e)} className="p-2 text-blue-600 bg-white rounded shadow hover:bg-stone-50"><Icon name="edit" size={14} /></button>
-                                                    <button onClick={(e) => deleteHotel(hotel.id, e)} className="p-2 text-red-600 bg-white rounded shadow hover:bg-stone-50"><Icon name="trash-2" size={14} /></button>
+                                                    <button onClick={(e) => startEditHotel(hotel, e)} className="p-2 text-blue-600 bg-white rounded shadow hover:bg-stone-50" title="Sửa thông tin"><Icon name="edit" size={14} /></button>
+                                                    <button onClick={(e) => hideHotel(hotel, e)} className="p-2 text-purple-600 bg-white rounded shadow hover:bg-stone-50" title="Tạm ẩn"><Icon name="eye-off" size={14} /></button>
+                                                    <button onClick={(e) => deleteHotel(hotel.id, e)} className="p-2 text-red-600 bg-white rounded shadow hover:bg-stone-50" title="Đưa vào thùng rác"><Icon name="trash-2" size={14} /></button>
                                                 </div>
                                             )}
                                         </div>
@@ -737,18 +763,102 @@ const App = () => {
                 {/* About Dialog Modal */}
                 {showAboutDialog && (
                     <div className="fixed inset-0 bg-stone-950/90 backdrop-blur-xl z-[200] flex items-center justify-center p-6">
-                        <div className="bg-white w-full max-w-md max-h-[95dvh] overflow-y-auto scrollbar-hide rounded-[40px] shadow-2xl p-8 text-center animate-in zoom-in-95 duration-200">
-                            <div className="w-16 h-16 bg-red-50 text-red-600 rounded-3xl flex items-center justify-center mx-auto mb-6 transform rotate-3">
-                                <Icon name="info" size={32} />
+                        <div className="bg-white w-full max-w-2xl max-h-[95dvh] overflow-y-auto scrollbar-hide rounded-[40px] shadow-2xl p-8 text-left animate-in zoom-in-95 duration-200">
+                            <div className="flex justify-between items-start mb-6">
+                                <div>
+                                    <h3 className="text-xl font-black text-stone-900 uppercase tracking-tight">Chính sách & Thông tin</h3>
+                                    <p className="text-xs text-stone-500 font-bold">Lữ Quán – Nền tảng dữ liệu du lịch mở</p>
+                                </div>
+                                <button onClick={() => setShowAboutDialog(false)} className="p-2 bg-stone-100 rounded-xl hover:bg-stone-200 transition-colors shrink-0"><Icon name="x" size={20} /></button>
                             </div>
-                            <h3 className="text-xl font-black text-stone-900 uppercase mb-4 tracking-tight">Thông tin dự án</h3>
-                            <div className="text-sm text-stone-600 font-medium mb-8 leading-relaxed text-left space-y-3">
-                                <p><strong>1.</strong> Lữ Quán là một website hoàn toàn miễn phí và toàn bộ dữ liệu được công khai mã nguồn mở trên Github.</p>
-                                <p><strong>2.</strong> Nếu một chủ khách sạn muốn đưa thông tin của mình lên bản đồ thì nhấp vào nút <strong>"Đăng ký khách sạn"</strong>.</p>
-                                <p><strong>3.</strong> Chúng tôi hoạt động như một danh bạ du lịch trên bản đồ, vì vậy bạn cần truy cập thông tin liên hệ của khách sạn để kiểm tra trực tiếp.</p>
-                                <p className="text-red-600 italic"><strong>4.</strong> Lưu ý: Chúng tôi sẽ không chịu trách nhiệm về chất lượng dịch vụ của các khách sạn.</p>
-                                <p><strong>5.</strong> Thông tin về đăng ký khách sạn sẽ được chúng tôi phê duyệt thủ công để đảm bảo chất lượng và cập nhật lại sau 6 tháng.</p>
-                                <p><strong>6.</strong> Nếu khách sạn có vấn đề không liên lạc được, sai địa chỉ... bạn có thể nhấp vào nút <strong>"Báo sai thông tin"</strong> để chúng tôi kiểm tra lại.</p>
+                            
+                            <div className="text-sm text-stone-700 font-medium leading-relaxed space-y-4">
+                                <p>Lữ Quán là một nền tảng hạ tầng dữ liệu du lịch, hoạt động theo nguyên tắc miễn phí – minh bạch – tự động hoá cao.</p>
+                                <p>Để đảm bảo hệ thống vận hành ổn định, tiết kiệm thời gian cho cả hai bên và giữ đúng vai trò hạ tầng, chúng tôi áp dụng chính sách liên hệ như sau:</p>
+
+                                <div>
+                                    <h4 className="font-black text-stone-800 mb-2">1. Kênh liên hệ chính thức</h4>
+                                    <p>Hiện tại, email là kênh liên hệ duy nhất:</p>
+                                    <p className="my-2 p-3 bg-stone-100 rounded-lg border border-stone-200">📧 Email: <strong>info@telua.vn</strong></p>
+                                    <p>Chúng tôi không hỗ trợ liên hệ qua điện thoại.</p>
+                                    <p>Việc sử dụng email giúp:</p>
+                                    <ul className="list-disc list-inside space-y-1 mt-2 pl-2">
+                                        <li>Ghi nhận yêu cầu rõ ràng, có nội dung đầy đủ</li>
+                                        <li>Lưu vết và xử lý theo quy trình</li>
+                                        <li>Hạn chế các yêu cầu rời rạc, thiếu thông tin</li>
+                                        <li>Phù hợp với mô hình vận hành tự động và dữ liệu mở</li>
+                                    </ul>
+                                </div>
+
+                                <div>
+                                    <h4 className="font-black text-stone-800 mb-2">2. Những trường hợp nên liên hệ</h4>
+                                    <p>Vui lòng liên hệ qua email trong các trường hợp sau:</p>
+                                    <div className="space-y-2 mt-2">
+                                        <p><strong>✅ Chủ khách sạn / nhà nghỉ</strong></p>
+                                        <ul className="list-disc list-inside space-y-1 pl-4">
+                                            <li>Yêu cầu cập nhật hoặc chỉnh sửa thông tin</li>
+                                            <li>Báo sai thông tin (số điện thoại, địa chỉ, vị trí bản đồ…)</li>
+                                            <li>Xác nhận quyền sở hữu cơ sở lưu trú</li>
+                                            <li>Gỡ thông tin theo yêu cầu chính đáng</li>
+                                        </ul>
+                                        <p><strong>✅ Cộng tác viên / đối tác</strong></p>
+                                        <ul className="list-disc list-inside space-y-1 pl-4">
+                                            <li>Đăng ký tham gia thu thập dữ liệu địa phương</li>
+                                            <li>Góp ý về chất lượng dữ liệu</li>
+                                            <li>Đề xuất mở rộng khu vực</li>
+                                        </ul>
+                                        <p><strong>✅ Người dùng</strong></p>
+                                        <ul className="list-disc list-inside space-y-1 pl-4">
+                                            <li>Báo lỗi dữ liệu</li>
+                                            <li>Góp ý cải thiện nền tảng</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h4 className="font-black text-stone-800 mb-2">3. Những trường hợp KHÔNG được hỗ trợ</h4>
+                                    <p>Lữ Quán không hỗ trợ các nội dung sau:</p>
+                                    <ul className="list-disc list-inside space-y-1 mt-2 pl-2">
+                                        <li>Hỗ trợ đặt phòng, giữ phòng, báo giá</li>
+                                        <li>Giải quyết tranh chấp giữa khách và khách sạn</li>
+                                        <li>Hỗ trợ kinh doanh, marketing, quảng bá riêng lẻ</li>
+                                        <li>Hỗ trợ khẩn cấp qua điện thoại</li>
+                                    </ul>
+                                    <p className="mt-2 italic">👉 Lữ Quán không phải dịch vụ trung gian, chúng tôi không can thiệp vào hoạt động kinh doanh của các cơ sở lưu trú.</p>
+                                </div>
+
+                                <div>
+                                    <h4 className="font-black text-stone-800 mb-2">4. Thời gian xử lý</h4>
+                                    <ul className="list-disc list-inside space-y-1 mt-2 pl-2">
+                                        <li>Mọi yêu cầu hợp lệ sẽ được xem xét và phản hồi trong 2–5 ngày làm việc</li>
+                                        <li>Thời gian có thể lâu hơn đối với các yêu cầu cần xác minh thực tế</li>
+                                        <li>Các thay đổi được phê duyệt sẽ được đồng bộ tự động lên hệ thống dữ liệu công khai</li>
+                                    </ul>
+                                </div>
+
+                                <div>
+                                    <h4 className="font-black text-stone-800 mb-2">5. Nguyên tắc vận hành</h4>
+                                    <ul className="list-disc list-inside space-y-1 mt-2 pl-2">
+                                        <li>Lữ Quán ưu tiên hệ thống và quy trình, không xử lý theo cảm tính</li>
+                                        <li>Mọi thay đổi đều phải phù hợp với dữ liệu mở – minh bạch</li>
+                                        <li>Chúng tôi chỉ xử lý ngoại lệ, phần lớn dữ liệu được duy trì bởi hệ thống và cộng đồng</li>
+                                    </ul>
+                                    <p className="mt-2 font-bold">Lữ Quán xây dựng hạ tầng để dùng lâu dài, không phải dịch vụ hỗ trợ ngắn hạn.</p>
+                                </div>
+
+                                <div>
+                                    <h4 className="font-black text-stone-800 mb-2">6. Cam kết</h4>
+                                    <ul className="list-disc list-inside space-y-1 mt-2 pl-2">
+                                        <li>Không thu phí liên hệ</li>
+                                        <li>Không yêu cầu đăng ký tài khoản</li>
+                                        <li>Không sử dụng thông tin liên hệ cho mục đích quảng cáo</li>
+                                    </ul>
+                                </div>
+
+                                <div className="text-center pt-4 border-t border-stone-200">
+                                    <p className="font-bold">📌 Nếu bạn hiểu và đồng thuận với cách vận hành này, chúng tôi rất sẵn lòng tiếp nhận đóng góp của bạn.</p>
+                                    <p className="font-bold mt-2">Trân trọng,<br/>Lữ Quán – Nền tảng dữ liệu du lịch mở</p>
+                                </div>
                             </div>
                             <button onClick={() => setShowAboutDialog(false)} className="w-full py-4 bg-stone-900 text-white rounded-2xl font-black shadow-xl active:scale-95 transition-all uppercase text-[11px] tracking-widest hover:bg-stone-800">
                                 Đã hiểu
