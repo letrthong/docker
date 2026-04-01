@@ -1,0 +1,51 @@
+export const SHIFT_SLOTS = [
+    { id: 'S1', label: 'Ca 1', time: '08:00 - 12:00' },
+    { id: 'S2', label: 'Ca 2', time: '12:00 - 16:00' },
+    { id: 'S3', label: 'Ca 3', time: '16:00 - 20:00' },
+    { id: 'S4', label: 'Ca 4', time: '20:00 - 00:00' },
+];
+
+export const DAYS_OF_WEEK = [
+    { id: 'Mon', label: 'T2' },
+    { id: 'Tue', label: 'T3' },
+    { id: 'Wed', label: 'T4' },
+    { id: 'Thu', label: 'T5' },
+    { id: 'Fri', label: 'T6' },
+    { id: 'Sat', label: 'T7' },
+    { id: 'Sun', label: 'CN' },
+];
+
+export const CATEGORIES = {
+    'Thời trang': '👕',
+    'Điện tử': '💻',
+    'Thực phẩm': '🍱',
+    'Phụ kiện': '👜',
+    'Nguyên liệu': '📦'
+};
+
+export const initialGlobalProducts = [
+    { id: 'p1', sku: 'THUN-COT-01', name: 'Áo thun Cotton', category: 'Thời trang', basePrice: 150000, warehouseStock: 500, unit: 'cái', description: 'Áo thun 100% cotton co giãn 4 chiều' },
+    { id: 'p2', sku: 'JEAN-SLIM-02', name: 'Quần Jeans Slimfit', category: 'Thời trang', basePrice: 450000, warehouseStock: 200, unit: 'cái', description: 'Dáng ôm vừa vặn, màu xanh denim' },
+    { id: 'p3', sku: 'LAP-DELL-15', name: 'Laptop Dell Inspiron 15', category: 'Điện tử', basePrice: 15000000, warehouseStock: 25, unit: 'cái', description: 'Core i5, RAM 8GB, SSD 256GB' },
+    { id: 'p4', sku: 'MOUSE-LOG-185', name: 'Chuột không dây Logitech', category: 'Điện tử', basePrice: 250000, warehouseStock: 150, unit: 'cái', description: 'Kết nối ổn định, pin bền' },
+];
+
+export const initialStores = [
+    {
+        id: '1',
+        name: 'Chi nhánh Quận 1',
+        location: '123 Lê Lợi, Phường Bến Thành, Q.1',
+        employees: [
+            { id: 'e1', name: 'Nguyễn Văn A', role: 'Quản lý', phone: '0901234567', username: 'nv_quan1', password: '123', schedule: { Mon: ['S1', 'S2'], Tue: ['S1', 'S2'], Wed: ['S1', 'S2'], Thu: ['S1', 'S2'], Fri: ['S1', 'S2'], Sat: [], Sun: [] } },
+        ],
+        inventory: [ { productId: 'p1', quantity: 50, sold: 12 }, { productId: 'p3', quantity: 3, sold: 1 } ],
+        transactions: []
+    },
+    {
+        id: '2',
+        name: 'Chi nhánh Quận 7',
+        location: '456 Nguyễn Văn Linh, Q.7',
+        employees: [ { id: 'e3', name: 'Trần Văn C', role: 'Quản lý', phone: '0909999999', username: 'nv_quan7', password: '123', schedule: { Mon: ['S1'], Tue: ['S1'], Wed: ['S1'], Thu: ['S1'], Fri: ['S1'], Sat: [], Sun: [] } } ],
+        inventory: [], transactions: []
+    }
+];
