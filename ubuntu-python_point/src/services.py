@@ -23,12 +23,12 @@ from hotel_helpers import get_hotel_file_path, read_requests, write_requests, re
 logging.basicConfig(level=logging.INFO)
 sys.stdout.reconfigure(line_buffering=True)
 
-app = Flask(__name__, template_folder='/app')
+# --- CẤU HÌNH ĐỂ FLASK SERVE THƯ MỤC BUILD CỦA VITE ---
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DIST_DIR = os.path.join(BASE_DIR, 'dist')
 
+app = Flask(__name__, static_folder=DIST_DIR, static_url_path='/')
 
-# Đảm bảo đường dẫn này đúng với cấu trúc thư mục của bạn
-template_dir = "/app/"
-template_dir_base = "./"
 os.makedirs(CONFIG_DIR, exist_ok=True)
 
 
@@ -636,38 +636,25 @@ def get_config_file(filename):
         
     return send_from_directory(directory, filename)
 
-@app.route('/luquan/')
-@app.route('/luquan/<path:page_name>')
+# --- ROUTE HOST GIAO DIỆN REACT/VITE (SPA Catch-all) ---
+# Các route này đặt ở cuối để không đè lên các endpoint API phía trên
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
 @cross_origin()
-def hotel_connect_resource_sub(page_name=None):
-    # 1. Xử lý mặc định cho index
-    if not page_name or page_name.strip() == "/":
-        return render_template("index.html")
-
-    # Đường dẫn gốc tới thư mục hotel_connect
-    # Đảm bảo template_dir của bạn trỏ đúng vào thư mục templates
-    directory = os.path.join(template_dir, "")
-
-    try:
-        # 2. Xử lý các file tài nguyên tĩnh (js, json, css, png, v.v.)
-        static_extensions = ('.js', '.json', '.css', '.png', '.jpg', '.svg', '.ico')
-
-        # Kiểm tra xem page_name có kết thúc bằng đuôi file tĩnh không
-        if any(page_name.endswith(ext) for ext in static_extensions):
-            # page_name lúc này sẽ là "js/components/Icon.js" (nhờ có <path:>)
-            # send_from_directory sẽ tìm đúng file trong sub-folder
-            return send_from_directory(directory, page_name)
-
-        # 3. Xử lý các route điều hướng (không có dấu chấm - giả định là page .html)
-        if '.' not in page_name:
-            return render_template(f"{page_name}.html")
-
-        # 4. Nếu có đuôi file khác (như .html cụ thể)
-        return render_template(f"{page_name}")
-
-    except Exception as e:
-        print(f"Lỗi truy cập file: {page_name} - Error: {e}")
+def serve_frontend(path):
+    # Không catch các request gọi vào API backend
+    if path.startswith('api/'):
         abort(404)
+        
+    # Trả về các file tĩnh (.js, .css, assets...) từ thư mục dist/ nếu có
+    if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+        return send_from_directory(app.static_folder, path)
+    
+    # Mọi request đường dẫn giao diện đều trả về index.html để React tự điều hướng
+    if os.path.exists(os.path.join(app.static_folder, 'index.html')):
+        return send_from_directory(app.static_folder, 'index.html')
+    
+    return "Chưa tìm thấy bản build UI. Vui lòng chạy lệnh 'npm run build' bên trong container.", 404
 
 
    
