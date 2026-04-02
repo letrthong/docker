@@ -1,4 +1,7 @@
 #!/bin/bash
+# single_page copy.sh
+# docker exec -w /app $CONTAINER_NAME /bin/sh ./create_single_page.sh
+#
 set -e
 
 echo "[1/3] Navigating to /app directory..."
