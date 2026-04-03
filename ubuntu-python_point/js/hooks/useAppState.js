@@ -10,11 +10,14 @@ const setCache = (key, value) => {
     localStorage.setItem(key, JSON.stringify(value));
 };
 
+const initialCategories = [];
+
 export function useAppState() {
     const [user, setUser] = useState(() => getCache('chain_user', null));
     const [stores, setStores] = useState(() => getCache('chain_stores', initialStores));
     const [globalProducts, setGlobalProducts] = useState(() => getCache('chain_products', initialGlobalProducts));
     const [warehouseTransactions, setWarehouseTransactions] = useState(() => getCache('chain_warehouse_tx', []));
+    const [categories, setCategories] = useState(() => getCache('chain_categories', initialCategories));
 
     const [activeTab, setActiveTab] = useState('dashboard');
     const [selectedStore, setSelectedStore] = useState(null);
@@ -34,6 +37,7 @@ export function useAppState() {
     useEffect(() => { setCache('chain_stores', stores); }, [stores]);
     useEffect(() => { setCache('chain_products', globalProducts); }, [globalProducts]);
     useEffect(() => { setCache('chain_warehouse_tx', warehouseTransactions); }, [warehouseTransactions]);
+    useEffect(() => { setCache('chain_categories', categories); }, [categories]);
 
     const currentStore = useMemo(() => {
         if (!user) return null;
@@ -226,12 +230,12 @@ export function useAppState() {
 
     return {
         // State
-        user, stores, globalProducts, warehouseTransactions,
+        user, stores, globalProducts, warehouseTransactions, categories,
         activeTab, selectedStore, storeSubTab, showModal, pendingAction,
         editingEmployee, toast, showUserMenu, searchTerm, historyFilter,
         currentStore, allEmployees, totalValue,
         // Setters
-        setActiveTab, setSelectedStore, setStoreSubTab, setShowModal,
+        setCategories, setActiveTab, setSelectedStore, setStoreSubTab, setShowModal,
         setPendingAction, setEditingEmployee, setShowUserMenu,
         setSearchTerm, setHistoryFilter,
         // Handlers

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Icon, TabButton } from './components/UI';
-import { ConfirmModal, AddProductModal, EmployeeModal, AddStoreModal, DistributeModal } from './components/Modals';
+import { ConfirmModal, AddProductModal, EmployeeModal, AddStoreModal, DistributeModal, CategoryManagerModal } from './components/Modals';
 import { useAppState } from './hooks/useAppState';
 
 // Pages
@@ -17,8 +17,8 @@ export default function App() {
         user, stores, globalProducts, warehouseTransactions,
         activeTab, selectedStore, storeSubTab, showModal, pendingAction,
         editingEmployee, toast, showUserMenu, searchTerm, historyFilter,
-        currentStore, allEmployees, totalValue,
-        setActiveTab, setSelectedStore, setStoreSubTab, setShowModal,
+        currentStore, allEmployees, totalValue, categories,
+        setCategories, setActiveTab, setSelectedStore, setStoreSubTab, setShowModal,
         setPendingAction, setEditingEmployee, setShowUserMenu,
         setSearchTerm, setHistoryFilter,
         handleLogin, handleLogout, handleSaveEmployee, handleDeleteEmployee,
@@ -41,14 +41,14 @@ export default function App() {
         return (
             <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
                 <div className="w-full max-w-[380px] bg-white rounded-[32px] shadow-2xl p-10 text-center">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 mb-6"><Icon name="package" size={32} /></div>
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-teal-50 text-teal-600 mb-6"><Icon name="package" size={32} /></div>
                     <h1 className="text-2xl font-black text-slate-900 tracking-tight mb-2 uppercase">ĐĂNG NHẬP</h1>
                     <p className="text-slate-400 text-sm mb-8 font-medium leading-relaxed">Hệ thống quản lý chuỗi hợp nhất<br/>v2.5 Professional</p>
                     <form onSubmit={onLogin} className="space-y-4">
                         {loginError && <div className="bg-rose-50 text-rose-600 p-4 rounded-xl text-xs font-bold border border-rose-100">{loginError}</div>}
-                        <input type="text" required className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold" placeholder="Username" value={loginForm.username} onChange={e => setLoginForm({...loginForm, username: e.target.value})} />
-                        <input type="password" required className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold" placeholder="Password" value={loginForm.password} onChange={e => setLoginForm({...loginForm, password: e.target.value})} />
-                        <button className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black shadow-lg hover:bg-blue-700 transition-all uppercase text-xs tracking-widest mt-4">Vào hệ thống</button>
+                        <input type="text" required className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-teal-500 font-bold" placeholder="Username" value={loginForm.username} onChange={e => setLoginForm({...loginForm, username: e.target.value})} />
+                        <input type="password" required className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-teal-500 font-bold" placeholder="Password" value={loginForm.password} onChange={e => setLoginForm({...loginForm, password: e.target.value})} />
+                        <button className="w-full bg-teal-600 text-white py-5 rounded-2xl font-black shadow-lg hover:bg-teal-700 transition-all uppercase text-xs tracking-widest mt-4">Vào hệ thống</button>
                     </form>
                 </div>
             </div>
@@ -62,7 +62,7 @@ export default function App() {
             <header className="bg-white border-b sticky top-0 z-50 h-20 px-8 flex items-center justify-between shadow-sm">
                 <div className="flex items-center space-x-6 lg:space-x-10">
                     <div className="flex items-center space-x-3 cursor-pointer group" onClick={() => user.role === 'admin' && setActiveTab('dashboard')}>
-                        <div className="bg-blue-600 p-2.5 rounded-xl shadow-lg group-hover:scale-105 transition-transform"><Icon name="package" size={22} className="text-white" /></div>
+                        <div className="bg-teal-600 p-2.5 rounded-xl shadow-lg group-hover:scale-105 transition-transform"><Icon name="package" size={22} className="text-white" /></div>
                         <h1 className="text-xl font-black tracking-tighter text-slate-900 uppercase hidden sm:block">ChainFlow</h1>
                     </div>
                     <nav className="flex items-center space-x-1 h-20 overflow-x-auto no-scrollbar">
@@ -81,7 +81,7 @@ export default function App() {
                 </div>
                 <div className="relative">
                     <button onClick={() => setShowUserMenu(!showUserMenu)} className="flex items-center space-x-3 bg-slate-50 p-1.5 pr-4 rounded-2xl border hover:bg-slate-100 transition-all">
-                        <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-black text-sm uppercase">{user.name.charAt(0)}</div>
+                        <div className="w-10 h-10 rounded-xl bg-teal-600 flex items-center justify-center text-white font-black text-sm uppercase">{user.name.charAt(0)}</div>
                         <div className="text-left hidden sm:block leading-none mr-2"><p className="text-xs font-black text-slate-900 leading-none">{user.name}</p><p className="text-[10px] font-bold text-slate-400 uppercase mt-1 leading-none">{user.role === 'admin' ? 'Hệ thống' : 'Chi nhánh'}</p></div>
                         <Icon name="chevron-down" size={14} className="text-slate-300" />
                     </button>
@@ -111,7 +111,7 @@ export default function App() {
                 )}
 
                 {user.role === 'admin' && activeTab === 'warehouse' && (
-                    <AdminWarehouse globalProducts={globalProducts} totalValue={totalValue} setShowModal={setShowModal} handleImportToWarehouse={handleImportToWarehouse} />
+                    <AdminWarehouse globalProducts={globalProducts} totalValue={totalValue} setShowModal={setShowModal} handleImportToWarehouse={handleImportToWarehouse} categories={categories} />
                 )}
 
                 {user.role === 'admin' && activeTab === 'history' && (
@@ -126,7 +126,8 @@ export default function App() {
 
             {/* Modals */}
             {showModal === 'confirmPopup' && <ConfirmModal pendingAction={pendingAction} setShowModal={setShowModal} setPendingAction={setPendingAction} />}
-            {showModal === 'addGlobalProduct' && <AddProductModal setShowModal={setShowModal} handleSaveGlobalProduct={handleSaveGlobalProduct} />}
+            {showModal === 'addGlobalProduct' && <AddProductModal setShowModal={setShowModal} handleSaveGlobalProduct={handleSaveGlobalProduct} categories={categories} />}
+            {showModal === 'manageCategories' && <CategoryManagerModal setShowModal={setShowModal} categories={categories} setCategories={setCategories} />}
             {(showModal === 'addEmployee' || showModal === 'editEmployee') && <EmployeeModal showModal={showModal} setShowModal={setShowModal} editingEmployee={editingEmployee} setEditingEmployee={setEditingEmployee} handleSaveEmployee={handleSaveEmployee} currentStoreId={currentStore?.id} />}
             {showModal === 'addStore' && <AddStoreModal setShowModal={setShowModal} handleAddStore={handleAddStore} />}
             {showModal === 'distribute' && <DistributeModal setShowModal={setShowModal} stores={stores} globalProducts={globalProducts} currentStore={currentStore} handleDistribute={handleDistribute} />}
