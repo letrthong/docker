@@ -1,0 +1,19 @@
+[
+  {
+    "id": "1",
+    "name": "Chi nhánh Quận 1",
+    "location": "123 Lê Lợi, Phường Bến Thành, Q.1",
+    "inventory": [
+      { "productId": "p1", "quantity": 50, "sold": 12 },
+      { "productId": "p3", "quantity": 3, "sold": 1 }
+    ],
+    "transactions": []
+  },
+  {
+    "id": "2",
+    "name": "Chi nhánh Quận 7",
+    "location": "456 Nguyễn Văn Linh, Q.7",
+    "inventory": [],
+    "transactions": []
+  }
+]

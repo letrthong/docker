@@ -1,290 +1,50 @@
-/**
- * HotelAPI - Module chịu trách nhiệm giao tiếp với Backend
- * (Hiện tại lấy file JSON tĩnh, có thể đổi URL thành API thật sau này)
- */
-const HotelAPI = {
-    baseUrl: null,
-    bannedWords: null,
+const API_BASE = '/pos/api/v1';
 
-    init: async () => {
-        const res = await fetch('js/config.json');
-        const config = await res.json();
-        const host = window.location.hostname;
-        const isLocal = host === 'localhost' || host === '127.0.0.1' || host.startsWith('192.168.');
-        HotelAPI.baseUrl = isLocal ? config.local_api_base : config.production_api_base;
-    },
+const json = (res) => res.json();
+const postJson = (url, body) => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(json);
+const putJson = (url, body) => fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(json);
+const del = (url) => fetch(url, { method: 'DELETE' }).then(json);
 
-    // Lấy danh sách từ khóa cấm từ file cấu hình tĩnh
-    getBannedWords: async () => {
-        if (HotelAPI.bannedWords !== null) return HotelAPI.bannedWords;
-        try {
-            const res = await fetch('js/banned_words.json');
-            if (res.ok) {
-                HotelAPI.bannedWords = await res.json();
-            } else {
-                HotelAPI.bannedWords = [];
-            }
-        } catch (e) {
-            console.error("Lỗi khi tải danh sách từ cấm:", e);
-            HotelAPI.bannedWords = ["sex", "tinhduc"]; // Fallback an toàn
-        }
-        return HotelAPI.bannedWords;
-    },
+export const api = {
+  // Config
+  getConfig:  () => fetch(`${API_BASE}/config`).then(json),
+  saveConfig: (data) => putJson(`${API_BASE}/config`, data),
 
-    // Lấy danh sách khách sạn
-    // Hàm này giờ sẽ nhận một mảng các đường dẫn file để tải
-    fetchHotelsByFilePaths: async (filePaths = []) => {
-        if (!HotelAPI.baseUrl) await HotelAPI.init();
-        if (!filePaths || filePaths.length === 0) {
-            return [];
-        }
-        const fetchPromises = filePaths.map(path =>
-            fetch(`${HotelAPI.baseUrl}/api/hotelconnect/v1/config/${path}`)
-                .then(res => {
-                    if (!res.ok) {
-                        // Phân loại lỗi: Nếu 404 thì chỉ là cảnh báo nhẹ (do khu vực mới chưa có file)
-                        if (res.status === 404) {
-                            console.warn(`Khu vực mới chưa có file dữ liệu khách sạn (404): ${path}`);
-                        } else {
-                            console.error(`Lỗi ${res.status} khi tải file: ${path}`);
-                        }
-                        return []; // Trả về mảng rỗng nếu có lỗi, để không làm hỏng toàn bộ
-                    }
-                    return res.json();
-                })
-                .catch(err => {
-                    console.error(`Lỗi mạng khi tải ${path}:`, err);
-                    return [];
-                })
-        );
+  // Products (kho hàng)
+  getProducts:    () => fetch(`${API_BASE}/products`).then(json),
+  saveProducts:   (products) => putJson(`${API_BASE}/products`, products),
+  addProduct:     (product) => postJson(`${API_BASE}/products`, product),
+  editProduct:    (id, data) => putJson(`${API_BASE}/products/${id}`, data),
+  deleteProduct:  (id) => del(`${API_BASE}/products/${id}`),
 
-        const hotelArrays = await Promise.all(fetchPromises);
-        return hotelArrays.flat();
-    },
-    
-    // Gửi yêu cầu đăng ký khách sạn mới
-    submitHotelRequest: async (newRequestData) => {
-        if (!HotelAPI.baseUrl) await HotelAPI.init();
-        const response = await fetch(`${HotelAPI.baseUrl}/api/hotelconnect/v1/hotels/request`, { 
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(newRequestData) 
-        });
-        if (!response.ok) {
-            const err = await response.json().catch(() => ({ error: "Lỗi không xác định" }));
-            throw new Error(err.error || "Lỗi khi gửi yêu cầu đăng ký");
-        }
-        return await response.json();
-    },
+  // Stores (cửa hàng)
+  getStores:    () => fetch(`${API_BASE}/stores`).then(json),
+  saveStores:   (stores) => putJson(`${API_BASE}/stores`, stores),
+  addStore:     (store) => postJson(`${API_BASE}/stores`, store),
+  getStore:     (id) => fetch(`${API_BASE}/stores/${id}`).then(json),
+  editStore:    (id, data) => putJson(`${API_BASE}/stores/${id}`, data),
+  deleteStore:  (id) => del(`${API_BASE}/stores/${id}`),
 
-    // Lấy danh sách yêu cầu đăng ký khách sạn (Pending Requests)
-    fetchPendingRequests: async () => {
-        if (!HotelAPI.baseUrl) await HotelAPI.init();
-        const response = await fetch(`${HotelAPI.baseUrl}/api/hotelconnect/v1/hotels/request`);
-        if (!response.ok) {
-            throw new Error("Lỗi khi tải danh sách yêu cầu chờ duyệt");
-        }
-        return await response.json();
-    },
+  // Inventory (tồn kho từng store)
+  getInventory:       (storeId) => fetch(`${API_BASE}/stores/${storeId}/inventory`).then(json),
+  saveInventory:      (storeId, items) => putJson(`${API_BASE}/stores/${storeId}/inventory`, items),
+  addInventoryItem:   (storeId, item) => postJson(`${API_BASE}/stores/${storeId}/inventory`, item),
+  deleteInventoryItem:(storeId, productId) => del(`${API_BASE}/stores/${storeId}/inventory/${productId}`),
 
-    // Phê duyệt một yêu cầu khách sạn
-    approveHotelRequest: async (requestId) => {
-        if (!HotelAPI.baseUrl) await HotelAPI.init();
-        const response = await fetch(`${HotelAPI.baseUrl}/api/hotelconnect/v1/requests/${requestId}/approve`, {
-            method: 'POST'
-        });
-        if (!response.ok) {
-            const err = await response.json().catch(() => ({ error: "Lỗi không xác định" }));
-            throw new Error(err.error || "Lỗi khi phê duyệt yêu cầu");
-        }
-        return await response.json();
-    },
+  // Employees (nhân viên)
+  getEmployees:       () => fetch(`${API_BASE}/employees`).then(json),
+  saveStoreEmployees: (storeId, emps) => putJson(`${API_BASE}/stores/${storeId}/employees`, emps),
+  addEmployee:        (storeId, emp) => postJson(`${API_BASE}/stores/${storeId}/employees`, emp),
+  editEmployee:       (storeId, empId, data) => putJson(`${API_BASE}/stores/${storeId}/employees/${empId}`, data),
+  deleteEmployee:     (storeId, empId) => del(`${API_BASE}/stores/${storeId}/employees/${empId}`),
 
-    // Từ chối một yêu cầu khách sạn
-    rejectHotelRequest: async (requestId) => {
-        if (!HotelAPI.baseUrl) await HotelAPI.init();
-        const response = await fetch(`${HotelAPI.baseUrl}/api/hotelconnect/v1/requests/${requestId}/reject`, {
-            method: 'POST'
-        });
-        if (!response.ok) {
-            const err = await response.json().catch(() => ({ error: "Lỗi không xác định" }));
-            throw new Error(err.error || "Lỗi khi từ chối yêu cầu");
-        }
-        return await response.json();
-    },
-
-    // Cập nhật một yêu cầu khách sạn đang chờ duyệt
-    updateHotelRequest: async (requestId, requestData) => {
-        if (!HotelAPI.baseUrl) await HotelAPI.init();
-        const response = await fetch(`${HotelAPI.baseUrl}/api/hotelconnect/v1/requests/${requestId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(requestData)
-        });
-        if (!response.ok) {
-            const err = await response.json().catch(() => ({ error: "Lỗi không xác định" }));
-            throw new Error(err.error || "Lỗi khi cập nhật yêu cầu");
-        }
-        return await response.json();
-    },
-
-    // Gửi báo cáo lỗi cho một khách sạn
-    submitReport: async (reportData) => {
-        if (!HotelAPI.baseUrl) await HotelAPI.init();
-        const response = await fetch(`${HotelAPI.baseUrl}/api/hotelconnect/v1/hotels/reports`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(reportData)
-        });
-        if (!response.ok) {
-            const err = await response.json().catch(() => ({ error: "Lỗi không xác định" }));
-            throw new Error(err.error || "Lỗi khi gửi báo cáo");
-        }
-        return await response.json();
-    },
-
-    // Lấy danh sách báo cáo lỗi
-    fetchReports: async () => {
-        if (!HotelAPI.baseUrl) await HotelAPI.init();
-        const response = await fetch(`${HotelAPI.baseUrl}/api/hotelconnect/v1/hotels/reports`);
-        if (!response.ok) {
-            throw new Error("Lỗi khi tải danh sách báo cáo");
-        }
-        return await response.json();
-    },
-
-    // Lấy tất cả báo cáo lỗi cho một khách sạn cụ thể
-    fetchReportsForHotel: async (hotelId) => {
-        if (!HotelAPI.baseUrl) await HotelAPI.init();
-        const response = await fetch(`${HotelAPI.baseUrl}/api/hotelconnect/v1/hotels/${hotelId}/reports`);
-        if (!response.ok) {
-            throw new Error(`Lỗi khi tải chi tiết báo cáo cho khách sạn ${hotelId}`);
-        }
-        return await response.json();
-    },
-
-    // Xóa một báo cáo lỗi
-    deleteReport: async (reportId) => {
-        if (!HotelAPI.baseUrl) await HotelAPI.init();
-        const response = await fetch(`${HotelAPI.baseUrl}/api/hotelconnect/v1/hotels/reports/${reportId}`, {
-            method: 'DELETE'
-        });
-        if (!response.ok) {
-            const err = await response.json().catch(() => ({ error: "Lỗi không xác định" }));
-            throw new Error(err.error || "Lỗi khi xóa báo cáo");
-        }
-        return await response.json();
-    },
-
-    // Lấy danh sách khách sạn theo trạng thái
-    fetchHotelsByStatus: async (status) => {
-        if (!HotelAPI.baseUrl) await HotelAPI.init();
-        const response = await fetch(`${HotelAPI.baseUrl}/api/hotelconnect/v1/hotels/status/${status}`);
-        if (!response.ok) {
-            throw new Error(`Lỗi khi tải danh sách khách sạn với trạng thái ${status}`);
-        }
-        return await response.json();
-    },
-
-    // Cập nhật trạng thái của khách sạn
-    setHotelStatus: async (hotelId, status) => {
-        if (!HotelAPI.baseUrl) await HotelAPI.init();
-        const response = await fetch(`${HotelAPI.baseUrl}/api/hotelconnect/v1/hotels/${hotelId}/status`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: status })
-        });
-        if (!response.ok) {
-            const err = await response.json().catch(() => ({ error: "Lỗi không xác định" }));
-            throw new Error(err.error || "Lỗi khi cập nhật trạng thái");
-        }
-        return await response.json();
-    },
-
-    // Cập nhật thông tin khách sạn đã duyệt
-    updateHotel: async (hotelId, hotelData) => {
-        if (!HotelAPI.baseUrl) await HotelAPI.init();
-        const response = await fetch(`${HotelAPI.baseUrl}/api/hotelconnect/v1/hotels/${hotelId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(hotelData)
-        });
-        if (!response.ok) {
-            const err = await response.json().catch(() => ({ error: "Lỗi không xác định" }));
-            throw new Error(err.error || "Lỗi khi cập nhật khách sạn");
-        }
-        return await response.json();
-    },
-
-    // Xóa một khách sạn đã duyệt
-    deleteHotel: async (hotelId) => {
-        if (!HotelAPI.baseUrl) await HotelAPI.init();
-        const response = await fetch(`${HotelAPI.baseUrl}/api/hotelconnect/v1/hotels/${hotelId}`, {
-            method: 'DELETE'
-        });
-        if (!response.ok) {
-            const err = await response.json().catch(() => ({ error: "Lỗi không xác định" }));
-            throw new Error(err.error || "Lỗi khi xóa khách sạn");
-        }
-        return await response.json();
-    },
-
-    // Lấy danh sách schema (Tỉnh/Thành phố)
-    getSchemas: async () => {
-        if (!HotelAPI.baseUrl) await HotelAPI.init();
-        try {
-            // Chuyển sang gọi API từ backend
-            const response = await fetch(`${HotelAPI.baseUrl}/api/hotelconnect/v1/schema`);
-            if (!response.ok) throw new Error("Không thể tải dữ liệu cấu hình các tỉnh");
-            const schemas = await response.json();
-            // Trả về toàn bộ object để component có thể lấy cả locationName và filePathId
-            return schemas.sort((a, b) => a.locationName.localeCompare(b.locationName, 'vi'));
-        } catch (error) {
-            console.error("Lỗi khi lấy danh sách thành phố:", error);
-            return [];
-        }
-    },
-
-    // Thêm một schema mới
-    addSchema: async (schemaData) => {
-        if (!HotelAPI.baseUrl) await HotelAPI.init();
-        const response = await fetch(`${HotelAPI.baseUrl}/api/hotelconnect/v1/schema`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(schemaData)
-        });
-        if (!response.ok) {
-            const err = await response.json().catch(() => ({ error: "Lỗi không xác định" }));
-            throw new Error(err.error || "Lỗi khi thêm schema");
-        }
-        return await response.json();
-    },
-
-    // Cập nhật một schema
-    updateSchema: async (id, schemaData) => {
-        if (!HotelAPI.baseUrl) await HotelAPI.init();
-        const response = await fetch(`${HotelAPI.baseUrl}/api/hotelconnect/v1/schema/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(schemaData)
-        });
-        if (!response.ok) {
-            const err = await response.json().catch(() => ({ error: "Lỗi không xác định" }));
-            throw new Error(err.error || "Lỗi khi cập nhật schema");
-        }
-        return await response.json();
-    },
-
-    // Xóa một schema
-    deleteSchema: async (id) => {
-        if (!HotelAPI.baseUrl) await HotelAPI.init();
-        const response = await fetch(`${HotelAPI.baseUrl}/api/hotelconnect/v1/schema/${id}`, {
-            method: 'DELETE'
-        });
-        if (!response.ok) {
-            const err = await response.json().catch(() => ({ error: "Lỗi không xác định" }));
-            throw new Error(err.error || "Lỗi khi xóa schema");
-        }
-        return await response.json();
-    }
+  // Transactions (lịch sử giao dịch) - theo từng store
+  getTransactions:    (storeId, month, type) => {
+    const params = new URLSearchParams();
+    if (month) params.set('month', month);
+    if (type && type !== 'all') params.set('type', type);
+    return fetch(`${API_BASE}/transactions/${storeId}?${params}`).then(json);
+  },
+  addTransaction:     (storeId, tx) => postJson(`${API_BASE}/transactions/${storeId}`, tx),
+  saveTransactions:   (storeId, txs) => putJson(`${API_BASE}/transactions/${storeId}`, txs),
 };

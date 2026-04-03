@@ -1,0 +1,42 @@
+[
+  {
+    "id": "p1",
+    "sku": "THUN-COT-01",
+    "name": "Áo thun Cotton",
+    "category": "Thời trang",
+    "basePrice": 150000,
+    "warehouseStock": 500,
+    "unit": "cái",
+    "description": "Áo thun 100% cotton co giãn 4 chiều"
+  },
+  {
+    "id": "p2",
+    "sku": "JEAN-SLIM-02",
+    "name": "Quần Jeans Slimfit",
+    "category": "Thời trang",
+    "basePrice": 450000,
+    "warehouseStock": 200,
+    "unit": "cái",
+    "description": "Dáng ôm vừa vặn, màu xanh denim"
+  },
+  {
+    "id": "p3",
+    "sku": "LAP-DELL-15",
+    "name": "Laptop Dell Inspiron 15",
+    "category": "Điện tử",
+    "basePrice": 15000000,
+    "warehouseStock": 25,
+    "unit": "cái",
+    "description": "Core i5, RAM 8GB, SSD 256GB"
+  },
+  {
+    "id": "p4",
+    "sku": "MOUSE-LOG-185",
+    "name": "Chuột không dây Logitech",
+    "category": "Điện tử",
+    "basePrice": 250000,
+    "warehouseStock": 150,
+    "unit": "cái",
+    "description": "Kết nối ổn định, pin bền"
+  }
+]

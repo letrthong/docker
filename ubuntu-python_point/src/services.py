@@ -1,664 +1,439 @@
+import base64
+# ==================== TRANSACTIONS / HISTORY API ====================
+
+# Helper encode/decode base64 cho field nhạy cảm
+def encode_b64_field(val):
+    if val is None:
+        return ""
+    return base64.b64encode(val.encode('utf-8')).decode('utf-8')
+
+def decode_b64_field(val):
+    if not val:
+        return ""
+    return base64.b64decode(val.encode('utf-8')).decode('utf-8')
 
 from operator import index
 import os
 import json
-from json_utils import read_json_file, write_json_file
-from hotel_schema_service import read_schema, write_schema, create_schema_item, update_schema_item, delete_schema_item
 import logging
 import sys
-import os
 import threading
-from flask import Flask, render_template, jsonify, request, abort, send_from_directory
-from flask_cors import cross_origin  # Import đúng tên thư viện
 import uuid
-from math import radians, sin, cos, sqrt, atan2
-from geo_utils import haversine
+import time
 from datetime import datetime, timezone
+from flask import Flask, jsonify, request, send_from_directory
+from flask_cors import cross_origin
+# ==================== PRODUCTS API ====================
 
-# Import all constants from hotel_constants.py
-from hotel_constants import CONFIG_DIR, HotelField, HotelStatus
-from hotel_helpers import get_hotel_file_path, read_requests, write_requests, read_reports, write_reports, validate_hotel_request, update_status
+PRODUCTS_LAST_UPDATE_FILE = os.path.join(CONFIG_DIR, 'products_last_update.txt')
 
-# Cấu hình logging hiển thị ra terminal
-logging.basicConfig(level=logging.INFO)
-sys.stdout.reconfigure(line_buffering=True)
+def get_products_last_update():
+    if not os.path.exists(PRODUCTS_LAST_UPDATE_FILE):
+        return 0
+    with open(PRODUCTS_LAST_UPDATE_FILE, 'r') as f:
+        return int(f.read())
 
-# --- CẤU HÌNH ĐỂ FLASK SERVE THƯ MỤC BUILD CỦA VITE ---
+def set_products_last_update():
+    with open(PRODUCTS_LAST_UPDATE_FILE, 'w') as f:
+        f.write(str(int(time.time())))
+
+# Flask app - serve SPA từ dist/
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DIST_DIR = os.path.join(BASE_DIR, 'dist')
+CONFIG_DIR = os.path.join(BASE_DIR, 'config')
+CONFIG_FILE = os.path.join(CONFIG_DIR, 'config.json')
 
-app = Flask(__name__, static_folder=DIST_DIR, static_url_path='/')
+app = Flask(__name__, static_folder=DIST_DIR, static_url_path='')
 
-os.makedirs(CONFIG_DIR, exist_ok=True)
+# --- Helper: đọc/ghi config ---
+config_lock = threading.Lock()
 
+def read_config():
+    if not os.path.exists(CONFIG_FILE):
+        return {"stores": [], "products": []}
+    with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+        return json.load(f)
 
+def write_config(data):
+    os.makedirs(CONFIG_DIR, exist_ok=True)
+    with config_lock:
+        with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
 
-## All constants are now imported from hotel_constants.py
+# --- SPA ---
+@app.route('/')
+def serve_index():
+    return send_from_directory(DIST_DIR, 'index.html')
 
+# ==================== CONFIG API ====================
 
-# --- API Quản lý hotel_schema.json ---
-schema_lock = threading.Lock()
-
-
-@app.route('/api/hotelconnect/v1/schema', methods=['GET'])
+# GET toàn bộ config (stores + products)
+@app.route('/pos/api/v1/config', methods=['GET'])
 @cross_origin()
-def get_schema():
-    with schema_lock:
-        data = read_schema()
-    return jsonify(data)
+def get_config():
+    return jsonify(read_config())
 
-@app.route('/api/hotelconnect/v1/schema', methods=['POST'])
+# PUT cập nhật toàn bộ config
+@app.route('/pos/api/v1/config', methods=['PUT'])
 @cross_origin()
-def add_schema():
-    req_data = request.json
-    if not req_data:
-        return jsonify({HotelField.ERROR: "Dữ liệu không hợp lệ"}), 400
-    try:
-        new_item = create_schema_item(req_data)
-    except Exception as e:
-        return jsonify({HotelField.ERROR: str(e)}), 400
-    with schema_lock:
-        data = read_schema()
-        data.append(new_item)
-        write_schema(data)
-    return jsonify({HotelField.MESSAGE: "Thêm mới thành công", HotelField.DATA: new_item}), 201
+def update_config():
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid JSON"}), 400
+    write_config(data)
+    return jsonify({"message": "Config saved"})
 
-@app.route('/api/hotelconnect/v1/schema/<item_id>', methods=['PUT'])
+# ==================== PRODUCTS API ====================
+
+@app.route('/pos/api/v1/products', methods=['GET'])
 @cross_origin()
-def update_schema(item_id):
-    req_data = request.json
-    if not req_data:
-        return jsonify({HotelField.ERROR: "Dữ liệu không hợp lệ"}), 400
-    with schema_lock:
-        data = read_schema()
-        for item in data:
-            if item.get("id") == item_id:
-                try:
-                    updated = update_schema_item(item, req_data)
-                except Exception as e:
-                    return jsonify({HotelField.ERROR: str(e)}), 400
-                write_schema(data)
-                return jsonify({HotelField.MESSAGE: "Cập nhật thành công", HotelField.DATA: updated}), 200
-    return jsonify({HotelField.ERROR: "Không tìm thấy item"}), 404
+def get_products():
+    since = int(request.args.get('since', 0))
+    last_update = get_products_last_update()
+    if since >= last_update:
+        return jsonify({'hasUpdate': False, 'lastUpdate': last_update})
+    config = read_config()
+    return jsonify({'hasUpdate': True, 'lastUpdate': last_update, 'products': config.get('products', [])})
 
-@app.route('/api/hotelconnect/v1/schema/<item_id>', methods=['DELETE'])
+@app.route('/pos/api/v1/products', methods=['PUT'])
 @cross_origin()
-def delete_schema(item_id):
-    with schema_lock:
-        data = read_schema()
-        new_data = delete_schema_item(data, item_id)
-        if len(data) == len(new_data):
-            return jsonify({HotelField.ERROR: "Không tìm thấy item"}), 404
-        write_schema(new_data)
-        return jsonify({HotelField.MESSAGE: "Xóa thành công"}), 200
+def update_products():
+    products = request.get_json()
+    if not isinstance(products, list):
+        return jsonify({"error": "Expected array"}), 400
+    config = read_config()
+    config['products'] = products
+    write_config(config)
+    set_products_last_update()
+    return jsonify({"message": "Products saved", "count": len(products)})
 
-# --- API Quản lý Yêu cầu Đăng ký Khách sạn ---
-requests_lock = threading.Lock()
-
-## Business logic moved to hotel_helpers.py
-
-## Business logic moved to hotel_helpers.py
-
-## Business logic moved to hotel_helpers.py
-
-@app.route('/api/hotelconnect/v1/hotels/request', methods=['POST'])
+# POST thêm 1 sản phẩm kho
+@app.route('/pos/api/v1/products', methods=['POST'])
 @cross_origin()
-def submit_hotel_request():
-    req_data = request.json
-    if not req_data:
-        return jsonify({HotelField.ERROR: "Dữ liệu không hợp lệ"}), 400
-    
-    # --- START VALIDATION: Kiểm tra khoảng cách vị trí đăng ký so với trung tâm khu vực ---
-    hotel_lat = req_data.get(HotelField.LAT)
-    hotel_lng = req_data.get(HotelField.LNG)
-    location_name = req_data.get(HotelField.LOCATION)
+def add_product():
+    product = request.get_json()
+    if not product or not product.get('name'):
+        return jsonify({"error": "Product name required"}), 400
+    config = read_config()
+    product['id'] = product.get('id', f"p{uuid.uuid4().hex[:8]}")
+    config['products'].append(product)
+    write_config(config)
+    set_products_last_update()
+    return jsonify({"message": "Product added", "product": product}), 201
 
-    # Đảm bảo có đủ thông tin vị trí
-    valid, error = validate_hotel_request(req_data)
-    if not valid:
-        return jsonify({HotelField.ERROR: error}), 400
-
-    # Lấy tọa độ trung tâm của khu vực từ schema
-    with schema_lock:
-        schemas = read_schema()
-    area_center = next((s for s in schemas if s.get(HotelField.LOCATION) == location_name), None)
-
-    # Kiểm tra xem khu vực có tồn tại và có tọa độ không
-    if not area_center or HotelField.LAT not in area_center or HotelField.LNG not in area_center:
-        return jsonify({HotelField.ERROR: f"Không tìm thấy thông tin vị trí cho khu vực: {location_name}"}), 400
-
-    area_lat = area_center[HotelField.LAT]
-    area_lng = area_center[HotelField.LNG]
-
-    # Tính khoảng cách bằng công thức Haversine
-    distance = haversine(hotel_lat, hotel_lng, area_lat, area_lng)
-
-    # Áp dụng quy tắc: khoảng cách không quá 2km
-    if distance > 2:
-        error_message = f"Vị trí khách sạn phải cách trung tâm {location_name} không quá 2km. Khoảng cách hiện tại là {distance:.2f}km."
-        return jsonify({HotelField.ERROR: error_message}), 400
-    # --- END VALIDATION ---
-
-    with requests_lock:
-        data = read_requests()
-        data.append(req_data)
-        write_requests(data)
-    return jsonify({HotelField.SUCCESS: True, HotelField.MESSAGE: "Gửi yêu cầu đăng ký thành công", HotelField.DATA: req_data}), 201
-
-@app.route('/api/hotelconnect/v1/hotels/request', methods=['GET'])
+# PUT sửa 1 sản phẩm kho
+@app.route('/pos/api/v1/products/<product_id>', methods=['PUT'])
 @cross_origin()
-def get_hotel_requests():
-    with requests_lock:
-        data = read_requests()
-    return jsonify(data)
+def edit_product(product_id):
+    updates = request.get_json()
+    if not updates:
+        return jsonify({"error": "Invalid JSON"}), 400
+    config = read_config()
+    for prod in config.get('products', []):
+        if prod['id'] == product_id:
+            prod.update(updates)
+            prod['id'] = product_id
+            write_config(config)
+            set_products_last_update()
+            return jsonify({"message": f"Product {product_id} updated", "product": prod})
+    return jsonify({"error": "Product not found"}), 404
 
-@app.route('/api/hotelconnect/v1/requests/<request_id>/approve', methods=['POST'])
+# DELETE xóa 1 sản phẩm kho
+@app.route('/pos/api/v1/products/<product_id>', methods=['DELETE'])
 @cross_origin()
-def approve_hotel_request(request_id):
-    with requests_lock:
-        all_requests = read_requests()
-        hotel_to_approve = None
-        other_requests = []
-        for req in all_requests:
-            if req.get('id') == request_id:
-                hotel_to_approve = req
-            else:
-                other_requests.append(req)
+def delete_product(product_id):
+    config = read_config()
+    before = len(config.get('products', []))
+    config['products'] = [p for p in config.get('products', []) if p['id'] != product_id]
+    if len(config['products']) < before:
+        write_config(config)
+        return jsonify({"message": f"Product {product_id} deleted"})
+    return jsonify({"error": "Product not found"}), 404
 
-        if not hotel_to_approve:
-            return jsonify({HotelField.ERROR: "Không tìm thấy yêu cầu"}), 404
+# ==================== STORES API ====================
 
-        location_name = hotel_to_approve.get(HotelField.LOCATION)
-        if not location_name:
-            return jsonify({HotelField.ERROR: "Yêu cầu thiếu thông tin Tỉnh/Thành phố"}), 400
-
-        target_file = get_hotel_file_path(location_name, read_schema())
-        if not target_file:
-            return jsonify({HotelField.ERROR: f"Không tìm thấy cấu hình cho Tỉnh/Thành phố: {location_name}"}), 400
-
-        # Cập nhật trạng thái và ngày tháng trước khi lưu
-        hotel_to_approve = update_status(hotel_to_approve, HotelStatus.APPROVED)
-        
-        try:
-            city_hotels = []
-            if os.path.exists(target_file):
-                with open(target_file, 'r', encoding='utf-8') as f:
-                    city_hotels = json.load(f)
-            
-            city_hotels.append(hotel_to_approve)
-            
-            with open(target_file, 'w', encoding='utf-8') as f:
-                json.dump(city_hotels, f, ensure_ascii=False, indent=4)
-        except Exception as e:
-            return jsonify({HotelField.ERROR: f"Lỗi khi ghi file khách sạn: {str(e)}"}), 500
-
-        # Nếu ghi file thành công, cập nhật lại danh sách chờ duyệt
-        write_requests(other_requests)
-
-    return jsonify({HotelField.SUCCESS: True, HotelField.MESSAGE: "Phê duyệt khách sạn thành công", HotelField.DATA: hotel_to_approve})
-
-@app.route('/api/hotelconnect/v1/requests/<request_id>/reject', methods=['POST'])
+@app.route('/pos/api/v1/stores', methods=['GET'])
 @cross_origin()
-def reject_hotel_request(request_id):
-    with requests_lock:
-        all_requests = read_requests()
-        remaining_requests = [req for req in all_requests if req.get('id') != request_id]
-        if len(remaining_requests) == len(all_requests):
-            return jsonify({HotelField.ERROR: "Không tìm thấy yêu cầu"}), 404
-        write_requests(remaining_requests)
-    return jsonify({HotelField.SUCCESS: True, HotelField.MESSAGE: "Từ chối yêu cầu thành công"})
+def get_stores():
+    config = read_config()
+    return jsonify(config.get('stores', []))
 
-@app.route('/api/hotelconnect/v1/requests/<request_id>', methods=['PUT'])
+@app.route('/pos/api/v1/stores', methods=['PUT'])
 @cross_origin()
-def update_hotel_request(request_id):
-    req_data = request.json
-    if not req_data:
-        return jsonify({HotelField.ERROR: "Dữ liệu không hợp lệ"}), 400
+def update_stores():
+    stores = request.get_json()
+    if not isinstance(stores, list):
+        return jsonify({"error": "Expected array"}), 400
+    config = read_config()
+    config['stores'] = stores
+    write_config(config)
+    return jsonify({"message": "Stores saved", "count": len(stores)})
 
-    with requests_lock:
-        all_requests = read_requests()
-        found = False
-        updated_request = None
-        for i, req in enumerate(all_requests):
-            if req.get('id') == request_id:
-                for k, v in req_data.items():
-                    if k not in [HotelField.ID, HotelField.CREATED_AT]:
-                        all_requests[i][k] = v
-                all_requests[i][HotelField.UPDATED_AT] = datetime.now().strftime("%Y-%m-%d")
-                found = True
-                updated_request = all_requests[i]
-                break
-        if not found:
-            return jsonify({HotelField.ERROR: "Không tìm thấy yêu cầu"}), 404
-        write_requests(all_requests)
-
-    return jsonify({HotelField.SUCCESS: True, HotelField.MESSAGE: "Cập nhật yêu cầu thành công", HotelField.DATA: updated_request})
-
-# --- API Quản lý Báo cáo Lỗi ---
-HOTEL_REPORTS_FILE_PATH = os.path.join(CONFIG_DIR, "hotel_reports.json")
-reports_lock = threading.Lock()
-history_lock = threading.Lock()
-
-def _find_hotel_details_by_id(hotel_id):
-    """Helper to find hotel details (name, locationName) across all hotel files."""
-    schemas = read_schema()
-    for schema in schemas:
-        file_path = os.path.join(CONFIG_DIR, schema.get(HotelField.FILE_PATH_ID))
-        if os.path.exists(file_path):
-            try:
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    hotels_in_file = json.load(f)
-                    for hotel in hotels_in_file:
-                        if hotel.get(HotelField.ID) == hotel_id:
-                            return {
-                                "name": hotel.get("name", 'N/A'),
-                                HotelField.LOCATION: hotel.get(HotelField.LOCATION, 'N/A')
-                            }
-            except Exception:
-                continue
-    return None
-
-
-## Business logic moved to hotel_helpers.py
-
-@app.route('/api/hotelconnect/v1/hotels/reports', methods=['POST'])
+# POST thêm 1 store mới
+@app.route('/pos/api/v1/stores', methods=['POST'])
 @cross_origin()
-def submit_hotel_report():
-    req_data = request.json
-    if not req_data:
-        return jsonify({HotelField.ERROR: "Dữ liệu không hợp lệ"}), 400
-        
-    hotel_id = req_data.get(HotelField.HOTEL_ID)
-    reason = req_data.get(HotelField.REASON)
-    
-    if not hotel_id or not reason:
-        return jsonify({HotelField.ERROR: "Thiếu ID khách sạn hoặc lý do"}), 400
-        
-    new_report = {
-        HotelField.REPORT_ID: str(uuid.uuid4()),
-        HotelField.HOTEL_ID: hotel_id,
-        HotelField.REASON: reason,
-        HotelField.DETAILS: req_data.get(HotelField.DETAILS, ""),
-        HotelField.REPORTED_AT: datetime.now(timezone.utc).isoformat(),
-        HotelField.REPORTER_IP: request.remote_addr,
-        HotelField.STATUS: HotelStatus.PENDING.value
-    }
-    
-    report_count_for_hotel = 0
-    with reports_lock:
-        reports = read_reports()
-        reports.append(new_report)
-        write_reports(reports)
-        # Đếm tổng số báo cáo cho khách sạn này
-        report_count_for_hotel = sum(1 for r in reports if r.get(HotelField.HOTEL_ID) == hotel_id)
+def add_store():
+    store = request.get_json()
+    if not store or not store.get('name'):
+        return jsonify({"error": "Store name required"}), 400
+    config = read_config()
+    store['id'] = store.get('id', f"s{uuid.uuid4().hex[:8]}")
+    store.setdefault('employees', [])
+    store.setdefault('inventory', [])
+    store.setdefault('transactions', [])
+    config['stores'].append(store)
+    write_config(config)
+    return jsonify({"message": "Store added", "store": store}), 201
 
-    # --- START: Update hotel status to 'reported' ---
-    hotel_to_update = None
-    target_file = None
-    city_hotels = None
-
-    with schema_lock:
-        schemas = read_schema()
-        # Find hotel in all config files
-        for schema in schemas:
-            file_path = os.path.join(CONFIG_DIR, schema.get(HotelField.FILE_PATH_ID))
-            if os.path.exists(file_path):
-                try:
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        hotels_in_file = json.load(f)
-                    for hotel in hotels_in_file:
-                        if hotel.get(HotelField.ID) == hotel_id:
-                            hotel_to_update = hotel
-                            target_file = file_path
-                            city_hotels = hotels_in_file
-                            break
-                except Exception as e:
-                    logging.error(f"Error reading or parsing file {file_path}: {e}")
-            if hotel_to_update:
-                break
-    
-    if hotel_to_update and target_file and city_hotels:
-        try:
-            # Tự động chuyển sang PENDING_REVIEW nếu có từ 5 báo cáo trở lên
-            if report_count_for_hotel >= 5:
-                hotel_to_update[HotelField.STATUS] = HotelStatus.PENDING_REVIEW.value
-            else:
-                hotel_to_update[HotelField.STATUS] = HotelStatus.REPORTED.value
-
-            hotel_to_update[HotelField.UPDATED_AT] = datetime.now().strftime("%Y-%m-%d")
-            with open(target_file, 'w', encoding='utf-8') as f:
-                json.dump(city_hotels, f, ensure_ascii=False, indent=4)
-        except Exception as e:
-            logging.error(f"Failed to write updated hotel status for {hotel_id} to {target_file}: {e}")
-    # --- END: Update hotel status ---
-        
-    return jsonify({HotelField.SUCCESS: True, HotelField.MESSAGE: "Gửi báo cáo lỗi thành công", HotelField.DATA: new_report}), 201
-
-@app.route('/api/hotelconnect/v1/hotels/reports', methods=['GET'])
+# GET 1 store theo id
+@app.route('/pos/api/v1/stores/<store_id>', methods=['GET'])
 @cross_origin()
-def get_hotel_reports():
-    with reports_lock:
-        reports = read_reports()
-    
-    # Group reports by hotel_id
-    grouped_by_hotel = {}
-    for report in reports:
-        hotel_id = report.get(HotelField.HOTEL_ID)
-        if not hotel_id:
-            continue
-        if hotel_id not in grouped_by_hotel:
-            grouped_by_hotel[hotel_id] = []
-        grouped_by_hotel[hotel_id].append(report)
+def get_store(store_id):
+    config = read_config()
+    for store in config.get('stores', []):
+        if store['id'] == store_id:
+            return jsonify(store)
+    return jsonify({"error": "Store not found"}), 404
 
-    # For each group, find the latest report and add a count
-    unique_reports = []
-    for hotel_id, hotel_reports in grouped_by_hotel.items():
-        if not hotel_reports:
-            continue
-        
-        # Sort reports for this hotel to find the latest
-        hotel_reports.sort(key=lambda r: r.get('reportedAt', ''), reverse=True)
-        latest_report = hotel_reports[0]
-        
-        # Add the count
-        latest_report['reportCount'] = len(hotel_reports)
-        unique_reports.append(latest_report)
-
-    # Enrich the unique reports with hotel names
-    with schema_lock:
-        for report in unique_reports:
-            details = _find_hotel_details_by_id(report.get(HotelField.HOTEL_ID))
-            if details:
-                report[HotelField.HOTEL_NAME] = details['name']
-                report[HotelField.LOCATION] = details.get(HotelField.LOCATION, "Không rõ")
-            else:
-                report[HotelField.HOTEL_NAME] = f"Không tìm thấy (ID: {report.get(HotelField.HOTEL_ID)})"
-                report[HotelField.LOCATION] = "Không rõ"
-
-    # Sort the final list by the date of the latest report
-    unique_reports.sort(key=lambda r: r.get('reportedAt', ''), reverse=True)
-    return jsonify(unique_reports)
-
-@app.route('/api/hotelconnect/v1/hotels/<hotel_id>/reports', methods=['GET'])
+# PUT sửa 1 store
+@app.route('/pos/api/v1/stores/<store_id>', methods=['PUT'])
 @cross_origin()
-def get_all_reports_for_hotel(hotel_id):
-    with reports_lock:
-        all_reports = read_reports()
-    
-    hotel_reports = [r for r in all_reports if r.get(HotelField.HOTEL_ID) == hotel_id]
-    
-    if not hotel_reports:
-        return jsonify([])
+def edit_store(store_id):
+    updates = request.get_json()
+    if not updates:
+        return jsonify({"error": "Invalid JSON"}), 400
+    config = read_config()
+    for store in config.get('stores', []):
+        if store['id'] == store_id:
+            store.update(updates)
+            store['id'] = store_id
+            write_config(config)
+            return jsonify({"message": f"Store {store_id} updated", "store": store})
+    return jsonify({"error": "Store not found"}), 404
 
-    # Enrich with hotel name (it will be the same for all)
-    with schema_lock:
-        details = _find_hotel_details_by_id(hotel_id)
-        hotel_name = "Không tìm thấy"
-        if details:
-            hotel_name = details.get('name', "Không tìm thấy")
-
-    for report in hotel_reports:
-        report[HotelField.HOTEL_NAME] = hotel_name
-
-    hotel_reports.sort(key=lambda r: r.get('reportedAt', ''), reverse=True)
-    
-    return jsonify(hotel_reports)
-
-@app.route('/api/hotelconnect/v1/hotels/reports/<report_id>', methods=['DELETE'])
+# DELETE xóa 1 store
+@app.route('/pos/api/v1/stores/<store_id>', methods=['DELETE'])
 @cross_origin()
-def delete_hotel_report(report_id):
-    with reports_lock:
-        reports = read_reports()
-        new_reports = [r for r in reports if r.get(HotelField.REPORT_ID) != report_id]
-        if len(reports) == len(new_reports):
-            return jsonify({HotelField.ERROR: "Không tìm thấy báo cáo"}), 404
-        write_reports(new_reports)
-        
-    return jsonify({HotelField.SUCCESS: True, HotelField.MESSAGE: "Xóa báo cáo thành công"})
+def delete_store(store_id):
+    config = read_config()
+    before = len(config.get('stores', []))
+    config['stores'] = [s for s in config.get('stores', []) if s['id'] != store_id]
+    if len(config['stores']) < before:
+        write_config(config)
+        return jsonify({"message": f"Store {store_id} deleted"})
+    return jsonify({"error": "Store not found"}), 404
 
-@app.route('/api/hotelconnect/v1/hotels/status/<status_name>', methods=['GET'])
+# ==================== INVENTORY API ====================
+
+# GET inventory của 1 store
+@app.route('/pos/api/v1/stores/<store_id>/inventory', methods=['GET'])
 @cross_origin()
-def get_hotels_by_status(status_name):
-    valid_statuses = [s.value for s in HotelStatus] + ["deleted"]
-    if status_name not in valid_statuses:
-        return jsonify({HotelField.ERROR: "Trạng thái không hợp lệ"}), 400
+def get_inventory(store_id):
+    config = read_config()
+    for store in config.get('stores', []):
+        if store['id'] == store_id:
+            return jsonify(store.get('inventory', []))
+    return jsonify({"error": "Store not found"}), 404
 
-    hotels_with_status = []
-    with schema_lock:
-        schemas = read_schema()
-        for schema in schemas:
-            file_path = os.path.join(CONFIG_DIR, schema.get(HotelField.FILE_PATH_ID))
-            if os.path.exists(file_path):
-                try:
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        hotels_in_file = json.load(f)
-                    for hotel in hotels_in_file:
-                        if hotel.get(HotelField.STATUS) == status_name:
-                            hotels_with_status.append(hotel)
-                except Exception as e:
-                    logging.error(f"Error processing file {file_path} for status '{status_name}': {e}")
-    
-    hotels_with_status.sort(key=lambda h: h.get(HotelField.UPDATED_AT, ''), reverse=True)
-    return jsonify(hotels_with_status)
-    
-@app.route('/api/hotelconnect/v1/hotels/<hotel_id>/status', methods=['POST'])
+# PUT cập nhật inventory của 1 store
+@app.route('/pos/api/v1/stores/<store_id>/inventory', methods=['PUT'])
 @cross_origin()
-def set_hotel_status(hotel_id):
-    req_data = request.json
-    new_status = req_data.get(HotelField.STATUS)
-    if not new_status:
-        return jsonify({HotelField.ERROR: "Thiếu trạng thái mới"}), 400
-    
-    valid_statuses = [s.value for s in HotelStatus] + ["deleted"]
-    if new_status not in valid_statuses:
-        return jsonify({HotelField.ERROR: "Trạng thái không hợp lệ"}), 400
+def update_inventory(store_id):
+    inventory = request.get_json()
+    if not isinstance(inventory, list):
+        return jsonify({"error": "Expected array"}), 400
+    config = read_config()
+    for store in config.get('stores', []):
+        if store['id'] == store_id:
+            store['inventory'] = inventory
+            write_config(config)
+            return jsonify({"message": f"Inventory updated for store {store_id}", "count": len(inventory)})
+    return jsonify({"error": "Store not found"}), 404
 
-    with schema_lock:
-        schemas = read_schema()
-        hotel_found, target_file, city_hotels, updated_hotel = False, None, [], None
-
-        for schema in schemas:
-            file_path = os.path.join(CONFIG_DIR, schema.get(HotelField.FILE_PATH_ID))
-            if os.path.exists(file_path):
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    hotels = json.load(f)
-                for i, h in enumerate(hotels):
-                    if h.get(HotelField.ID) == hotel_id:
-                        hotel_found, target_file, city_hotels = True, file_path, hotels
-                        city_hotels[i][HotelField.STATUS] = new_status
-                        city_hotels[i][HotelField.UPDATED_AT] = datetime.now().strftime("%Y-%m-%d")
-                        updated_hotel = city_hotels[i]
-                        break
-            if hotel_found: break
-        
-        if not hotel_found:
-            return jsonify({HotelField.ERROR: "Không tìm thấy khách sạn"}), 404
-
-        try:
-            with open(target_file, 'w', encoding='utf-8') as f:
-                json.dump(city_hotels, f, ensure_ascii=False, indent=4)
-        except Exception as e:
-            return jsonify({HotelField.ERROR: f"Lỗi khi ghi file: {str(e)}"}), 500
-
-        # --- START: TỰ ĐỘNG LƯU TRỮ VÀ XÓA BÁO CÁO CŨ KHI REVIEW ---
-        if new_status in [HotelStatus.APPROVED.value, HotelStatus.INACTIVE.value, "deleted"]:
-            with reports_lock:
-                reports = read_reports()
-                reports_to_keep = []
-                reports_to_archive = []
-                for r in reports:
-                    if r.get(HotelField.HOTEL_ID) == hotel_id:
-                        r['archivedAt'] = datetime.now(timezone.utc).isoformat()
-                        r['resolution'] = f'{new_status}_by_admin'
-                        reports_to_archive.append(r)
-                    else:
-                        reports_to_keep.append(r)
-                
-                if reports_to_archive:
-                    write_reports(reports_to_keep) # Cập nhật lại file chính
-                    
-                    # Backup sang file history riêng cho khách sạn
-                    with history_lock:
-                        history = []
-                        history_file = os.path.join(CONFIG_DIR, f"hotel_report_{hotel_id}.json")
-                        if os.path.exists(history_file):
-                            try:
-                                with open(history_file, 'r', encoding='utf-8') as f:
-                                    history = json.load(f)
-                            except Exception:
-                                pass
-                        history.extend(reports_to_archive)
-                        try:
-                            with open(history_file, 'w', encoding='utf-8') as f:
-                                json.dump(history, f, ensure_ascii=False, indent=4)
-                        except Exception as e:
-                            logging.error(f"Failed to write history: {e}")
-        # --- END: TỰ ĐỘNG LƯU TRỮ ---
-
-    return jsonify({HotelField.SUCCESS: True, HotelField.MESSAGE: f"Cập nhật trạng thái thành công sang '{new_status}'", HotelField.DATA: updated_hotel})
-
-@app.route('/api/hotelconnect/v1/hotels/<hotel_id>', methods=['PUT'])
+# POST thêm sản phẩm vào inventory store
+@app.route('/pos/api/v1/stores/<store_id>/inventory', methods=['POST'])
 @cross_origin()
-def update_hotel(hotel_id):
-    req_data = request.json
-    if not req_data:
-        return jsonify({HotelField.ERROR: "Dữ liệu không hợp lệ"}), 400
+def add_inventory_item(store_id):
+    item = request.get_json()
+    if not item or not item.get('productId'):
+        return jsonify({"error": "productId required"}), 400
+    config = read_config()
+    for store in config.get('stores', []):
+        if store['id'] == store_id:
+            store.setdefault('inventory', []).append(item)
+            write_config(config)
+            return jsonify({"message": "Inventory item added", "item": item}), 201
+    return jsonify({"error": "Store not found"}), 404
 
-    with schema_lock:
-        schemas = read_schema()
-        hotel_found = False
-        target_file = None
-        city_hotels = []
-
-        # Tìm khách sạn trong toàn bộ các tệp cấu hình
-        for schema in schemas:
-            file_path = os.path.join(CONFIG_DIR, schema.get(HotelField.FILE_PATH_ID))
-            if os.path.exists(file_path):
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    try:
-                        hotels = json.load(f)
-                        for i, h in enumerate(hotels):
-                            if h.get(HotelField.ID) == hotel_id:
-                                hotel_found = True
-                                target_file = file_path
-                                city_hotels = hotels
-                                # Cập nhật các trường thông tin cho phép
-                                for k, v in req_data.items():
-                                    if k not in [HotelField.ID, HotelField.CREATED_AT]: # Cho phép cập nhật status
-                                        city_hotels[i][k] = v
-                                city_hotels[i][HotelField.UPDATED_AT] = datetime.now().strftime("%Y-%m-%d")
-                                updated_hotel = city_hotels[i]
-                                break
-                    except Exception:
-                        pass
-            if hotel_found:
-                break
-        
-        if not hotel_found:
-            return jsonify({HotelField.ERROR: "Không tìm thấy khách sạn"}), 404
-
-        try:
-            with open(target_file, 'w', encoding='utf-8') as f:
-                json.dump(city_hotels, f, ensure_ascii=False, indent=4)
-        except Exception as e:
-            return jsonify({HotelField.ERROR: f"Lỗi khi ghi file: {str(e)}"}), 500
-
-    return jsonify({HotelField.SUCCESS: True, HotelField.MESSAGE: "Cập nhật khách sạn thành công", HotelField.DATA: updated_hotel})
-
-@app.route('/api/hotelconnect/v1/hotels/<hotel_id>', methods=['DELETE'])
+# DELETE xóa sản phẩm khỏi inventory store
+@app.route('/pos/api/v1/stores/<store_id>/inventory/<product_id>', methods=['DELETE'])
 @cross_origin()
-def delete_hotel(hotel_id):
-    with schema_lock:
-        schemas = read_schema()
-        hotel_found = False
-        target_file = None
-        city_hotels = []
+def delete_inventory_item(store_id, product_id):
+    config = read_config()
+    for store in config.get('stores', []):
+        if store['id'] == store_id:
+            before = len(store.get('inventory', []))
+            store['inventory'] = [i for i in store.get('inventory', []) if i['productId'] != product_id]
+            if len(store['inventory']) < before:
+                write_config(config)
+                return jsonify({"message": f"Product {product_id} removed from store {store_id}"})
+            return jsonify({"error": "Product not in inventory"}), 404
+    return jsonify({"error": "Store not found"}), 404
 
-        # Tìm và xóa khách sạn trong các tệp cấu hình
-        for schema in schemas:
-            file_path = os.path.join(CONFIG_DIR, schema.get(HotelField.FILE_PATH_ID))
-            if os.path.exists(file_path):
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    try:
-                        hotels = json.load(f)
-                        for i, h in enumerate(hotels):
-                            if h.get(HotelField.ID) == hotel_id:
-                                hotel_found = True
-                                target_file = file_path
-                                city_hotels = hotels
-                                city_hotels.pop(i) # Loại bỏ khách sạn khỏi danh sách
-                                break
-                    except Exception:
-                        pass
-            if hotel_found:
-                break
-        
-        if not hotel_found:
-            return jsonify({HotelField.ERROR: "Không tìm thấy khách sạn"}), 404
+# ==================== EMPLOYEES API ====================
 
-        try:
-            with open(target_file, 'w', encoding='utf-8') as f:
-                json.dump(city_hotels, f, ensure_ascii=False, indent=4)
-        except Exception as e:
-            return jsonify({HotelField.ERROR: f"Lỗi khi ghi file: {str(e)}"}), 500
-
-        # --- START: XÓA BÁO CÁO LIÊN QUAN KHI XÓA VĨNH VIỄN LỮ QUÁN ---
-        # 1. Xóa các báo cáo đang chờ xử lý trong hotel_reports.json (nếu có)
-        with reports_lock:
-            reports = read_reports()
-            new_reports = [r for r in reports if r.get(HotelField.HOTEL_ID) != hotel_id]
-            if len(reports) != len(new_reports):
-                write_reports(new_reports)
-                
-        # 2. Xóa file lịch sử báo cáo (hotel_report_<hotel_id>.json)
-        history_file = os.path.join(CONFIG_DIR, f"hotel_report_{hotel_id}.json")
-        if os.path.exists(history_file):
-            try:
-                os.remove(history_file)
-            except Exception as e:
-                logging.error(f"Lỗi khi xóa file lịch sử {history_file}: {e}")
-        # --- END: XÓA BÁO CÁO LIÊN QUAN ---
-
-    return jsonify({HotelField.SUCCESS: True, HotelField.MESSAGE: "Xóa khách sạn thành công"})
-
-@app.route('/api/hotelconnect/v1/config/<filename>', methods=['GET'])
+# GET tất cả nhân viên từ tất cả stores
+@app.route('/pos/api/v1/employees', methods=['GET'])
 @cross_origin()
-def get_config_file(filename):
-    # Đảm bảo chỉ phục vụ file JSON để tránh lỗi bảo mật (Directory Traversal)
-    if '.json' not in filename:
-        return jsonify({HotelField.ERROR: "Chỉ hỗ trợ tải file JSON"}), 400
-        
-    directory = CONFIG_DIR
-    full_path = os.path.join(directory, filename)
-    if not os.path.exists(full_path):
-        logging.warning(f"File không tồn tại (404): {full_path}")
-        return jsonify([]), 404
-        
-    return send_from_directory(directory, filename)
+def get_all_employees():
+    config = read_config()
+    employees = []
+    for store in config.get('stores', []):
+        for emp in store.get('employees', []):
+            employees.append({**emp, 'storeId': store['id'], 'storeName': store['name']})
+    return jsonify(employees)
 
-# --- ROUTE HOST GIAO DIỆN REACT/VITE (SPA Catch-all) ---
-# Các route này đặt ở cuối để không đè lên các endpoint API phía trên
-@app.route('/', defaults={'path': ''})
-@app.route('/<path:path>')
+# PUT cập nhật nhân viên của 1 store
+@app.route('/pos/api/v1/stores/<store_id>/employees', methods=['PUT'])
 @cross_origin()
-def serve_frontend(path):
-    # Không catch các request gọi vào API backend
-    if path.startswith('api/'):
-        abort(404)
-        
-    # Trả về các file tĩnh (.js, .css, assets...) từ thư mục dist/ nếu có
-    if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
-        return send_from_directory(app.static_folder, path)
-    
-    # Mọi request đường dẫn giao diện đều trả về index.html để React tự điều hướng
-    if os.path.exists(os.path.join(app.static_folder, 'index.html')):
-        return send_from_directory(app.static_folder, 'index.html')
-    
-    return "Chưa tìm thấy bản build UI. Vui lòng chạy lệnh 'npm run build' bên trong container.", 404
+def update_store_employees(store_id):
+    employees = request.get_json()
+    if not isinstance(employees, list):
+        return jsonify({"error": "Expected array"}), 400
+    config = read_config()
+    for store in config.get('stores', []):
+        if store['id'] == store_id:
+            store['employees'] = employees
+            write_config(config)
+            return jsonify({"message": f"Employees updated for store {store_id}", "count": len(employees)})
+    return jsonify({"error": "Store not found"}), 404
 
+# POST thêm nhân viên vào store
+@app.route('/pos/api/v1/stores/<store_id>/employees', methods=['POST'])
+@cross_origin()
+def add_employee(store_id):
+    emp = request.get_json()
+    if not emp or not emp.get('name'):
+        return jsonify({"error": "Employee name required"}), 400
+    config = read_config()
+    for store in config.get('stores', []):
+        if store['id'] == store_id:
+            emp['id'] = emp.get('id', f"e{uuid.uuid4().hex[:8]}")
+            store.setdefault('employees', []).append(emp)
+            write_config(config)
+            return jsonify({"message": "Employee added", "employee": emp}), 201
+    return jsonify({"error": "Store not found"}), 404
 
-   
+# DELETE xóa nhân viên
+@app.route('/pos/api/v1/stores/<store_id>/employees/<emp_id>', methods=['DELETE'])
+@cross_origin()
+def delete_employee(store_id, emp_id):
+    config = read_config()
+    for store in config.get('stores', []):
+        if store['id'] == store_id:
+            before = len(store.get('employees', []))
+            store['employees'] = [e for e in store.get('employees', []) if e['id'] != emp_id]
+            if len(store['employees']) < before:
+                write_config(config)
+                return jsonify({"message": f"Employee {emp_id} deleted"})
+            return jsonify({"error": "Employee not found"}), 404
+    return jsonify({"error": "Store not found"}), 404
 
+# PUT sửa thông tin 1 nhân viên
+@app.route('/pos/api/v1/stores/<store_id>/employees/<emp_id>', methods=['PUT'])
+@cross_origin()
+def edit_employee(store_id, emp_id):
+    updates = request.get_json()
+    if not updates:
+        return jsonify({"error": "Invalid JSON"}), 400
+    config = read_config()
+    for store in config.get('stores', []):
+        if store['id'] == store_id:
+            for emp in store.get('employees', []):
+                if emp['id'] == emp_id:
+                    emp.update(updates)
+                    emp['id'] = emp_id  # giữ nguyên id
+                    write_config(config)
+                    return jsonify({"message": f"Employee {emp_id} updated", "employee": emp})
+            return jsonify({"error": "Employee not found"}), 404
+    return jsonify({"error": "Store not found"}), 404
+
+# ==================== TRANSACTIONS / HISTORY API ====================
+
+def get_transactions_file(store_id):
+    return os.path.join(CONFIG_DIR, f'transactions_{store_id}.json')
+
+def read_transactions(store_id):
+    file = get_transactions_file(store_id)
+    if not os.path.exists(file):
+        return []
+    with open(file, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    # decode các field nhạy cảm
+    for tx in data:
+        if 'productName' in tx:
+            tx['productName'] = decode_b64_field(tx['productName'])
+        if 'storeName' in tx:
+            tx['storeName'] = decode_b64_field(tx['storeName'])
+        if 'note' in tx:
+            tx['note'] = decode_b64_field(tx['note'])
+    return data
+
+def write_transactions(store_id, data):
+    file = get_transactions_file(store_id)
+    os.makedirs(CONFIG_DIR, exist_ok=True)
+    # encode các field nhạy cảm
+    data_to_write = []
+    for tx in data:
+        tx2 = dict(tx)
+        if 'productName' in tx2:
+            tx2['productName'] = encode_b64_field(tx2['productName'])
+        if 'storeName' in tx2:
+            tx2['storeName'] = encode_b64_field(tx2['storeName'])
+        if 'note' in tx2:
+            tx2['note'] = encode_b64_field(tx2['note'])
+        data_to_write.append(tx2)
+    with open(file, 'w', encoding='utf-8') as f:
+        json.dump(data_to_write, f, ensure_ascii=False, indent=2)
+
+# GET/POST transactions for a store
+@app.route('/pos/api/v1/transactions/<store_id>', methods=['GET', 'POST'])
+@cross_origin()
+def transactions_by_store(store_id):
+    if request.method == 'GET':
+        txs = read_transactions(store_id)
+        month = request.args.get('month')
+        tx_type = request.args.get('type')
+        if month:
+            txs = [t for t in txs if t.get('date', '').startswith(month)]
+        if tx_type and tx_type != 'all':
+            txs = [t for t in txs if t.get('type') == tx_type]
+        return jsonify(txs)
+    elif request.method == 'POST':
+        tx = request.get_json()
+        if not tx or not tx.get('type'):
+            return jsonify({"error": "Transaction type required"}), 400
+        txs = read_transactions(store_id)
+        tx['id'] = tx.get('id', f"tx{uuid.uuid4().hex[:8]}")
+        tx.setdefault('date', datetime.now(timezone.utc).isoformat())
+        txs.append(tx)
+        write_transactions(store_id, txs)
+        return jsonify({"message": "Transaction recorded", "transaction": tx}), 201
+
+# PUT replace all transactions for a store
+@app.route('/pos/api/v1/transactions/<store_id>', methods=['PUT'])
+@cross_origin()
+def update_transactions_by_store(store_id):
+    txs = request.get_json()
+    if not isinstance(txs, list):
+        return jsonify({"error": "Expected array"}), 400
+    write_transactions(store_id, txs)
+    return jsonify({"message": "Transactions saved", "count": len(txs)})
+
+# ==================== 404 fallback for SPA ====================
+@app.errorhandler(404)
+def fallback(e):
+    return send_from_directory(DIST_DIR, 'index.html')
 
 if __name__ == "__main__":
     # Tắt debug để tránh Werkzeug Reloader quét file liên tục gây tràn RAM

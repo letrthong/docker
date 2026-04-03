@@ -1,0 +1,20 @@
+[
+  {
+    "id": "e1",
+    "storeId": "1",
+    "name": "Nguyễn Văn A",
+    "role": "Quản lý",
+    "phone": "0901234567",
+    "username": "nv_quan1",
+    "schedule": { "Mon": ["S1", "S2"], "Tue": ["S1", "S2"], "Wed": ["S1", "S2"], "Thu": ["S1", "S2"], "Fri": ["S1", "S2"], "Sat": [], "Sun": [] }
+  },
+  {
+    "id": "e3",
+    "storeId": "2",
+    "name": "Trần Văn C",
+    "role": "Quản lý",
+    "phone": "0909999999",
+    "username": "nv_quan7",
+    "schedule": { "Mon": ["S1"], "Tue": ["S1"], "Wed": ["S1"], "Thu": ["S1"], "Fri": ["S1"], "Sat": [], "Sun": [] }
+  }
+]

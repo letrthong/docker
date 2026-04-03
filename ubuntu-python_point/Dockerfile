@@ -18,12 +18,15 @@ WORKDIR /app
 COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application files
-COPY *.py /app/
-COPY *.sh /app/
+# Copy frontend files and install + build
+COPY package.json /app/
+RUN npm install
 
- 
-RUN  npm run dev
+# Copy all project files
+COPY . /app/
+
+# Build frontend SPA → dist/
+RUN npm run build
 
 # 5. EXPOSE PORT AND RUN THE APPLICATION
 # Expose the port the app runs on
