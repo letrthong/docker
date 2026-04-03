@@ -12,20 +12,24 @@ def decode_b64_field(val):
         return ""
     return base64.b64decode(val.encode('utf-8')).decode('utf-8')
 
-from operator import index
 import os
 import json
-import logging
-import sys
 import threading
 import uuid
 import time
 from datetime import datetime, timezone
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import cross_origin
-# ==================== PRODUCTS API ====================
 
+# --- Directory and File Constants ---
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SRC_DIR = os.path.join(BASE_DIR, 'src')
+DIST_DIR = os.path.join(BASE_DIR, 'dist')
+CONFIG_DIR = os.path.join(BASE_DIR, 'config')
+CONFIG_FILE = os.path.join(CONFIG_DIR, 'config.json')
 PRODUCTS_LAST_UPDATE_FILE = os.path.join(CONFIG_DIR, 'products_last_update.txt')
+
+# ==================== PRODUCTS API ====================
 
 def get_products_last_update():
     if not os.path.exists(PRODUCTS_LAST_UPDATE_FILE):
@@ -36,12 +40,6 @@ def get_products_last_update():
 def set_products_last_update():
     with open(PRODUCTS_LAST_UPDATE_FILE, 'w') as f:
         f.write(str(int(time.time())))
-
-# Flask app - serve SPA từ dist/
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DIST_DIR = os.path.join(BASE_DIR, 'dist')
-CONFIG_DIR = os.path.join(BASE_DIR, 'config')
-CONFIG_FILE = os.path.join(CONFIG_DIR, 'config.json')
 
 app = Flask(__name__, static_folder=DIST_DIR, static_url_path='')
 

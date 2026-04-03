@@ -19,12 +19,9 @@ COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy frontend files and install + build
-COPY package.json /app/
-RUN npm install
-
-# Copy all project files
 COPY . /app/
 
+RUN npm install --legacy-peer-deps
 # Build frontend SPA → dist/
 RUN npm run build
 
