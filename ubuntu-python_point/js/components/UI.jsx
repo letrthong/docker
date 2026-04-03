@@ -9,14 +9,14 @@ export const Icon = ({ name, size = 18, className = "", ...props }) => {
 };
 
 export const TabButton = ({ active, onClick, icon, label }) => (
-    <button onClick={onClick} className={`flex items-center space-x-3 px-6 h-14 rounded-2xl font-black text-[13px] uppercase tracking-tighter transition-all ${active ? 'bg-blue-600 text-white shadow-xl shadow-blue-100' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}>
-        <Icon name={icon} /> <span>{label}</span>
+    <button onClick={onClick} className={`group flex items-center space-x-3 px-6 h-12 rounded-2xl font-black text-xs uppercase tracking-widest transition-all duration-300 ${active ? 'bg-teal-600 text-white shadow-[0_8px_16px_-6px_rgba(13,148,136,0.4)]' : 'text-slate-400 hover:text-teal-600 hover:bg-teal-50 hover:-translate-y-0.5'}`}>
+        <Icon name={icon} size={18} className={`${active ? 'scale-110' : 'group-hover:scale-110 group-hover:rotate-3'} transition-transform duration-300`} /> <span>{label}</span>
     </button>
 );
 
 export const SubTabButton = ({ active, onClick, icon, label }) => (
-    <button onClick={onClick} className={`flex items-center space-x-2.5 px-8 py-3.5 rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all ${active ? 'bg-white text-blue-600 shadow-sm border border-slate-100' : 'text-slate-400 hover:text-slate-600'}`}>
-        <Icon name={icon} size={16} /> <span>{label}</span>
+    <button onClick={onClick} className={`group flex items-center space-x-2.5 px-6 py-3.5 rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all duration-300 ${active ? 'bg-white text-teal-600 shadow-md border border-slate-100 scale-105' : 'text-slate-400 hover:text-teal-600 hover:bg-teal-50/50'}`}>
+        <Icon name={icon} size={16} className={`${active ? 'scale-110' : 'group-hover:scale-110'} transition-transform duration-300`} /> <span>{label}</span>
     </button>
 );
 
@@ -44,13 +44,13 @@ export const SummaryBigCard = ({ icon, color, label, value }) => (
 export const Input = ({ label, ...props }) => (
     <div className="space-y-2 w-full text-left">
         <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">{label}</label>
-        <input {...props} className="w-full px-6 py-5 bg-slate-50 border border-slate-100 rounded-3xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:bg-white font-bold text-slate-700 shadow-inner transition-all placeholder:font-medium placeholder:text-slate-300" onChange={e => props.onChange ? props.onChange(e.target.value) : null}/>
+        <input {...props} className="w-full px-6 py-5 bg-slate-50 border border-slate-100 rounded-3xl outline-none focus:ring-4 focus:ring-teal-500/10 focus:bg-white font-bold text-slate-700 shadow-inner transition-all placeholder:font-medium placeholder:text-slate-300" onChange={e => props.onChange ? props.onChange(e.target.value) : null}/>
     </div>
 );
 
 export const Select = ({ label, children, value, onChange, ...props }) => (
     <div className="space-y-2 w-full text-left">
         <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">{label}</label>
-        <div className="relative"><select value={value} {...props} className="w-full px-6 py-5 bg-slate-50 border border-slate-100 rounded-3xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:bg-white font-bold text-slate-700 appearance-none shadow-inner cursor-pointer transition-all" onChange={e => onChange ? onChange(e.target.value) : null}>{children}</select><div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400"><Icon name="chevron-down" size={22} /></div></div>
+        <div className="relative"><select value={value} {...props} className="w-full px-6 py-5 bg-slate-50 border border-slate-100 rounded-3xl outline-none focus:ring-4 focus:ring-teal-500/10 focus:bg-white font-bold text-slate-700 appearance-none shadow-inner cursor-pointer transition-all" onChange={e => onChange ? onChange(e.target.value) : null}>{children}</select><div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400"><Icon name="chevron-down" size={22} /></div></div>
     </div>
 );

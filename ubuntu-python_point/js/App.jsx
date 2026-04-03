@@ -59,13 +59,13 @@ export default function App() {
     return (
         <div className="min-h-screen flex flex-col">
             {/* Header */}
-            <header className="bg-white border-b sticky top-0 z-50 h-20 px-8 flex items-center justify-between shadow-sm">
+            <header className="bg-white border-b sticky top-0 z-50 h-20 px-4 md:px-8 flex items-center justify-between shadow-sm">
                 <div className="flex items-center space-x-6 lg:space-x-10">
                     <div className="flex items-center space-x-3 cursor-pointer group" onClick={() => user.role === 'admin' && setActiveTab('dashboard')}>
                         <div className="bg-teal-600 p-2.5 rounded-xl shadow-lg group-hover:scale-105 transition-transform"><Icon name="package" size={22} className="text-white" /></div>
                         <h1 className="text-xl font-black tracking-tighter text-slate-900 uppercase hidden sm:block">ChainFlow</h1>
                     </div>
-                    <nav className="flex items-center space-x-1 h-20 overflow-x-auto no-scrollbar">
+                    <nav className="hidden md:flex items-center space-x-1 h-20 overflow-x-auto no-scrollbar">
                         {user.role === 'admin' ? (
                             <>
                                 <TabButton active={activeTab === 'dashboard'} onClick={() => {setActiveTab('dashboard'); setSelectedStore(null)}} label="Tổng quan" icon="layout-dashboard" />
@@ -94,8 +94,8 @@ export default function App() {
             </header>
 
             {/* Main Content */}
-            <main className="flex-1 p-8 max-w-[1400px] mx-auto w-full">
-                {toast && <div className="fixed bottom-8 right-8 z-[100] bg-slate-900 text-white px-6 py-4 rounded-3xl shadow-2xl flex items-center space-x-4 animate-in slide-in-from-right"><Icon name="check-circle-2" size={16} className="text-emerald-400"/><p className="text-sm font-bold">{toast}</p></div>}
+            <main className="flex-1 p-4 md:p-8 pb-24 md:pb-8 max-w-[1400px] mx-auto w-full">
+                {toast && <div className="fixed bottom-20 md:bottom-8 right-4 md:right-8 z-[100] bg-slate-900 text-white px-6 py-4 rounded-3xl shadow-2xl flex items-center space-x-4 animate-in slide-in-from-right"><Icon name="check-circle-2" size={16} className="text-emerald-400"/><p className="text-sm font-bold">{toast}</p></div>}
 
                 {/* Admin Pages */}
                 {user.role === 'admin' && activeTab === 'dashboard' && !selectedStore && (
@@ -131,6 +131,21 @@ export default function App() {
             {(showModal === 'addEmployee' || showModal === 'editEmployee') && <EmployeeModal showModal={showModal} setShowModal={setShowModal} editingEmployee={editingEmployee} setEditingEmployee={setEditingEmployee} handleSaveEmployee={handleSaveEmployee} currentStoreId={currentStore?.id} />}
             {showModal === 'addStore' && <AddStoreModal setShowModal={setShowModal} handleAddStore={handleAddStore} />}
             {showModal === 'distribute' && <DistributeModal setShowModal={setShowModal} stores={stores} globalProducts={globalProducts} currentStore={currentStore} handleDistribute={handleDistribute} />}
+
+            {/* Mobile Bottom Navigation */}
+            <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-[90] flex justify-around items-center h-16 px-1 pb-safe">
+                {user.role === 'admin' ? (
+                    <>
+                        <button onClick={() => {setActiveTab('dashboard'); setSelectedStore(null)}} className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${activeTab === 'dashboard' ? 'text-teal-600' : 'text-slate-400 hover:text-teal-500'}`}><Icon name="layout-dashboard" size={20}/><span className="text-[9px] font-black uppercase tracking-wider">Tổng quan</span></button>
+                        <button onClick={() => {setActiveTab('stores'); setSelectedStore(null)}} className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${activeTab === 'stores' ? 'text-teal-600' : 'text-slate-400 hover:text-teal-500'}`}><Icon name="store" size={20}/><span className="text-[9px] font-black uppercase tracking-wider">Chi nhánh</span></button>
+                        <button onClick={() => {setActiveTab('warehouse'); setSelectedStore(null)}} className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${activeTab === 'warehouse' ? 'text-teal-600' : 'text-slate-400 hover:text-teal-500'}`}><Icon name="warehouse" size={20}/><span className="text-[9px] font-black uppercase tracking-wider">Kho tổng</span></button>
+                        <button onClick={() => {setActiveTab('staff-global'); setSelectedStore(null)}} className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${activeTab === 'staff-global' ? 'text-teal-600' : 'text-slate-400 hover:text-teal-500'}`}><Icon name="users" size={20}/><span className="text-[9px] font-black uppercase tracking-wider">Nhân sự</span></button>
+                        <button onClick={() => {setActiveTab('history'); setSelectedStore(null)}} className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${activeTab === 'history' ? 'text-teal-600' : 'text-slate-400 hover:text-teal-500'}`}><Icon name="history" size={20}/><span className="text-[9px] font-black uppercase tracking-wider">Lịch sử</span></button>
+                    </>
+                ) : (
+                    <button onClick={() => setActiveTab('my-store')} className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${activeTab === 'my-store' ? 'text-teal-600' : 'text-slate-400 hover:text-teal-500'}`}><Icon name="store" size={20}/><span className="text-[9px] font-black uppercase tracking-wider">C.Nhánh</span></button>
+                )}
+            </nav>
         </div>
     );
 }
