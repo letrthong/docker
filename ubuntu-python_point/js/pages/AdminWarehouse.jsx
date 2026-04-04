@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Icon, SummaryMiniCard } from '../components/UI';
+import { ImportProductModal } from '../components/Modals';
 
-export default function AdminWarehouse({ globalProducts, totalValue, setShowModal, handleImportToWarehouse, setImportingItem, categories = [], stockRequests = [], handleProcessStockRequest }) {
+export default function AdminWarehouse({ globalProducts, totalValue, setShowModal, handleImportToWarehouse, categories = [], stockRequests = [], handleProcessStockRequest }) {
     const [filterCategory, setFilterCategory] = useState('all');
     const [viewTab, setViewTab] = useState('inventory'); // 'inventory', 'requests'
+    const [importingItem, setImportingItem] = useState(null);
 
     const displayedProducts = filterCategory === 'all' 
         ? globalProducts 
@@ -55,7 +57,7 @@ export default function AdminWarehouse({ globalProducts, totalValue, setShowModa
                                 <td className="px-10 py-8 font-black text-slate-800 text-center">{p.basePrice.toLocaleString()} đ</td>
                                 <td className="px-10 py-8 pr-14 text-right">
                                     <div className="flex justify-end gap-2">
-                                        <button onClick={() => { setImportingItem(p); setShowModal('importProduct'); }} className="p-3 text-emerald-500 hover:bg-emerald-50 rounded-xl transition-all" title="Nhập hàng NCC"><Icon name="arrow-down-left" size={20}/></button>
+                                        <button onClick={() => setImportingItem(p)} className="p-3 text-emerald-500 hover:bg-emerald-50 rounded-xl transition-all" title="Nhập hàng NCC"><Icon name="arrow-down-left" size={20}/></button>
                                         <button onClick={() => setShowModal('distribute')} className="p-3 text-orange-500 hover:bg-orange-50 rounded-xl transition-all" title="Điều phối chi nhánh"><Icon name="arrow-up-right" size={20}/></button>
                                     </div>
                                 </td>
@@ -78,7 +80,13 @@ export default function AdminWarehouse({ globalProducts, totalValue, setShowModa
                                 <td className="px-10 py-6 font-black text-blue-600">{req.storeName}</td>
                                 <td className="px-10 py-6 font-bold text-slate-700">{req.productName}</td>
                                 <td className="px-10 py-6 text-center font-black text-lg text-orange-500">{req.quantity}</td>
-                                <td className="px-10 py-6 text-xs text-slate-500">{req.note}</td>
+                                <td className="px-10 py-6 text-xs">
+                                    {req.note?.includes('Admin điều phối') ? (
+                                        <span className="px-3 py-1.5 bg-indigo-50 text-indigo-600 font-bold rounded-lg border border-indigo-100 whitespace-nowrap">{req.note}</span>
+                                    ) : (
+                                        <span className="text-slate-500">{req.note}</span>
+                                    )}
+                                </td>
                                 <td className="px-10 py-6 text-right pr-14">
                                     {req.status === 'pending' ? (
                                         <div className="flex justify-end gap-2">
@@ -96,6 +104,17 @@ export default function AdminWarehouse({ globalProducts, totalValue, setShowModa
                     </tbody>
                 </table>
             </div>
+            )}
+
+            {importingItem && (
+                <ImportProductModal 
+                    product={importingItem}
+                    setShowModal={() => setImportingItem(null)}
+                    handleImportToWarehouse={(id, qty) => {
+                        handleImportToWarehouse(id, qty);
+                        setImportingItem(null);
+                    }}
+                />
             )}
         </div>
     );

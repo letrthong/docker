@@ -176,11 +176,19 @@ def secure_distribute(store_id):
         if not target_store: return jsonify({"error": "Không tìm thấy chi nhánh!"}), 404
         
         product['warehouseStock'] = int(product.get('warehouseStock', 0)) - qty
-        inventory_item = next((i for i in target_store.get('inventory', []) if i['productId'] == product_id), None)
-        if inventory_item:
-            inventory_item['quantity'] = int(inventory_item['quantity']) + qty
-        else:
-            target_store.setdefault('inventory', []).append({'productId': product_id, 'quantity': qty, 'sold': 0})
+        
+        new_req = {
+            'id': f"req_{uuid.uuid4().hex[:8]}",
+            'storeId': store_id,
+            'storeName': target_store.get('name', 'N/A'),
+            'productId': product_id,
+            'productName': product.get('name', 'N/A'),
+            'quantity': qty,
+            'status': 'shipping',
+            'date': datetime.now(timezone.utc).isoformat(),
+            'note': "Admin điều phối (Chờ nhận)"
+        }
+        config.setdefault('stockRequests', []).append(new_req)
             
         write_config(config)
         
@@ -192,7 +200,7 @@ def secure_distribute(store_id):
         'costPrice': product.get('costPrice', 0),
         'unitPrice': product.get('basePrice', 0),
         'date': datetime.now(timezone.utc).isoformat(),
-        'note': f"Phân phối {qty} {product.get('unit', 'cái')} đến {target_store.get('name', 'N/A')}"
+        'note': f"Chờ nhận {qty} {product.get('unit', 'cái')} từ kho tổng"
     })
     write_transactions(store_id, txs)
     
@@ -204,11 +212,11 @@ def secure_distribute(store_id):
         'unitPrice': product.get('basePrice', 0),
         'storeName': target_store.get('name', 'N/A'), 'quantity': qty,
         'date': datetime.now(timezone.utc).isoformat(),
-        'note': f"Xuất kho tổng {qty} {product.get('unit', 'cái')} cho {target_store.get('name', 'N/A')}"
+        'note': f"Xuất kho tổng {qty} {product.get('unit', 'cái')} cho {target_store.get('name', 'N/A')} (Đang giao)"
     })
     write_transactions('warehouse', warehouse_txs)
     
-    return jsonify({"message": "Phân phối thành công"})
+    return jsonify({"message": "Phân phối thành công", "request": new_req})
 
 @pos_stores_bp.route('/pos/api/v1/stores/<store_id>/action/return', methods=['POST'])
 def secure_return(store_id):
@@ -316,3 +324,58 @@ def secure_transfer(store_id):
     write_transactions(to_store_id, to_txs)
     
     return jsonify({"message": "Luân chuyển thành công"})
+
+@pos_stores_bp.route('/pos/api/v1/requests/action', methods=['POST'])
+def secure_request_action():
+    data = request.get_json()
+    req_id = data.get('requestId')
+    action = data.get('action') # 'approve', 'reject', 'receive'
+    
+    with config_lock:
+        config = read_config()
+        req = next((r for r in config.get('stockRequests', []) if r['id'] == req_id), None)
+        if not req: return jsonify({"error": "Không tìm thấy yêu cầu!"}), 404
+        
+        qty = int(req.get('quantity', 0))
+        
+        if action == 'approve':
+            if req.get('status') != 'pending': return jsonify({"error": "Yêu cầu không ở trạng thái chờ duyệt!"}), 400
+            product = next((p for p in config.get('products', []) if p['id'] == req['productId']), None)
+            if not product or int(product.get('warehouseStock', 0)) < qty:
+                return jsonify({"error": "Kho tổng không đủ hàng để duyệt xuất!"}), 400
+            
+            product['warehouseStock'] = int(product.get('warehouseStock', 0)) - qty
+            req['status'] = 'shipping'
+            
+            # Ghi log kho tổng
+            warehouse_txs = read_transactions('warehouse')
+            warehouse_txs.append({
+                'id': f"tx_out_{uuid.uuid4().hex[:8]}", 'type': 'distribute', 'productId': req['productId'],
+                'productName': product.get('name', 'N/A'), 'storeId': req['storeId'],
+                'costPrice': product.get('costPrice', 0), 'unitPrice': product.get('basePrice', 0),
+                'storeName': req.get('storeName', 'N/A'), 'quantity': qty,
+                'date': datetime.now(timezone.utc).isoformat(),
+                'note': f"Xuất kho gửi đến {req.get('storeName', 'N/A')} (Đang giao)"
+            })
+            write_transactions('warehouse', warehouse_txs)
+            
+        elif action == 'reject':
+            if req.get('status') != 'pending': return jsonify({"error": "Yêu cầu không ở trạng thái chờ duyệt!"}), 400
+            req['status'] = 'rejected'
+            
+        elif action == 'receive':
+            if req.get('status') != 'shipping': return jsonify({"error": "Yêu cầu không ở trạng thái đang giao!"}), 400
+            target_store = next((s for s in config.get('stores', []) if s['id'] == req['storeId']), None)
+            if not target_store: return jsonify({"error": "Không tìm thấy chi nhánh!"}), 404
+            
+            inventory_item = next((i for i in target_store.get('inventory', []) if i['productId'] == req['productId']), None)
+            if inventory_item:
+                inventory_item['quantity'] = int(inventory_item['quantity']) + qty
+            else:
+                target_store.setdefault('inventory', []).append({'productId': req['productId'], 'quantity': qty, 'sold': 0})
+                
+            req['status'] = 'completed'
+            
+        write_config(config)
+        
+    return jsonify({"message": "Xử lý yêu cầu thành công!", "request": req})

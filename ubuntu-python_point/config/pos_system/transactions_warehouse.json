@@ -20,5 +20,40 @@
     "unitPrice": 12,
     "date": "2026-04-04T14:04:12.455126+00:00",
     "note": "b64:Tmjhuq1wIDEwIDEwMCB2w6BvIGtobyB04buVbmc="
+  },
+  {
+    "id": "txa9219211",
+    "type": "import",
+    "productId": "p1775300196380",
+    "productName": "b64:eA==",
+    "quantity": 10,
+    "costPrice": 0,
+    "unitPrice": 12,
+    "date": "2026-04-04T14:18:11.065676+00:00",
+    "note": "b64:Tmjhuq1wIDEwIDEwMCB2w6BvIGtobyB04buVbmc="
+  },
+  {
+    "id": "txd6e92cae",
+    "type": "import",
+    "productId": "p1775300196380",
+    "productName": "b64:eA==",
+    "quantity": 100,
+    "costPrice": 0,
+    "unitPrice": 12,
+    "date": "2026-04-04T14:21:27.223168+00:00",
+    "note": "b64:Tmjhuq1wIDEwMCAxMDAgdsOgbyBraG8gdOG7lW5n"
+  },
+  {
+    "id": "tx_out_e55cb293",
+    "type": "distribute",
+    "productId": "p1775300196380",
+    "productName": "b64:eA==",
+    "storeId": "s1775300073390",
+    "costPrice": 0,
+    "unitPrice": 12,
+    "storeName": "b64:eHh4eA==",
+    "quantity": 2,
+    "date": "2026-04-04T14:55:42.640186+00:00",
+    "note": "b64:WHXhuqV0IGtobyB04buVbmcgMiAxMDAgY2hvIHh4eHg="
   }
 ]

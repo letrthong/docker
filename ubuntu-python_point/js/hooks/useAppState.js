@@ -45,6 +45,7 @@ export function useAppState() {
     const [sellingItem, setSellingItem] = useState(null);
     const [importingItem, setImportingItem] = useState(null);
     const [toast, setToast] = useState(null);
+    const [toastType, setToastType] = useState('success');
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [historyFilter, setHistoryFilter] = useState({ type: 'all', year: String(new Date().getFullYear()), viewMode: 'year' });
@@ -99,8 +100,9 @@ export function useAppState() {
         return globalProducts.reduce((sum, p) => sum + (Number(p.warehouseStock) * Number(p.basePrice)), 0);
     }, [globalProducts]);
 
-    const showToast = (msg) => {
+    const showToast = (msg, type = 'success') => {
         setToast(msg);
+        setToastType(type);
         setTimeout(() => setToast(null), 3000);
     };
 
@@ -156,7 +158,7 @@ export function useAppState() {
             if (timeoutId) clearTimeout(timeoutId);
             timeoutId = setTimeout(() => {
                 handleLogout();
-                showToast("Phiên làm việc đã hết hạn do không hoạt động. Vui lòng đăng nhập lại.");
+                showToast("Phiên làm việc đã hết hạn do không hoạt động. Vui lòng đăng nhập lại.", 'error');
             }, logoutTime);
         };
 
@@ -186,19 +188,19 @@ export function useAppState() {
 
         const inputCccd = (employeeData.cccd || '').trim();
         if (!inputCccd) {
-            showToast("Vui lòng nhập số CCCD/CMND!");
+            showToast("Vui lòng nhập số CCCD/CMND!", 'error');
             return;
         }
         const isDuplicateCccd = allEmployees.some(e => e.cccd === inputCccd && (!isEdit || e.id !== editingEmployee?.id));
         if (isDuplicateCccd) {
-            showToast("Số CCCD/CMND đã tồn tại trong hệ thống!");
+            showToast("Số CCCD/CMND đã tồn tại trong hệ thống!", 'error');
             return;
         }
 
         const inputUsername = (employeeData.username || '').toLowerCase();
         const isDuplicate = allEmployees.some(e => e.username && e.username.toLowerCase() === inputUsername && (!isEdit || e.id !== editingEmployee?.id));
         if (isDuplicate) {
-            showToast("Username đã tồn tại!");
+            showToast("Username đã tồn tại!", 'error');
             return;
         }
         setAllEmployees(prev => {
@@ -266,7 +268,7 @@ export function useAppState() {
 
     const handleChangePassword = (oldPassword, newPassword) => {
         if (user.role === 'admin') {
-            showToast("Tài khoản Admin không thể đổi mật khẩu ở đây.");
+            showToast("Tài khoản Admin không thể đổi mật khẩu ở đây.", 'error');
             return false;
         }
         const emp = allEmployees.find(e => e.username === user.username);
@@ -288,7 +290,7 @@ export function useAppState() {
         const product = globalProducts.find(p => p.id === productId);
         const reqQty = Number(quantity);
         if (reqQty > (product?.warehouseStock || 0)) {
-            showToast(`Lỗi: Kho tổng chỉ còn ${product?.warehouseStock || 0} sản phẩm!`);
+            showToast(`Lỗi: Kho tổng chỉ còn ${product?.warehouseStock || 0} sản phẩm!`, 'error');
             return;
         }
         const store = stores.find(s => s.id === storeId);
@@ -305,49 +307,82 @@ export function useAppState() {
         showToast("Đã gửi yêu cầu cấp hàng đến Kho tổng.");
     };
 
-    const handleProcessStockRequest = (requestId, status) => {
-        const req = stockRequests.find(r => r.id === requestId);
-        if (!req) return;
-
-        if (status === 'shipping') {
-            const product = globalProducts.find(p => p.id === req.productId);
-            if (!product || product.warehouseStock < req.quantity) {
-                showToast("Lỗi: Kho tổng không đủ hàng để duyệt!");
+    const handleProcessStockRequest = async (requestId, status) => {
+        const action = status === 'shipping' ? 'approve' : 'reject';
+        try {
+            const res = await fetch('/pos/api/v1/requests/action', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ requestId, action })
+            });
+            const result = await res.json();
+            
+            if (!res.ok) {
+                showToast(result.error || "Giao dịch thất bại từ Server!", 'error');
                 return;
             }
-            setGlobalProducts(globalProducts.map(p => p.id === req.productId ? { ...p, warehouseStock: Number(p.warehouseStock) - req.quantity } : p));
-            setWarehouseTransactions(prev => [...prev, {
-                id: 'tx_' + generateId(), type: 'distribute', productId: req.productId,
-                productName: product?.name || 'N/A', storeId: req.storeId,
-                storeName: req.storeName || 'N/A', quantity: req.quantity,
-                costPrice: product?.costPrice || 0, unitPrice: product?.basePrice || 0,
-                date: new Date().toISOString(),
-                note: `Xuất kho gửi đến ${req.storeName} (Đang giao)`
-            }]);
+
+            const req = stockRequests.find(r => r.id === requestId);
+            if (!req) return;
+
+            if (action === 'approve') {
+                const product = globalProducts.find(p => p.id === req.productId);
+                setGlobalProducts(globalProducts.map(p => p.id === req.productId ? { ...p, warehouseStock: Number(p.warehouseStock) - req.quantity } : p));
+                setWarehouseTransactions(prev => [...prev, {
+                    id: 'tx_' + generateId(), type: 'distribute', productId: req.productId,
+                    productName: product?.name || 'N/A', storeId: req.storeId,
+                    storeName: req.storeName || 'N/A', quantity: req.quantity,
+                    costPrice: product?.costPrice || 0, unitPrice: product?.basePrice || 0,
+                    date: new Date().toISOString(),
+                    note: `Xuất kho gửi đến ${req.storeName} (Đang giao)`
+                }]);
+            }
+            
+            setStockRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: result.request.status } : r));
+            if (action === 'reject') showToast("Đã từ chối yêu cầu (Xử lý an toàn).", 'error');
+            else showToast("Đã xuất kho, chờ chi nhánh nhận (Xử lý an toàn).");
+
+        } catch (error) {
+            console.error("Lỗi xử lý yêu cầu:", error);
+            showToast("Lỗi kết nối máy chủ!", 'error');
         }
-        setStockRequests(prev => prev.map(r => r.id === requestId ? { ...r, status } : r));
-        if (status === 'rejected') showToast("Đã từ chối yêu cầu.");
-        else showToast("Đã xuất kho, chờ chi nhánh nhận.");
     };
 
-    const handleReceiveStockRequest = (requestId) => {
-        const req = stockRequests.find(r => r.id === requestId);
-        if (!req || req.status !== 'shipping') return;
-
-        setStores(stores.map(s => {
-            if (s.id === req.storeId) {
-                const exist = s.inventory.find(i => i.productId === req.productId);
-                const inv = exist
-                    ? s.inventory.map(i => i.productId === req.productId ? { ...i, quantity: Number(i.quantity) + req.quantity } : i)
-                    : [...s.inventory, { productId: req.productId, quantity: req.quantity, sold: 0 }];
-                return { ...s, inventory: inv };
+    const handleReceiveStockRequest = async (requestId) => {
+        try {
+            const res = await fetch('/pos/api/v1/requests/action', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ requestId, action: 'receive' })
+            });
+            const result = await res.json();
+            
+            if (!res.ok) {
+                showToast(result.error || "Giao dịch thất bại từ Server!", 'error');
+                return;
             }
-            return s;
-        }));
 
-        setStockRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: 'completed' } : r));
+            const req = stockRequests.find(r => r.id === requestId);
+            if (!req) return;
 
-        showToast("Đã xác nhận nhận hàng vào kho chi nhánh!");
+            setStores(stores.map(s => {
+                if (s.id === req.storeId) {
+                    const exist = s.inventory.find(i => i.productId === req.productId);
+                    const inv = exist
+                        ? s.inventory.map(i => i.productId === req.productId ? { ...i, quantity: Number(i.quantity) + req.quantity } : i)
+                        : [...s.inventory, { productId: req.productId, quantity: req.quantity, sold: 0 }];
+                    return { ...s, inventory: inv };
+                }
+                return s;
+            }));
+
+            setStockRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: 'completed' } : r));
+            showToast("Đã xác nhận nhận hàng vào kho chi nhánh (Xử lý an toàn)!");
+
+        } catch (error) {
+            console.error("Lỗi nhận hàng:", error);
+            showToast("Lỗi kết nối máy chủ!", 'error');
+        }
     };
 
     const handleReturnStock = async (storeId, productId, amount, reason) => {
@@ -362,7 +397,7 @@ export function useAppState() {
             });
             const result = await res.json();
             if (!res.ok) {
-                showToast(result.error || "Giao dịch thất bại từ Server!");
+                showToast(result.error || "Giao dịch thất bại từ Server!", 'error');
                 return;
             }
 
@@ -384,14 +419,14 @@ export function useAppState() {
             setShowModal(null);
             showToast(`Đã xuất trả ${qty} SP về kho tổng (An toàn từ Server).`);
         } catch (error) {
-            showToast("Lỗi kết nối máy chủ!");
+            showToast("Lỗi kết nối máy chủ!", 'error');
         }
     };
 
     const handleTransferStock = async (fromStoreId, toStoreId, productId, amount, note) => {
         const qty = Number(amount);
         if (qty <= 0 || fromStoreId === toStoreId) {
-            showToast("Thông tin luân chuyển không hợp lệ!");
+            showToast("Thông tin luân chuyển không hợp lệ!", 'error');
             return;
         }
 
@@ -403,7 +438,7 @@ export function useAppState() {
             });
             const result = await res.json();
             if (!res.ok) {
-                showToast(result.error || "Giao dịch thất bại từ Server!");
+                showToast(result.error || "Giao dịch thất bại từ Server!", 'error');
                 return;
             }
 
@@ -431,7 +466,7 @@ export function useAppState() {
             setShowModal(null);
             showToast(`Đã luân chuyển ${qty} SP đến ${toStore?.name} (An toàn từ Server).`);
         } catch (error) {
-            showToast("Lỗi kết nối máy chủ!");
+            showToast("Lỗi kết nối máy chủ!", 'error');
         }
     };
 
@@ -477,7 +512,7 @@ export function useAppState() {
             });
             const result = await res.json();
             if (!res.ok) {
-                showToast(result.error || "Giao dịch thất bại từ Server!");
+                showToast(result.error || "Giao dịch thất bại từ Server!", 'error');
                 return;
             }
 
@@ -494,13 +529,17 @@ export function useAppState() {
         setImportingItem(null); // Đóng modal sau khi nhập thành công
         showToast(`Đã nhập ${qty} SP vào kho tổng (Xử lý an toàn bởi Server).`);
         } catch (error) {
-            showToast("Lỗi kết nối máy chủ!");
+            showToast("Lỗi kết nối máy chủ!", 'error');
         }
     };
 
     const handleDistribute = async (storeId, productId, amount) => {
         const qty = Number(amount);
         if (qty <= 0) return;
+        if (!storeId || !productId) {
+            showToast("Vui lòng chọn đầy đủ chi nhánh và mặt hàng!", 'error');
+            return;
+        }
 
         try {
             const res = await fetch(`/pos/api/v1/stores/${storeId}/action/distribute`, {
@@ -510,35 +549,39 @@ export function useAppState() {
             });
             const result = await res.json();
             if (!res.ok) {
-                showToast(result.error || "Giao dịch thất bại từ Server!");
+                showToast(result.error || "Giao dịch thất bại từ Server!", 'error');
                 return;
             }
 
         const product = globalProducts.find(p => p.id === productId);
         const store = stores.find(s => s.id === storeId);
         setGlobalProducts(globalProducts.map(p => p.id === productId ? { ...p, warehouseStock: Number(p.warehouseStock) - qty } : p));
-        setStores(stores.map(s => {
-            if (s.id === storeId) {
-                const exist = s.inventory.find(i => i.productId === productId);
-                const inv = exist
-                    ? s.inventory.map(i => i.productId === productId ? { ...i, quantity: Number(i.quantity) + qty } : i)
-                    : [...s.inventory, { productId, quantity: qty, sold: 0 }];
-                return { ...s, inventory: inv };
-            }
-            return s;
-        }));
+        if (result.request) {
+            setStockRequests(prev => [result.request, ...prev]);
+        } else {
+            setStockRequests(prev => [{
+                id: 'req_' + generateId(),
+                storeId, storeName: store?.name,
+                productId, productName: product?.name,
+                quantity: qty,
+                status: 'shipping',
+                date: new Date().toISOString(),
+                note: 'Admin điều phối (Chờ nhận)'
+            }, ...prev]);
+        }
         setWarehouseTransactions(prev => [...prev, {
             id: 'tx_' + generateId(), type: 'distribute', productId,
             productName: product?.name || 'N/A', storeId,
             storeName: store?.name || 'N/A', quantity: qty,
             costPrice: product?.costPrice || 0, unitPrice: product?.basePrice || 0,
             date: new Date().toISOString(),
-            note: `Phân phối ${qty} ${product?.unit || 'cái'} đến ${store?.name}`
+            note: `Xuất kho ${qty} ${product?.unit || 'cái'} đến ${store?.name} (Đang giao)`
         }]);
         setShowModal(null);
-        showToast(`Đã phân phối ${qty} SP (Xử lý an toàn bởi Server).`);
+        showToast(`Đã xuất kho ${qty} SP, chờ cửa hàng xác nhận.`);
         } catch (error) {
-            showToast("Lỗi kết nối máy chủ!");
+            console.error("Lỗi điều phối kho:", error);
+            showToast(`Lỗi hệ thống: ${error.message || "Mất kết nối đến máy chủ!"}`, 'error');
         }
     };
 
@@ -582,7 +625,7 @@ export function useAppState() {
             const result = await res.json();
             
             if (!res.ok) {
-                showToast(result.error || "Giao dịch thất bại từ Server!");
+                showToast(result.error || "Giao dịch thất bại từ Server!", 'error');
                 return;
             }
 
@@ -607,7 +650,7 @@ export function useAppState() {
         setSellingItem(null);
         showToast(`Đã ghi nhận bán ${qty} SP (Xử lý an toàn bởi Server).`);
         } catch (error) {
-            showToast("Lỗi kết nối máy chủ!");
+            showToast("Lỗi kết nối máy chủ!", 'error');
         }
     };
 
@@ -617,7 +660,7 @@ export function useAppState() {
         // State
         user, stores, globalProducts, warehouseTransactions, categories, shiftSlots, stockRequests,
         activeTab, selectedStore, storeSubTab, showModal, pendingAction,
-        editingEmployee, editingStore, sellingItem, importingItem, toast, showUserMenu, searchTerm, historyFilter, setUser,
+        editingEmployee, editingStore, sellingItem, importingItem, toast, toastType, showUserMenu, searchTerm, historyFilter, setUser,
         currentStore, allEmployees, totalValue,
         // Setters
         setCategories, setShiftSlots, setActiveTab, setSelectedStore, setStoreSubTab, setShowModal,
