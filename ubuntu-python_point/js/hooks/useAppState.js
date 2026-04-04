@@ -376,6 +376,16 @@ export function useAppState() {
                 return s;
             }));
 
+            const product = globalProducts.find(p => p.id === req.productId);
+            setWarehouseTransactions(prev => [...prev, {
+                id: 'tx_in_' + generateId(), type: 'receive', productId: req.productId,
+                productName: product?.name || req.productName || 'N/A', storeId: req.storeId,
+                storeName: req.storeName || 'N/A', quantity: req.quantity,
+                costPrice: product?.costPrice || 0, unitPrice: product?.basePrice || 0,
+                date: new Date().toISOString(),
+                note: `Nhận ${req.quantity} ${product?.unit || 'cái'} từ kho tổng`
+            }]);
+
             setStockRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: 'completed' } : r));
             showToast("Đã xác nhận nhận hàng vào kho chi nhánh (Xử lý an toàn)!");
 
@@ -617,7 +627,7 @@ export function useAppState() {
 
         try {
             // Yêu cầu Backend xử lý trực tiếp thay vì tự tính ở Frontend
-            const res = await fetchWithAuth(`/pos/api/v1/stores/${storeId}/action/sell`, {
+            const res = await fetch(`/pos/api/v1/stores/${storeId}/action/sell`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ productId, quantity: qty })

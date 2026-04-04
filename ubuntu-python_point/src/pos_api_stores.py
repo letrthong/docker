@@ -376,6 +376,19 @@ def secure_request_action():
                 
             req['status'] = 'completed'
             
+            # Ghi lại lịch sử giao dịch cho Chi nhánh
+            product = next((p for p in config.get('products', []) if p['id'] == req['productId']), {})
+            txs = read_transactions(req['storeId'])
+            txs.append({
+                'id': f"tx_in_{uuid.uuid4().hex[:8]}", 'type': 'receive', 'productId': req['productId'],
+                'productName': product.get('name', req.get('productName', 'N/A')), 'storeId': req['storeId'],
+                'storeName': target_store.get('name', 'N/A'), 'quantity': qty,
+                'costPrice': product.get('costPrice', 0), 'unitPrice': product.get('basePrice', 0),
+                'date': datetime.now(timezone.utc).isoformat(),
+                'note': f"Nhận {qty} {product.get('unit', 'cái')} từ kho tổng"
+            })
+            write_transactions(req['storeId'], txs)
+            
         write_config(config)
         
     return jsonify({"message": "Xử lý yêu cầu thành công!", "request": req})
