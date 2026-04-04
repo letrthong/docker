@@ -55,6 +55,20 @@ export const Select = ({ label, children, value, onChange, ...props }) => (
     </div>
 );
 
+export const getShiftColorClass = (color = 'blue', isActive = false, isDisplayOnly = false) => {
+    const map = {
+        blue: { active: 'bg-blue-600 text-white border-blue-600 shadow-md scale-105', inactive: 'hover:border-blue-300 hover:text-blue-500' },
+        emerald: { active: 'bg-emerald-500 text-white border-emerald-500 shadow-md scale-105', inactive: 'hover:border-emerald-300 hover:text-emerald-500' },
+        rose: { active: 'bg-rose-500 text-white border-rose-500 shadow-md scale-105', inactive: 'hover:border-rose-300 hover:text-rose-500' },
+        orange: { active: 'bg-orange-500 text-white border-orange-500 shadow-md scale-105', inactive: 'hover:border-orange-300 hover:text-orange-500' },
+        indigo: { active: 'bg-indigo-500 text-white border-indigo-500 shadow-md scale-105', inactive: 'hover:border-indigo-300 hover:text-indigo-500' },
+        slate: { active: 'bg-slate-800 text-white border-slate-800 shadow-md scale-105', inactive: 'hover:border-slate-400 hover:text-slate-600' }
+    };
+    const styles = map[color] || map.blue;
+    const baseInactive = isDisplayOnly ? 'bg-white text-slate-300 border-slate-100 opacity-40 hover:opacity-100' : 'bg-white text-slate-300 border-slate-100';
+    return isActive ? styles.active : `${baseInactive} ${styles.inactive}`;
+};
+
 export const StoreStatusBadge = ({ openTime = '08:00', closeTime = '22:00' }) => {
     const now = new Date();
     const currentStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;

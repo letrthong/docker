@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Icon, TabButton } from './components/UI';
-import { ConfirmModal, AddProductModal, EmployeeModal, AddExistingEmployeeModal, StoreModal, DistributeModal, CategoryManagerModal, ChangePasswordModal, RequestStockModal, ReturnStockModal, TransferStockModal } from './components/Modals';
+import { ConfirmModal, AddProductModal, EmployeeModal, AddExistingEmployeeModal, StoreModal, DistributeModal, CategoryManagerModal, ShiftManagerModal, ChangePasswordModal, RequestStockModal, ReturnStockModal, TransferStockModal, ProfileModal, SellProductModal } from './components/Modals';
 import { useAppState } from './hooks/useAppState';
 
 // Pages
@@ -14,13 +14,13 @@ import StoreDetail from './pages/StoreDetail';
 export default function App() {
     const state = useAppState();
     const {
-        user, stores, globalProducts, warehouseTransactions, stockRequests,
+        user, stores, globalProducts, warehouseTransactions, shiftSlots, stockRequests,
         activeTab, selectedStore, storeSubTab, showModal, pendingAction,
-        editingEmployee, editingStore, toast, showUserMenu, searchTerm, historyFilter,
+        editingEmployee, editingStore, sellingItem, toast, showUserMenu, searchTerm, historyFilter,
         currentStore, allEmployees, totalValue, categories,
-        setUser, setCategories, setActiveTab, setSelectedStore, setStoreSubTab, setShowModal,
+        setUser, setCategories, setShiftSlots, setActiveTab, setSelectedStore, setStoreSubTab, setShowModal,
         setPendingAction, setEditingEmployee, setEditingStore, setShowUserMenu,
-        setSearchTerm, setHistoryFilter,
+        setSearchTerm, setHistoryFilter, setSellingItem,
         handleLogin, handleLogout, handleSaveEmployee, handleDeleteEmployee, handleAddExistingEmployee, handleUpdateEmployeeStatus,
         handleResetPassword, handleChangePassword, handleSaveGlobalProduct, handleImportToWarehouse, handleDistribute, handleAddStockRequest, handleProcessStockRequest, handleReceiveStockRequest, handleReturnStock, handleTransferStock,
         handleAddStore, handleEditStore, handleDeleteStore, handleSellProduct,
@@ -141,6 +141,7 @@ export default function App() {
                     </button>
                     {showUserMenu && (
                         <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-3xl shadow-2xl border border-slate-100 p-2 z-[60] overflow-hidden animate-in slide-in-from-top-2">
+                            <button onClick={() => { setShowUserMenu(false); setShowModal('profile'); }} className="w-full flex items-center space-x-3 px-4 py-4 text-xs font-black text-slate-600 hover:bg-slate-50 rounded-2xl transition-all uppercase tracking-widest mb-1"><Icon name="user" size={16}/> <span>Hồ sơ cá nhân</span></button>
                             <button onClick={() => { setShowUserMenu(false); setShowModal('changePassword'); }} className="w-full flex items-center space-x-3 px-4 py-4 text-xs font-black text-slate-600 hover:bg-slate-50 rounded-2xl transition-all uppercase tracking-widest mb-1"><Icon name="key" size={16}/> <span>Đổi mật khẩu</span></button>
                             <button onClick={onLogout} className="w-full flex items-center space-x-3 px-4 py-4 text-xs font-black text-rose-500 hover:bg-rose-50 rounded-2xl transition-all uppercase tracking-widest"><Icon name="log-out" size={16}/> <span>Đăng xuất</span></button>
                         </div>
@@ -175,7 +176,7 @@ export default function App() {
 
                 {/* Store Detail — shared by admin (selected store) and staff (my-store) */}
                 {currentStore && (activeTab === 'my-store' || selectedStore) && activeTab !== 'staff-global' && activeTab !== 'history' && (
-                    <StoreDetail currentStore={currentStore} allEmployees={allEmployees} user={user} storeSubTab={storeSubTab} setStoreSubTab={setStoreSubTab} setSelectedStore={setSelectedStore} setEditingEmployee={setEditingEmployee} setEditingStore={setEditingStore} setShowModal={setShowModal} handleSellProduct={handleSellProduct} handleDeleteEmployee={handleDeleteEmployee} handleResetPassword={handleResetPassword} handleUpdateEmployeeStatus={handleUpdateEmployeeStatus} getProductInfo={getProductInfo} warehouseTransactions={warehouseTransactions} stockRequests={stockRequests} handleReceiveStockRequest={handleReceiveStockRequest} />
+                    <StoreDetail currentStore={currentStore} allEmployees={allEmployees} user={user} storeSubTab={storeSubTab} setStoreSubTab={setStoreSubTab} setSelectedStore={setSelectedStore} setEditingEmployee={setEditingEmployee} setEditingStore={setEditingStore} setSellingItem={setSellingItem} setShowModal={setShowModal} handleSellProduct={handleSellProduct} handleDeleteEmployee={handleDeleteEmployee} handleResetPassword={handleResetPassword} handleUpdateEmployeeStatus={handleUpdateEmployeeStatus} getProductInfo={getProductInfo} warehouseTransactions={warehouseTransactions} stockRequests={stockRequests} handleReceiveStockRequest={handleReceiveStockRequest} shiftSlots={shiftSlots} />
                 )}
             </main>
 
@@ -183,7 +184,8 @@ export default function App() {
             {showModal === 'confirmPopup' && <ConfirmModal pendingAction={pendingAction} setShowModal={setShowModal} setPendingAction={setPendingAction} />}
             {showModal === 'addGlobalProduct' && <AddProductModal setShowModal={setShowModal} handleSaveGlobalProduct={handleSaveGlobalProduct} categories={categories} />}
             {showModal === 'manageCategories' && <CategoryManagerModal setShowModal={setShowModal} categories={categories} setCategories={setCategories} />}
-                {(showModal === 'addEmployee' || showModal === 'editEmployee') && <EmployeeModal showModal={showModal} setShowModal={setShowModal} editingEmployee={editingEmployee} setEditingEmployee={setEditingEmployee} handleSaveEmployee={handleSaveEmployee} currentStoreId={currentStore?.id} stores={stores} user={user} />}
+            {showModal === 'manageShifts' && <ShiftManagerModal setShowModal={setShowModal} shiftSlots={shiftSlots} setShiftSlots={setShiftSlots} />}
+                {(showModal === 'addEmployee' || showModal === 'editEmployee') && <EmployeeModal showModal={showModal} setShowModal={setShowModal} editingEmployee={editingEmployee} setEditingEmployee={setEditingEmployee} handleSaveEmployee={handleSaveEmployee} currentStoreId={currentStore?.id} stores={stores} user={user} shiftSlots={shiftSlots} />}
             {showModal === 'addExistingEmployee' && <AddExistingEmployeeModal setShowModal={setShowModal} allEmployees={allEmployees} currentStoreId={currentStore?.id} handleAddExistingEmployee={(empId) => handleAddExistingEmployee(currentStore?.id, empId)} user={user} />}
             {showModal === 'addStore' && <StoreModal setShowModal={setShowModal} handleSaveStore={handleAddStore} />}
             {showModal === 'editStore' && <StoreModal setShowModal={setShowModal} handleSaveStore={(data) => handleEditStore(editingStore.id, data)} initialData={editingStore} />}
@@ -191,7 +193,9 @@ export default function App() {
             {showModal === 'requestStock' && <RequestStockModal setShowModal={setShowModal} globalProducts={globalProducts} currentStore={currentStore} handleAddStockRequest={handleAddStockRequest} />}
             {showModal === 'returnStock' && <ReturnStockModal setShowModal={setShowModal} globalProducts={globalProducts} currentStore={currentStore} handleReturnStock={handleReturnStock} />}
             {showModal === 'transferStock' && <TransferStockModal setShowModal={setShowModal} currentStore={currentStore} stores={stores} globalProducts={globalProducts} handleTransferStock={handleTransferStock} />}
+            {showModal === 'sellProduct' && <SellProductModal setShowModal={setShowModal} currentStore={currentStore} product={sellingItem} handleSellProduct={handleSellProduct} />}
             {showModal === 'changePassword' && <ChangePasswordModal setShowModal={setShowModal} handleChangePassword={handleChangePassword} />}
+            {showModal === 'profile' && <ProfileModal setShowModal={setShowModal} user={user} allEmployees={allEmployees} shiftSlots={shiftSlots} />}
 
             {/* Mobile Bottom Navigation */}
             <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-[90] flex justify-around items-center h-16 px-1 pb-safe">

@@ -11,6 +11,11 @@ const setCache = (key, value) => {
 };
 
 const initialCategories = [];
+const initialShiftSlots = [
+    { id: 's1', label: 'Ca Sáng', time: '08:00 - 12:00', hidden: false, color: 'blue' },
+    { id: 's2', label: 'Ca Chiều', time: '13:00 - 17:00', hidden: false, color: 'emerald' },
+    { id: 's3', label: 'Ca Tối', time: '18:00 - 22:00', hidden: false, color: 'slate' }
+];
 
 export function useAppState() {
     const [user, setUser] = useState(() => getCache('chain_user', null));
@@ -18,6 +23,7 @@ export function useAppState() {
     const [globalProducts, setGlobalProducts] = useState(() => getCache('chain_products', initialGlobalProducts));
     const [warehouseTransactions, setWarehouseTransactions] = useState(() => getCache('chain_warehouse_tx', []));
     const [categories, setCategories] = useState(() => getCache('chain_categories', initialCategories));
+    const [shiftSlots, setShiftSlots] = useState(() => getCache('chain_shift_slots', initialShiftSlots));
     const [stockRequests, setStockRequests] = useState(() => getCache('chain_stock_requests', []));
     const [allEmployees, setAllEmployees] = useState(() => {
         const saved = getCache('chain_employees', null);
@@ -38,6 +44,7 @@ export function useAppState() {
     const [pendingAction, setPendingAction] = useState(null);
     const [editingEmployee, setEditingEmployee] = useState(null);
     const [editingStore, setEditingStore] = useState(null);
+    const [sellingItem, setSellingItem] = useState(null);
     const [toast, setToast] = useState(null);
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -51,6 +58,7 @@ export function useAppState() {
     useEffect(() => { setCache('chain_products', globalProducts); }, [globalProducts]);
     useEffect(() => { setCache('chain_warehouse_tx', warehouseTransactions); }, [warehouseTransactions]);
     useEffect(() => { setCache('chain_categories', categories); }, [categories]);
+    useEffect(() => { setCache('chain_shift_slots', shiftSlots); }, [shiftSlots]);
     useEffect(() => { setCache('chain_stock_requests', stockRequests); }, [stockRequests]);
     useEffect(() => { setCache('chain_employees', allEmployees); }, [allEmployees]);
 
@@ -60,7 +68,7 @@ export function useAppState() {
     }, [selectedStore, user, stores]);
 
     const totalValue = useMemo(() => {
-        return globalProducts.reduce((sum, p) => sum + (p.warehouseStock * p.basePrice), 0);
+        return globalProducts.reduce((sum, p) => sum + (Number(p.warehouseStock) * Number(p.basePrice)), 0);
     }, [globalProducts]);
 
     const showToast = (msg) => {
@@ -83,7 +91,7 @@ export function useAppState() {
         const found = allEmployees.find(emp => emp.username && emp.username.toLowerCase() === inputUsername && emp.password === loginForm.password);
         if (found) {
             const status = found.status || 'active'; // Hỗ trợ tương thích ngược với tài khoản cũ
-            if (status === 'create') return 'Tài khoản đang chờ Admin xác minh CCCD!';
+            if (status === 'create') return 'Tài khoản mới tạo, vui lòng chờ Admin phê duyệt!';
             if (status === 'disable') return 'Tài khoản đã bị vô hiệu hóa!';
 
             const defaultStoreId = found.assignedStores?.[0] || null;
@@ -101,7 +109,6 @@ export function useAppState() {
     };
 
     const handleSaveEmployee = (storeId, employeeData) => {
-        if (!storeId) return;
         const isEdit = !!editingEmployee;
 
         const inputCccd = (employeeData.cccd || '').trim();
@@ -121,20 +128,13 @@ export function useAppState() {
             showToast("Username đã tồn tại!");
             return;
         }
-        requestConfirm({
-            type: isEdit ? 'edit' : 'add',
-            title: isEdit ? 'Cập nhật' : 'Đăng ký mới',
-            message: `Lưu hồ sơ cho ${employeeData.name}?`,
-            onConfirm: () => {
-                setAllEmployees(prev => {
-                    if (isEdit) return prev.map(e => e.id === editingEmployee.id ? { ...employeeData, id: e.id } : e);
-                    return [...prev, { ...employeeData, id: employeeData.cccd }];
-                });
-                setShowModal(null);
-                setEditingEmployee(null);
-                showToast("Đã cập nhật nhân sự.");
-            }
+        setAllEmployees(prev => {
+            if (isEdit) return prev.map(e => e.id === editingEmployee.id ? { ...employeeData, id: e.id } : e);
+            return [...prev, { ...employeeData, id: employeeData.cccd }];
         });
+        setShowModal(null);
+        setEditingEmployee(null);
+        showToast(isEdit ? "Đã cập nhật hồ sơ nhân sự thành công!" : "Đã thêm nhân sự mới thành công!");
     };
 
     const handleDeleteEmployee = (storeId, empId, empName) => {
@@ -213,12 +213,17 @@ export function useAppState() {
 
     const handleAddStockRequest = (storeId, productId, quantity, note) => {
         const product = globalProducts.find(p => p.id === productId);
+        const reqQty = Number(quantity);
+        if (reqQty > (product?.warehouseStock || 0)) {
+            showToast(`Lỗi: Kho tổng chỉ còn ${product?.warehouseStock || 0} sản phẩm!`);
+            return;
+        }
         const store = stores.find(s => s.id === storeId);
         setStockRequests(prev => [{
             id: 'req' + Date.now(),
             storeId, storeName: store?.name,
             productId, productName: product?.name,
-            quantity: Number(quantity),
+            quantity: reqQty,
             status: 'pending',
             date: new Date().toISOString(),
             note
@@ -237,7 +242,7 @@ export function useAppState() {
                 showToast("Lỗi: Kho tổng không đủ hàng để duyệt!");
                 return;
             }
-            setGlobalProducts(globalProducts.map(p => p.id === req.productId ? { ...p, warehouseStock: p.warehouseStock - req.quantity } : p));
+            setGlobalProducts(globalProducts.map(p => p.id === req.productId ? { ...p, warehouseStock: Number(p.warehouseStock) - req.quantity } : p));
             setWarehouseTransactions(prev => [...prev, {
                 id: 'tx' + Date.now(), type: 'distribute', productId: req.productId,
                 productName: product?.name || 'N/A', storeId: req.storeId,
@@ -259,7 +264,7 @@ export function useAppState() {
             if (s.id === req.storeId) {
                 const exist = s.inventory.find(i => i.productId === req.productId);
                 const inv = exist
-                    ? s.inventory.map(i => i.productId === req.productId ? { ...i, quantity: i.quantity + req.quantity } : i)
+                    ? s.inventory.map(i => i.productId === req.productId ? { ...i, quantity: Number(i.quantity) + req.quantity } : i)
                     : [...s.inventory, { productId: req.productId, quantity: req.quantity, sold: 0 }];
                 return { ...s, inventory: inv };
             }
@@ -271,69 +276,88 @@ export function useAppState() {
         showToast("Đã xác nhận nhận hàng vào kho chi nhánh!");
     };
 
-    const handleReturnStock = (storeId, productId, amount, reason) => {
+    const handleReturnStock = async (storeId, productId, amount, reason) => {
         const qty = Number(amount);
         if (qty <= 0) return;
-        const product = globalProducts.find(p => p.id === productId);
-        const store = stores.find(s => s.id === storeId);
-        
-        const storeInventoryItem = store?.inventory.find(i => i.productId === productId);
-        if (!storeInventoryItem || storeInventoryItem.quantity < qty) {
-            showToast("Số lượng trong kho không đủ để hoàn trả!");
-            return;
+
+        try {
+            const res = await fetch(`/pos/api/v1/stores/${storeId}/action/return`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ productId, quantity: qty, note: reason })
+            });
+            const result = await res.json();
+            if (!res.ok) {
+                showToast(result.error || "Giao dịch thất bại từ Server!");
+                return;
+            }
+
+            const product = globalProducts.find(p => p.id === productId);
+            const store = stores.find(s => s.id === storeId);
+            
+            setGlobalProducts(globalProducts.map(p => p.id === productId ? { ...p, warehouseStock: Number(p.warehouseStock) + qty } : p));
+            setStores(stores.map(s => s.id === storeId ? { ...s, inventory: s.inventory.map(i => i.productId === productId ? { ...i, quantity: Number(i.quantity) - qty } : i) } : s));
+
+            setWarehouseTransactions(prev => [...prev, {
+                id: 'tx' + Date.now(), type: 'return', productId,
+                productName: product?.name || 'N/A', storeId,
+                storeName: store?.name || 'N/A', quantity: qty,
+                date: new Date().toISOString(),
+                note: `Hoàn kho: ${reason || 'Không xác định'}`
+            }]);
+
+            setShowModal(null);
+            showToast(`Đã xuất trả ${qty} SP về kho tổng (An toàn từ Server).`);
+        } catch (error) {
+            showToast("Lỗi kết nối máy chủ!");
         }
-
-        setGlobalProducts(globalProducts.map(p => p.id === productId ? { ...p, warehouseStock: p.warehouseStock + qty } : p));
-        
-        setStores(stores.map(s => s.id === storeId ? { ...s, inventory: s.inventory.map(i => i.productId === productId ? { ...i, quantity: i.quantity - qty } : i) } : s));
-
-        setWarehouseTransactions(prev => [...prev, {
-            id: 'tx' + Date.now(), type: 'return', productId,
-            productName: product?.name || 'N/A', storeId,
-            storeName: store?.name || 'N/A', quantity: qty,
-            date: new Date().toISOString(),
-            note: `Hoàn kho: ${reason || 'Không xác định'}`
-        }]);
-
-        setShowModal(null);
-        showToast("Đã xuất trả hàng về kho tổng.");
     };
 
-    const handleTransferStock = (fromStoreId, toStoreId, productId, amount, note) => {
+    const handleTransferStock = async (fromStoreId, toStoreId, productId, amount, note) => {
         const qty = Number(amount);
         if (qty <= 0 || fromStoreId === toStoreId) {
             showToast("Thông tin luân chuyển không hợp lệ!");
             return;
         }
-        const product = globalProducts.find(p => p.id === productId);
-        const fromStore = stores.find(s => s.id === fromStoreId);
-        const toStore = stores.find(s => s.id === toStoreId);
-        
-        const fromInventoryItem = fromStore?.inventory.find(i => i.productId === productId);
-        if (!fromInventoryItem || fromInventoryItem.quantity < qty) {
-            showToast("Số lượng trong kho không đủ để luân chuyển!");
-            return;
-        }
 
-        setStores(stores.map(s => {
-            if (s.id === fromStoreId) return { ...s, inventory: s.inventory.map(i => i.productId === productId ? { ...i, quantity: i.quantity - qty } : i) };
-            if (s.id === toStoreId) {
-                const exist = s.inventory.find(i => i.productId === productId);
-                const inv = exist ? s.inventory.map(i => i.productId === productId ? { ...i, quantity: i.quantity + qty } : i) : [...s.inventory, { productId, quantity: qty, sold: 0 }];
-                return { ...s, inventory: inv };
+        try {
+            const res = await fetch(`/pos/api/v1/stores/${fromStoreId}/action/transfer`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ toStoreId, productId, quantity: qty, note })
+            });
+            const result = await res.json();
+            if (!res.ok) {
+                showToast(result.error || "Giao dịch thất bại từ Server!");
+                return;
             }
-            return s;
-        }));
 
-        const now = new Date().toISOString();
-        setWarehouseTransactions(prev => [
-            ...prev,
-            { id: 'tx_out_' + Date.now() + '1', type: 'transfer_out', productId, productName: product?.name || 'N/A', storeId: fromStoreId, storeName: fromStore?.name || 'N/A', quantity: qty, date: now, note: `Chuyển đến ${toStore?.name}: ${note || ''}` },
-            { id: 'tx_in_' + Date.now() + '2', type: 'transfer_in', productId, productName: product?.name || 'N/A', storeId: toStoreId, storeName: toStore?.name || 'N/A', quantity: qty, date: now, note: `Nhận từ ${fromStore?.name}: ${note || ''}` }
-        ]);
+            const product = globalProducts.find(p => p.id === productId);
+            const fromStore = stores.find(s => s.id === fromStoreId);
+            const toStore = stores.find(s => s.id === toStoreId);
 
-        setShowModal(null);
-        showToast(`Đã luân chuyển hàng đến ${toStore?.name}.`);
+            setStores(stores.map(s => {
+                if (s.id === fromStoreId) return { ...s, inventory: s.inventory.map(i => i.productId === productId ? { ...i, quantity: Number(i.quantity) - qty } : i) };
+                if (s.id === toStoreId) {
+                    const exist = s.inventory.find(i => i.productId === productId);
+                    const inv = exist ? s.inventory.map(i => i.productId === productId ? { ...i, quantity: Number(i.quantity) + qty } : i) : [...s.inventory, { productId, quantity: qty, sold: 0 }];
+                    return { ...s, inventory: inv };
+                }
+                return s;
+            }));
+
+            const now = new Date().toISOString();
+            setWarehouseTransactions(prev => [
+                ...prev,
+                { id: 'tx_out_' + Date.now() + '1', type: 'transfer_out', productId, productName: product?.name || 'N/A', storeId: fromStoreId, storeName: fromStore?.name || 'N/A', quantity: qty, date: now, note: `Chuyển đến ${toStore?.name}: ${note || ''}` },
+                { id: 'tx_in_' + Date.now() + '2', type: 'transfer_in', productId, productName: product?.name || 'N/A', storeId: toStoreId, storeName: toStore?.name || 'N/A', quantity: qty, date: now, note: `Nhận từ ${fromStore?.name}: ${note || ''}` }
+            ]);
+
+            setShowModal(null);
+            showToast(`Đã luân chuyển ${qty} SP đến ${toStore?.name} (An toàn từ Server).`);
+        } catch (error) {
+            showToast("Lỗi kết nối máy chủ!");
+        }
     };
 
     const handleSaveGlobalProduct = (productData) => {
@@ -352,29 +376,60 @@ export function useAppState() {
         });
     };
 
-    const handleImportToWarehouse = (productId, amount) => {
+    const handleImportToWarehouse = async (productId, amount) => {
         const qty = Number(amount);
+        if (qty <= 0) return;
+
+        try {
+            const res = await fetch(`/pos/api/v1/products/${productId}/action/import`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ quantity: qty })
+            });
+            const result = await res.json();
+            if (!res.ok) {
+                showToast(result.error || "Giao dịch thất bại từ Server!");
+                return;
+            }
+
         const product = globalProducts.find(p => p.id === productId);
-        setGlobalProducts(globalProducts.map(p => p.id === productId ? { ...p, warehouseStock: p.warehouseStock + qty } : p));
+        setGlobalProducts(globalProducts.map(p => p.id === productId ? { ...p, warehouseStock: Number(p.warehouseStock) + qty } : p));
         setWarehouseTransactions(prev => [...prev, {
             id: 'tx' + Date.now(), type: 'import', productId,
             productName: product?.name || 'N/A', quantity: qty,
             date: new Date().toISOString(),
             note: `Nhập ${qty} ${product?.unit || 'cái'} vào kho tổng`
         }]);
-        showToast("Đã cập nhật kho tổng.");
+        showToast(`Đã nhập ${qty} SP vào kho tổng (Xử lý an toàn bởi Server).`);
+        } catch (error) {
+            showToast("Lỗi kết nối máy chủ!");
+        }
     };
 
-    const handleDistribute = (storeId, productId, amount) => {
+    const handleDistribute = async (storeId, productId, amount) => {
         const qty = Number(amount);
+        if (qty <= 0) return;
+
+        try {
+            const res = await fetch(`/pos/api/v1/stores/${storeId}/action/distribute`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ productId, quantity: qty })
+            });
+            const result = await res.json();
+            if (!res.ok) {
+                showToast(result.error || "Giao dịch thất bại từ Server!");
+                return;
+            }
+
         const product = globalProducts.find(p => p.id === productId);
         const store = stores.find(s => s.id === storeId);
-        setGlobalProducts(globalProducts.map(p => p.id === productId ? { ...p, warehouseStock: p.warehouseStock - qty } : p));
+        setGlobalProducts(globalProducts.map(p => p.id === productId ? { ...p, warehouseStock: Number(p.warehouseStock) - qty } : p));
         setStores(stores.map(s => {
             if (s.id === storeId) {
                 const exist = s.inventory.find(i => i.productId === productId);
                 const inv = exist
-                    ? s.inventory.map(i => i.productId === productId ? { ...i, quantity: i.quantity + qty } : i)
+                    ? s.inventory.map(i => i.productId === productId ? { ...i, quantity: Number(i.quantity) + qty } : i)
                     : [...s.inventory, { productId, quantity: qty, sold: 0 }];
                 return { ...s, inventory: inv };
             }
@@ -388,7 +443,10 @@ export function useAppState() {
             note: `Phân phối ${qty} ${product?.unit || 'cái'} đến ${store?.name}`
         }]);
         setShowModal(null);
-        showToast("Đã phân phối hàng.");
+        showToast(`Đã phân phối ${qty} SP (Xử lý an toàn bởi Server).`);
+        } catch (error) {
+            showToast("Lỗi kết nối máy chủ!");
+        }
     };
 
     const handleAddStore = (storeData) => {
@@ -417,35 +475,59 @@ export function useAppState() {
         });
     };
 
-    const handleSellProduct = (storeId, productId) => {
+    const handleSellProduct = async (storeId, productId, amount) => {
+        const qty = Number(amount);
+        if (qty <= 0) return;
+
+        try {
+            // Yêu cầu Backend xử lý trực tiếp thay vì tự tính ở Frontend
+            const res = await fetch(`/pos/api/v1/stores/${storeId}/action/sell`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ productId, quantity: qty })
+            });
+            const result = await res.json();
+            
+            if (!res.ok) {
+                showToast(result.error || "Giao dịch thất bại từ Server!");
+                return;
+            }
+
         const product = globalProducts.find(p => p.id === productId);
         const store = stores.find(s => s.id === storeId);
+        
+            // Thành công: Cập nhật đồng bộ lại giao diện mượt mà (Optimistic UI)
         setStores(stores.map(s => s.id === storeId ? {
             ...s, inventory: s.inventory.map(i => i.productId === productId
-                ? { ...i, quantity: i.quantity - 1, sold: (i.sold || 0) + 1 } : i)
+                ? { ...i, quantity: Number(i.quantity) - qty, sold: Number(i.sold || 0) + qty } : i)
         } : s));
         setWarehouseTransactions(prev => [...prev, {
             id: 'tx' + Date.now(), type: 'sell', productId,
             productName: product?.name || 'N/A', storeId,
-            storeName: store?.name || 'N/A', quantity: 1,
+            storeName: store?.name || 'N/A', quantity: qty,
             unitPrice: product?.basePrice || 0,
             date: new Date().toISOString(),
-            note: `Bán 1 ${product?.unit || 'cái'} tại ${store?.name}`
+            note: `Bán ${qty} ${product?.unit || 'cái'} tại ${store?.name}`
         }]);
-        showToast("Đã ghi nhận bán hàng.");
+        setShowModal(null);
+        setSellingItem(null);
+        showToast(`Đã ghi nhận bán ${qty} SP (Xử lý an toàn bởi Server).`);
+        } catch (error) {
+            showToast("Lỗi kết nối máy chủ!");
+        }
     };
 
     const getProductInfo = (pid) => globalProducts.find(p => p.id === pid) || { name: 'N/A', sku: 'N/A', category: 'N/A', unit: 'cái' };
 
     return {
         // State
-        user, stores, globalProducts, warehouseTransactions, categories, stockRequests,
+        user, stores, globalProducts, warehouseTransactions, categories, shiftSlots, stockRequests,
         activeTab, selectedStore, storeSubTab, showModal, pendingAction,
-        editingEmployee, editingStore, toast, showUserMenu, searchTerm, historyFilter, setUser,
+        editingEmployee, editingStore, sellingItem, toast, showUserMenu, searchTerm, historyFilter, setUser,
         currentStore, allEmployees, totalValue,
         // Setters
-        setCategories, setActiveTab, setSelectedStore, setStoreSubTab, setShowModal,
-        setPendingAction, setEditingEmployee, setEditingStore, setShowUserMenu,
+        setCategories, setShiftSlots, setActiveTab, setSelectedStore, setStoreSubTab, setShowModal,
+        setPendingAction, setEditingEmployee, setEditingStore, setSellingItem, setShowUserMenu,
         setSearchTerm, setHistoryFilter,
         // Handlers
         handleLogin, handleLogout, handleSaveEmployee, handleDeleteEmployee, handleAddExistingEmployee, handleUpdateEmployeeStatus,

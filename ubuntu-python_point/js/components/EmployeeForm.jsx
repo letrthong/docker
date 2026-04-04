@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Input, Select, Icon } from './UI';
-import { SHIFT_SLOTS, DAYS_OF_WEEK } from '../constants';
+import { Input, Select, Icon, getShiftColorClass } from './UI';
+import { DAYS_OF_WEEK } from '../constants';
 
-export const EmployeeForm = ({ initialData, onSave, onCancel, isAdmin, stores = [], currentStoreId, currentUser }) => {
+export const EmployeeForm = ({ initialData, onSave, onCancel, isAdmin, stores = [], currentStoreId, currentUser, shiftSlots = [] }) => {
     const defaultAssigned = currentStoreId ? [currentStoreId] : [];
     const [data, setData] = useState(initialData || { name: '', role: 'Nhân viên', phone: '', username: '', password: '', assignedStores: defaultAssigned, cccd: '', cccdImage: '', status: 'create' });
     
@@ -58,8 +58,47 @@ export const EmployeeForm = ({ initialData, onSave, onCancel, isAdmin, stores = 
 
     const canViewCccd = isAdmin || !initialData || currentUser?.username === data.username;
 
+    const totalHours = React.useMemo(() => {
+        let total = 0;
+        if (schedule) {
+            Object.values(schedule).forEach(storeSch => {
+                Object.values(storeSch || {}).forEach(shifts => {
+                    if (Array.isArray(shifts)) {
+                        shifts.forEach(shiftId => {
+                            const slot = shiftSlots.find(s => s.id === shiftId);
+                            if (slot && slot.time) {
+                                const pts = slot.time.split('-');
+                                if(pts.length === 2) {
+                                    const [sh, sm] = pts[0].trim().split(':').map(Number);
+                                    const [eh, em] = pts[1].trim().split(':').map(Number);
+                                    if (!isNaN(sh) && !isNaN(eh)) {
+                                        let h = (eh + (em||0)/60) - (sh + (sm||0)/60);
+                                        if (h < 0) h += 24;
+                                        total += h;
+                                        return;
+                                    }
+                                }
+                            }
+                            total += 4;
+                        });
+                    }
+                });
+            });
+        }
+        return Math.round(total * 10) / 10;
+    }, [schedule, shiftSlots]);
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        if (totalHours > 48) {
+            alert(`Tổng thời gian trực của nhân viên này là ${totalHours} giờ, vượt quá giới hạn cho phép (tối đa 48 giờ/tuần). Vui lòng điều chỉnh lại lịch trực!`);
+            return;
+        }
+        onSave({...data, schedule});
+    };
+
     return (
-        <form className="p-10 space-y-10 max-h-[80vh] overflow-y-auto" onSubmit={(e)=>{ e.preventDefault(); onSave({...data, schedule}); }}>
+        <form className="p-10 space-y-10 max-h-[80vh] overflow-y-auto" onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                 <div className="space-y-6 text-left">
                     <h4 className="text-xs font-black text-blue-600 uppercase tracking-[0.3em] border-l-4 border-blue-600 pl-4">Hồ sơ cá nhân</h4>
@@ -112,7 +151,10 @@ export const EmployeeForm = ({ initialData, onSave, onCancel, isAdmin, stores = 
             </div>
         )}
             <div className="space-y-6 text-left">
-                <h4 className="text-xs font-black text-blue-600 uppercase tracking-[0.3em] border-l-4 border-blue-600 pl-4">Ma trận ca trực tuần</h4>
+                <div className="flex justify-between items-center">
+                    <h4 className="text-xs font-black text-blue-600 uppercase tracking-[0.3em] border-l-4 border-blue-600 pl-4">Ma trận ca trực tuần</h4>
+                    <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${totalHours > 48 ? 'bg-rose-50 text-rose-600 border-rose-200 animate-pulse' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>Tổng giờ: {totalHours}h / 48h</span>
+                </div>
             {data.assignedStores.length > 1 && (
                 <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
                     {data.assignedStores.map(sId => (
@@ -123,13 +165,23 @@ export const EmployeeForm = ({ initialData, onSave, onCancel, isAdmin, stores = 
                 <div className="bg-slate-50 p-8 rounded-[45px] border shadow-inner overflow-x-auto no-scrollbar">
                 {data.assignedStores.length === 0 && <p className="text-center text-slate-400 font-bold text-sm">Vui lòng chọn ít nhất 1 chi nhánh để xếp ca trực.</p>}
                 {data.assignedStores.length > 0 && activeStoreSch && (
-                <div className="flex space-x-4 min-w-[750px] animate-fade-in">
+                <div className="flex space-x-2 min-w-[750px] animate-fade-in">
+                    <div className="w-24 shrink-0 flex flex-col pt-8 space-y-2">
+                        {shiftSlots.filter(s => !s.hidden).map(slot => (
+                            <div key={slot.id} className="h-12 flex flex-col justify-center text-right pr-3 border-r-2 border-slate-100">
+                                <p className="text-[11px] font-black text-slate-700 leading-none">{slot.label}</p>
+                                <p className="text-[9px] font-bold text-slate-400 mt-1 tracking-tighter">{slot.time}</p>
+                            </div>
+                        ))}
+                    </div>
                         {DAYS_OF_WEEK.map(day => (
-                            <div key={day.id} className="flex-1 space-y-4">
-                                <p className="text-center font-black text-xs text-slate-500 uppercase tracking-widest">{day.label}</p>
+                            <div key={day.id} className="flex-1">
+                                <p className="text-center font-black text-xs text-slate-500 uppercase tracking-widest mb-4">{day.label}</p>
                                 <div className="space-y-2">
-                                    {SHIFT_SLOTS.map(slot => (
-                                    <button key={slot.id} type="button" onClick={() => toggleShift(day.id, slot.id)} className={`w-full py-4 rounded-2xl text-[10px] font-black border-2 transition-all ${(schedule[activeStoreSch]?.[day.id] || []).includes(slot.id) ? 'bg-blue-600 text-white border-blue-600 shadow-md scale-105' : 'bg-white text-slate-300 border-slate-100 hover:border-blue-200'}`}>{slot.label}</button>
+                                    {shiftSlots.filter(s => !s.hidden).map(slot => (
+                                    <button key={slot.id} type="button" onClick={() => toggleShift(day.id, slot.id)} className={`w-full h-12 flex items-center justify-center rounded-2xl border-2 transition-all ${getShiftColorClass(slot.color, (schedule[activeStoreSch]?.[day.id] || []).includes(slot.id))}`}>
+                                        {(schedule[activeStoreSch]?.[day.id] || []).includes(slot.id) ? <Icon name="check" size={20}/> : <span className="w-1.5 h-1.5 rounded-full bg-slate-200"></span>}
+                                    </button>
                                     ))}
                                 </div>
                             </div>

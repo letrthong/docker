@@ -1,6 +1,6 @@
 import uuid
 from flask import Blueprint, jsonify, request
-from pos_utils import read_config, write_config, get_products_last_update, set_products_last_update
+from utils import read_config, write_config, get_products_last_update, set_products_last_update, config_lock
 
 pos_products_bp = Blueprint('pos_products_bp', __name__)
 
@@ -49,3 +49,20 @@ def modify_product(product_id):
             set_products_last_update()
             return jsonify({"message": f"Product {product_id} updated", "product": prod})
     return jsonify({"error": "Product not found"}), 404
+
+@pos_products_bp.route('/pos/api/v1/products/<product_id>/action/import', methods=['POST'])
+def secure_import(product_id):
+    data = request.get_json()
+    qty = int(data.get('quantity', 1))
+    if qty <= 0: return jsonify({"error": "Số lượng không hợp lệ"}), 400
+    
+    with config_lock:
+        config = read_config()
+        product = next((p for p in config.get('products', []) if p['id'] == product_id), None)
+        if not product: return jsonify({"error": "Không tìm thấy sản phẩm!"}), 404
+        
+        product['warehouseStock'] = int(product.get('warehouseStock', 0)) + qty
+        write_config(config)
+        set_products_last_update()
+        
+    return jsonify({"message": "Nhập kho thành công", "newStock": product['warehouseStock']})

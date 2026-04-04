@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request
-from utils import read_config, write_config
+from pos_utils import read_config, write_config
 
 pos_config_bp = Blueprint('pos_config_bp', __name__)
 

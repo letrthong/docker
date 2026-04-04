@@ -6,16 +6,14 @@ import time
 import copy
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
+SRC_DIR = os.path.join(BASE_DIR, 'src')
+DIST_DIR = os.path.join(BASE_DIR, 'dist')
 CONFIG_DIR = os.path.join(BASE_DIR, 'config')
 CONFIG_FILE = os.path.join(CONFIG_DIR, 'config.json')
 PRODUCTS_LAST_UPDATE_FILE = os.path.join(CONFIG_DIR, 'products_last_update.txt')
 
-SRC_DIR = os.path.join(BASE_DIR, 'src')
-DIST_DIR = os.path.join(BASE_DIR, 'dist')
-
-
-config_lock = threading.Lock()
+# Đổi sang RLock để cho phép khóa lồng nhau (vừa đọc vừa ghi an toàn)
+config_lock = threading.RLock()
 
 def encode_b64_field(val):
     if not val:

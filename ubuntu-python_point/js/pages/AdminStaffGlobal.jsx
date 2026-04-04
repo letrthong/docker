@@ -12,6 +12,7 @@ export default function AdminStaffGlobal({ allEmployees, stores, searchTerm, set
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 text-left">
                 <div><h2 className="text-3xl font-black text-slate-900 tracking-tight">Nhân sự Toàn Hệ thống</h2><p className="text-slate-400 font-bold text-sm uppercase mt-1 tracking-widest">Tổng cộng {allEmployees.length} nhân sự</p></div>
                 <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
+                    <button onClick={() => setShowModal('manageShifts')} className="flex items-center px-5 py-3 bg-white border border-slate-100 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all text-blue-600 shadow-sm whitespace-nowrap"><Icon name="clock" size={18} className="mr-2" /> Quản lý Ca</button>
                     <div className="flex bg-slate-200/50 p-1 rounded-2xl">
                         <button onClick={() => setFilterTab('all')} className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${filterTab === 'all' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Tất cả</button>
                         <button onClick={() => setFilterTab('pending')} className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${filterTab === 'pending' ? 'bg-white text-orange-500 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>

@@ -1,8 +1,8 @@
 import React from 'react';
-import { Icon, SubTabButton, StoreStatusBadge } from '../components/UI';
-import { SHIFT_SLOTS, DAYS_OF_WEEK } from '../constants';
+import { Icon, SubTabButton, StoreStatusBadge, getShiftColorClass } from '../components/UI';
+import { DAYS_OF_WEEK } from '../constants';
 
-export default function StoreDetail({ currentStore, allEmployees = [], user, storeSubTab, setStoreSubTab, setSelectedStore, setEditingEmployee, setEditingStore, setShowModal, handleSellProduct, handleDeleteEmployee, handleResetPassword, handleUpdateEmployeeStatus, getProductInfo, warehouseTransactions = [], stockRequests = [], handleReceiveStockRequest }) {
+export default function StoreDetail({ currentStore, allEmployees = [], user, storeSubTab, setStoreSubTab, setSelectedStore, setEditingEmployee, setEditingStore, setSellingItem, setShowModal, handleSellProduct, handleDeleteEmployee, handleResetPassword, handleUpdateEmployeeStatus, getProductInfo, warehouseTransactions = [], stockRequests = [], handleReceiveStockRequest, shiftSlots = [] }) {
     const isManager = user.role === 'admin' || (user.role === 'staff' && user.staffRole === 'Quản lý');
     const storeTxs = warehouseTransactions.filter(tx => tx.storeId === currentStore.id).sort((a, b) => new Date(b.date) - new Date(a.date));
     
@@ -43,7 +43,8 @@ export default function StoreDetail({ currentStore, allEmployees = [], user, sto
                 </div>
                 <div className="bg-slate-50 p-10 rounded-[50px] border border-slate-100 text-center min-w-[280px] shadow-inner">
                     <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">Hàng tại chi nhánh</p>
-                    <p className="text-6xl font-black text-blue-600 tracking-tighter">{currentStore.inventory.length} <span className="text-xl opacity-30">MÃ</span></p>
+                    <p className="text-6xl font-black text-blue-600 tracking-tighter">{currentStore.inventory.reduce((sum, i) => sum + Number(i.quantity), 0)} <span className="text-xl opacity-30">SP</span></p>
+                    <p className="text-[10px] font-bold text-slate-400 mt-3 uppercase tracking-widest">{currentStore.inventory.length} mã sản phẩm (SKU)</p>
                 </div>
             </div>
             <div className="flex space-x-2 bg-slate-100 w-fit p-2 rounded-3xl shadow-inner mb-8">
@@ -81,7 +82,7 @@ export default function StoreDetail({ currentStore, allEmployees = [], user, sto
                                         <td className="px-10 py-8 font-mono font-bold text-slate-400 text-xs text-center">{info.sku}</td>
                                         <td className="px-10 py-8 text-center font-black"><span className={`px-6 py-2 rounded-full text-xs border-2 ${item.quantity < 5 ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>{item.quantity} {info.unit}</span></td>
                                         <td className="px-10 py-8 text-center"><span className="px-6 py-2 rounded-full bg-emerald-50 text-emerald-600 font-black text-xs border-2 border-emerald-100">+{item.sold || 0}</span></td>
-                                        <td className="px-10 py-8 text-right pr-14"><button onClick={() => handleSellProduct(currentStore.id, item.productId)} disabled={item.quantity === 0} className={`px-8 py-4 rounded-[20px] text-[11px] font-black uppercase tracking-widest transition-all shadow-xl active:scale-95 ${item.quantity > 0 ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-100' : 'bg-slate-100 text-slate-300 cursor-not-allowed shadow-none'}`}>{item.quantity > 0 ? 'Xuất bán' : 'Hết hàng'}</button></td>
+                                        <td className="px-10 py-8 text-right pr-14"><button onClick={() => { setSellingItem({ ...item, name: info.name, unit: info.unit }); setShowModal('sellProduct'); }} disabled={item.quantity === 0} className={`px-8 py-4 rounded-[20px] text-[11px] font-black uppercase tracking-widest transition-all shadow-xl active:scale-95 ${item.quantity > 0 ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-100' : 'bg-slate-100 text-slate-300 cursor-not-allowed shadow-none'}`}>{item.quantity > 0 ? 'Xuất bán' : 'Hết hàng'}</button></td>
                                     </tr>
                                 );
                             })}
@@ -93,7 +94,7 @@ export default function StoreDetail({ currentStore, allEmployees = [], user, sto
             {storeSubTab === 'employees' && (
                 <div className="bg-white rounded-[40px] border p-10 text-left">
                     <div className="flex justify-between items-center mb-8">
-                        <h3 className="text-2xl font-black tracking-tight uppercase flex items-center gap-3 leading-none"><Icon name="clock" size={24} className="text-blue-600" /> Bảng phân ca trực tuần (4h)</h3>
+                        <h3 className="text-2xl font-black tracking-tight uppercase flex items-center gap-3 leading-none"><Icon name="clock" size={24} className="text-blue-600" /> Bảng phân ca trực tuần</h3>
                         {isManager && (
                             <div className="flex gap-3">
                                 <button onClick={()=>{setShowModal('addExistingEmployee');}} className="bg-slate-100 text-slate-600 px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center shadow-sm active:scale-95 transition-all hover:bg-slate-200"><Icon name="search" size={18} className="mr-2"/> Tìm từ hệ thống</button>
@@ -103,7 +104,35 @@ export default function StoreDetail({ currentStore, allEmployees = [], user, sto
                     </div>
                     <div className="space-y-8">
                     {storeEmployees.map(e => {
-                        const canViewCccd = user.role === 'admin' || user.username === e.username; return (
+                        const canViewCccd = user.role === 'admin' || user.username === e.username;
+                        let totalHours = 0;
+                        if (e.schedule) {
+                            Object.values(e.schedule).forEach(storeSch => {
+                                Object.values(storeSch || {}).forEach(shifts => {
+                                    if (Array.isArray(shifts)) {
+                                        shifts.forEach(shiftId => {
+                                            const slot = shiftSlots.find(s => s.id === shiftId);
+                                            if (slot && slot.time) {
+                                                const pts = slot.time.split('-');
+                                                if(pts.length === 2) {
+                                                    const [sh, sm] = pts[0].trim().split(':').map(Number);
+                                                    const [eh, em] = pts[1].trim().split(':').map(Number);
+                                                    if (!isNaN(sh) && !isNaN(eh)) {
+                                                        let h = (eh + (em||0)/60) - (sh + (sm||0)/60);
+                                                        if (h < 0) h += 24;
+                                                        totalHours += h;
+                                                        return;
+                                                    }
+                                                }
+                                            }
+                                            totalHours += 4;
+                                        });
+                                    }
+                                });
+                            });
+                        }
+                        totalHours = Math.round(totalHours * 10) / 10;
+                        return (
                             <div key={e.id} className="p-8 bg-slate-50 rounded-[40px] border border-transparent hover:border-blue-200 transition-all flex flex-col xl:flex-row gap-8 items-start xl:items-center relative group shadow-sm border-l-8 border-l-blue-600">
                                 <div className="flex items-center gap-6 xl:w-[250px]">
                                     <div className="w-16 h-16 rounded-[25px] bg-white text-blue-600 flex items-center justify-center font-black text-2xl shadow-sm uppercase border leading-none overflow-hidden shrink-0">{(canViewCccd && e.cccdImage) ? <img src={e.cccdImage} className="w-full h-full object-cover" alt="CCCD"/> : e.name.charAt(0)}</div>
@@ -113,19 +142,30 @@ export default function StoreDetail({ currentStore, allEmployees = [], user, sto
                                             <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase border tracking-widest ${e.role === 'Quản lý' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-slate-50 text-slate-400 border-slate-100'}`}>{e.role}</span>
                                             {canViewCccd && <span className="px-3 py-1 rounded-full text-[10px] font-black text-slate-500 border border-slate-200 bg-white">ID: {e.cccd || e.id}</span>}
                                             <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase border tracking-widest ${e.status === 'disable' ? 'bg-rose-50 text-rose-500 border-rose-200' : (!e.status || e.status === 'active') ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-amber-50 text-amber-600 border-amber-200'}`}>{e.status === 'disable' ? 'Vô hiệu' : (!e.status || e.status === 'active') ? 'Đã duyệt' : 'Chờ duyệt'}</span>
+                                            <span className="px-3 py-1 rounded-full text-[10px] font-black text-blue-600 border border-blue-200 bg-blue-50">{totalHours}h / tuần</span>
                                         </div>
                                     </div>
                                 </div>
                                 <div className="flex-1 overflow-x-auto w-full no-scrollbar">
-                                    <div className="flex space-x-4 min-w-[700px]">
+                                    <div className="flex space-x-2 min-w-[700px]">
+                                        <div className="w-20 shrink-0 flex flex-col pt-7 space-y-1.5">
+                                            {shiftSlots.filter(s => !s.hidden).map(slot => (
+                                                <div key={slot.id} className="h-8 flex flex-col justify-center text-right pr-3 border-r-2 border-slate-100">
+                                                    <p className="text-[10px] font-black text-slate-700 leading-none">{slot.label}</p>
+                                                    <p className="text-[8px] font-bold text-slate-400 mt-0.5 tracking-tighter">{slot.time}</p>
+                                                </div>
+                                            ))}
+                                        </div>
                                         {DAYS_OF_WEEK.map(day => (
-                                            <div key={day.id} className="flex-1 min-w-[80px] text-center">
-                                                <p className="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest">{day.label}</p>
+                                            <div key={day.id} className="flex-1 min-w-[60px] text-center">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase mb-3 tracking-widest">{day.label}</p>
                                                 <div className="space-y-1.5">
-                                                    {SHIFT_SLOTS.map(slot => {
+                                                    {shiftSlots.filter(s => !s.hidden).map(slot => {
                                                     const storeSchedule = e.schedule?.[currentStore.id] || {};
                                                     const isActive = storeSchedule[day.id]?.includes(slot.id);
-                                                        return <div key={slot.id} className={`p-2 rounded-xl text-[9px] font-black border transition-all ${isActive ? 'bg-blue-600 text-white border-blue-600 shadow-md scale-105' : 'bg-white text-slate-200 border-slate-50 opacity-30 hover:opacity-100'}`} title={slot.time}>{slot.label}</div>;
+                                                        return <div key={slot.id} className={`h-8 rounded-xl border flex items-center justify-center transition-all ${getShiftColorClass(slot.color, isActive, true)}`} title={`${slot.label} (${slot.time})`}>
+                                                            {isActive ? <Icon name="check" size={14}/> : <span className="w-1.5 h-1.5 rounded-full bg-slate-100"></span>}
+                                                        </div>;
                                                     })}
                                                 </div>
                                             </div>
