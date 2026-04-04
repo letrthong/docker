@@ -134,6 +134,45 @@ export function useAppState() {
         localStorage.removeItem('chain_token');
     };
 
+    // =====================================================================
+    // AUTO LOGOUT: Tự động đăng xuất sau 30 phút không có thao tác (Idle)
+    // =====================================================================
+    useEffect(() => {
+        // Chỉ kích hoạt bộ đếm giờ khi người dùng ĐÃ đăng nhập
+        if (!user) return;
+
+        let timeoutId;
+        const logoutTime = 30 * 60 * 1000; // 30 phút = 1,800,000 ms
+
+        const resetTimer = () => {
+            if (timeoutId) clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                handleLogout();
+                showToast("Phiên làm việc đã hết hạn do không hoạt động. Vui lòng đăng nhập lại.");
+            }, logoutTime);
+        };
+
+        // Dùng Debounce/Throttle để không gọi resetTimer liên tục gây tốn CPU khi di chuột
+        let throttleTimer;
+        const handleActivity = () => {
+            if (throttleTimer) return;
+            throttleTimer = setTimeout(() => {
+                resetTimer();
+                throttleTimer = null;
+            }, 1000); // Chỉ làm mới bộ đếm tối đa 1 lần mỗi giây
+        };
+
+        const events = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart'];
+        events.forEach(e => window.addEventListener(e, handleActivity));
+        resetTimer(); // Khởi tạo đếm ngược ngay khi vừa đăng nhập xong
+
+        return () => {
+            if (timeoutId) clearTimeout(timeoutId);
+            if (throttleTimer) clearTimeout(throttleTimer);
+            events.forEach(e => window.removeEventListener(e, handleActivity));
+        };
+    }, [user]);
+
     const handleSaveEmployee = (storeId, employeeData) => {
         const isEdit = !!editingEmployee;
 
@@ -507,7 +546,7 @@ export function useAppState() {
 
         try {
             // Yêu cầu Backend xử lý trực tiếp thay vì tự tính ở Frontend
-            const res = await fetch(`/pos/api/v1/stores/${storeId}/action/sell`, {
+            const res = await fetchWithAuth(`/pos/api/v1/stores/${storeId}/action/sell`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ productId, quantity: qty })
