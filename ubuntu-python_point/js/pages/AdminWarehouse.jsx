@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Icon, SummaryMiniCard } from '../components/UI';
 
-export default function AdminWarehouse({ globalProducts, totalValue, setShowModal, handleImportToWarehouse, categories = [], stockRequests = [], handleProcessStockRequest }) {
+export default function AdminWarehouse({ globalProducts, totalValue, setShowModal, handleImportToWarehouse, setImportingItem, categories = [], stockRequests = [], handleProcessStockRequest }) {
     const [filterCategory, setFilterCategory] = useState('all');
     const [viewTab, setViewTab] = useState('inventory'); // 'inventory', 'requests'
 
@@ -55,7 +55,7 @@ export default function AdminWarehouse({ globalProducts, totalValue, setShowModa
                                 <td className="px-10 py-8 font-black text-slate-800 text-center">{p.basePrice.toLocaleString()} đ</td>
                                 <td className="px-10 py-8 pr-14 text-right">
                                     <div className="flex justify-end gap-2">
-                                        <button onClick={() => handleImportToWarehouse(p.id, 10)} className="p-3 text-emerald-500 hover:bg-emerald-50 rounded-xl transition-all" title="Nhập hàng NCC"><Icon name="arrow-down-left" size={20}/></button>
+                                        <button onClick={() => { setImportingItem(p); setShowModal('importProduct'); }} className="p-3 text-emerald-500 hover:bg-emerald-50 rounded-xl transition-all" title="Nhập hàng NCC"><Icon name="arrow-down-left" size={20}/></button>
                                         <button onClick={() => setShowModal('distribute')} className="p-3 text-orange-500 hover:bg-orange-50 rounded-xl transition-all" title="Điều phối chi nhánh"><Icon name="arrow-up-right" size={20}/></button>
                                     </div>
                                 </td>

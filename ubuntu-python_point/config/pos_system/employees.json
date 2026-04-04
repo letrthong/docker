@@ -4,6 +4,7 @@
       "s1775300073390"
     ],
     "cccd": "b64:MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMQ==",
+    "hasImage": true,
     "id": "1111111111111111111111111111111",
     "name": "b64:YWJj",
     "password": "123456",
@@ -25,7 +26,6 @@
       }
     },
     "status": "active",
-    "username": "abc",
-    "hasImage": true
+    "username": "abc"
   }
 ]
