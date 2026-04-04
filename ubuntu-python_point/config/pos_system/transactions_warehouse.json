@@ -55,5 +55,18 @@
     "quantity": 2,
     "date": "2026-04-04T14:55:42.640186+00:00",
     "note": "b64:WHXhuqV0IGtobyB04buVbmcgMiAxMDAgY2hvIHh4eHg="
+  },
+  {
+    "id": "tx_out_ef0aea09",
+    "type": "distribute",
+    "productId": "p1775300196380",
+    "productName": "b64:eA==",
+    "storeId": "s1775300073390",
+    "costPrice": 0,
+    "unitPrice": 12,
+    "storeName": "b64:eHh4eA==",
+    "quantity": 39,
+    "date": "2026-04-04T15:10:46.019735+00:00",
+    "note": "b64:WHXhuqV0IGtobyBn4butaSDEkeG6v24geHh4eCAoxJBhbmcgZ2lhbyk="
   }
 ]
