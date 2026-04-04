@@ -3,8 +3,10 @@ import json
 import base64
 import hmac
 import hashlib
-from flask import Blueprint, jsonify, request
-from pos_utils import read_config
+import os
+from flask import Blueprint, jsonify, request, send_file
+from werkzeug.utils import secure_filename
+from pos_utils import read_config, CONFIG_DIR
 
 pos_auth_bp = Blueprint('pos_auth_bp', __name__)
 SECRET_KEY = "chain-secret-key-super-safe"  # Trong môi trường thực tế (Production), bạn nên đưa key này vào biến môi trường (.env)
@@ -20,6 +22,18 @@ def generate_token(payload, secret):
     signature_b64 = base64.urlsafe_b64encode(signature).decode('utf-8').rstrip('=')
     
     return f"{signature_message}.{signature_b64}"
+
+@pos_auth_bp.route('/pos/api/v1/employees/<emp_id>/image', methods=['GET'])
+def get_employee_image(emp_id):
+    # Sử dụng secure_filename để chặn lỗ hổng Path Traversal
+    safe_emp_id = secure_filename(emp_id)
+    if not safe_emp_id:
+        return jsonify({"error": "ID không hợp lệ"}), 400
+        
+    file_path = os.path.join(CONFIG_DIR, 'images', f"{safe_emp_id}.jpg")
+    if os.path.exists(file_path):
+        return send_file(file_path, mimetype='image/jpeg')
+    return jsonify({"error": "Không tìm thấy ảnh"}), 404
 
 @pos_auth_bp.route('/pos/api/v1/login', methods=['POST'])
 def login():

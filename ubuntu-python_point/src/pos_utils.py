@@ -6,11 +6,11 @@ import time
 import copy
 
 # BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-BASE_DIR = "/app"
-SRC_DIR = os.path.join(BASE_DIR, 'src')
-DIST_DIR = os.path.join(BASE_DIR, 'dist')
-CONFIG_DIR = os.path.join(BASE_DIR, 'config')
-# CONFIG_FILE = os.path.join(CONFIG_DIR, 'config.json') # Đã được thay thế bằng các file riêng lẻ
+BASE_DIR = "/app/config/pos_system"  # Đặt cố định để tránh lỗi đường dẫn khi chạy trong container
+WEB_DIR = "/app"
+SRC_DIR = os.path.join(WEB_DIR, 'src')
+DIST_DIR = os.path.join(WEB_DIR, 'dist')
+CONFIG_DIR = os.path.join(BASE_DIR, '')
 PRODUCTS_LAST_UPDATE_FILE = os.path.join(CONFIG_DIR, 'products_last_update.txt')
 
 # Các file cấu hình riêng lẻ
@@ -20,6 +20,12 @@ EMPLOYEES_FILE = os.path.join(CONFIG_DIR, 'employees.json')
 STOCK_REQUESTS_FILE = os.path.join(CONFIG_DIR, 'stock_requests.json')
 CATEGORIES_FILE = os.path.join(CONFIG_DIR, 'categories.json')
 SHIFT_SLOTS_FILE = os.path.join(CONFIG_DIR, 'shift_slots.json')
+IMAGES_DIR = os.path.join(CONFIG_DIR, 'images')
+
+# Đảm bảo các thư mục cấu hình và thư mục gốc tồn tại ngay khi khởi động
+os.makedirs(BASE_DIR, exist_ok=True)
+os.makedirs(CONFIG_DIR, exist_ok=True)
+os.makedirs(IMAGES_DIR, exist_ok=True)
 
 # Đổi sang RLock để cho phép khóa lồng nhau (vừa đọc vừa ghi an toàn)
 config_lock = threading.RLock()
@@ -90,6 +96,13 @@ def read_config():
         if 'cccd' in emp: emp['cccd'] = decode_b64_field(emp['cccd'])
         if 'phone' in emp: emp['phone'] = decode_b64_field(emp['phone'])
         
+        # Phục hồi URL ảnh cho frontend để tránh gửi nguyên chuỗi base64 nặng nề
+        if emp.get('hasImage'):
+            img_path = os.path.join(IMAGES_DIR, f"{emp.get('id')}.jpg")
+            if os.path.exists(img_path):
+                mtime = int(os.path.getmtime(img_path))
+                emp['cccdImage'] = f"/pos/api/v1/employees/{emp.get('id')}/image?t={mtime}"
+        
     for req in stock_requests:
         if 'storeName' in req: req['storeName'] = decode_b64_field(req['storeName'])
         if 'productName' in req: req['productName'] = decode_b64_field(req['productName'])
@@ -111,6 +124,7 @@ def write_config(data):
     Hàm này cũng đảm nhiệm việc mã hóa các trường dữ liệu nhạy cảm trước khi ghi.
     """
     os.makedirs(CONFIG_DIR, exist_ok=True)
+    os.makedirs(IMAGES_DIR, exist_ok=True)
     with config_lock:
         # Copy ra một bản sao để tránh làm thay đổi data trên RAM (tránh lỗi hiển thị API)
         data_to_write = copy.deepcopy(data)
@@ -127,6 +141,25 @@ def write_config(data):
                 if 'name' in emp: emp['name'] = encode_b64_field(emp['name'])
                 if 'cccd' in emp: emp['cccd'] = encode_b64_field(emp['cccd'])
                 if 'phone' in emp: emp['phone'] = encode_b64_field(emp['phone'])
+                
+                # Tách ảnh cccdImage ra file riêng để giảm dung lượng file json
+                img_data = emp.get('cccdImage')
+                if img_data and isinstance(img_data, str) and img_data.startswith('data:image/'):
+                    try:
+                        header, encoded = img_data.split(",", 1)
+                        file_path = os.path.join(IMAGES_DIR, f"{emp['id']}.jpg")
+                        with open(file_path, "wb") as fh:
+                            fh.write(base64.b64decode(encoded))
+                        emp['hasImage'] = True
+                    except Exception:
+                        pass
+                elif img_data and isinstance(img_data, str) and img_data.startswith('/pos/api/v1/employees/'):
+                    # Nếu url đã được tạo ra ở hàm read_config, đánh dấu cờ hasImage
+                    emp['hasImage'] = True
+                
+                # Xóa cccdImage khỏi json file để tiết kiệm dung lượng
+                if 'cccdImage' in emp:
+                    del emp['cccdImage']
             _write_json_file(EMPLOYEES_FILE, data_to_write['allEmployees'])
 
         if 'stockRequests' in data_to_write:

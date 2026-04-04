@@ -1,0 +1,31 @@
+[
+  {
+    "assignedStores": [
+      "s1775300073390"
+    ],
+    "cccd": "b64:MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMQ==",
+    "id": "1111111111111111111111111111111",
+    "name": "b64:YWJj",
+    "password": "123456",
+    "phone": "b64:MTExMTExMTExMTExMTExMTExMTEx",
+    "role": "Quản lý",
+    "schedule": {
+      "s1775300073390": {
+        "Fri": [],
+        "Mon": [],
+        "Sat": [],
+        "Sun": [],
+        "Thu": [],
+        "Tue": [
+          "s1"
+        ],
+        "Wed": [
+          "s2"
+        ]
+      }
+    },
+    "status": "active",
+    "username": "abc",
+    "hasImage": true
+  }
+]

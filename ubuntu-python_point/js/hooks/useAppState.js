@@ -10,6 +10,13 @@ const setCache = (key, value) => {
     localStorage.setItem(key, JSON.stringify(value));
 };
 
+const generateId = () => {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        return crypto.randomUUID().replace(/-/g, '');
+    }
+    return Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+};
+
 const initialCategories = [];
 const initialShiftSlots = [
     { id: 's1', label: 'Ca Sáng', time: '08:00 - 12:00', hidden: false, color: 'blue' },
@@ -36,6 +43,7 @@ export function useAppState() {
     const [editingEmployee, setEditingEmployee] = useState(null);
     const [editingStore, setEditingStore] = useState(null);
     const [sellingItem, setSellingItem] = useState(null);
+    const [importingItem, setImportingItem] = useState(null);
     const [toast, setToast] = useState(null);
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -285,7 +293,7 @@ export function useAppState() {
         }
         const store = stores.find(s => s.id === storeId);
         setStockRequests(prev => [{
-            id: 'req_' + crypto.randomUUID().replace(/-/g, ''),
+            id: 'req_' + generateId(),
             storeId, storeName: store?.name,
             productId, productName: product?.name,
             quantity: reqQty,
@@ -309,9 +317,10 @@ export function useAppState() {
             }
             setGlobalProducts(globalProducts.map(p => p.id === req.productId ? { ...p, warehouseStock: Number(p.warehouseStock) - req.quantity } : p));
             setWarehouseTransactions(prev => [...prev, {
-                id: 'tx_' + crypto.randomUUID().replace(/-/g, ''), type: 'distribute', productId: req.productId,
+                id: 'tx_' + generateId(), type: 'distribute', productId: req.productId,
                 productName: product?.name || 'N/A', storeId: req.storeId,
                 storeName: req.storeName || 'N/A', quantity: req.quantity,
+                costPrice: product?.costPrice || 0, unitPrice: product?.basePrice || 0,
                 date: new Date().toISOString(),
                 note: `Xuất kho gửi đến ${req.storeName} (Đang giao)`
             }]);
@@ -364,9 +373,10 @@ export function useAppState() {
             setStores(stores.map(s => s.id === storeId ? { ...s, inventory: s.inventory.map(i => i.productId === productId ? { ...i, quantity: Number(i.quantity) - qty } : i) } : s));
 
             setWarehouseTransactions(prev => [...prev, {
-                id: 'tx_' + crypto.randomUUID().replace(/-/g, ''), type: 'return', productId,
+                id: 'tx_' + generateId(), type: 'return', productId,
                 productName: product?.name || 'N/A', storeId,
                 storeName: store?.name || 'N/A', quantity: qty,
+                costPrice: product?.costPrice || 0, unitPrice: product?.basePrice || 0,
                 date: new Date().toISOString(),
                 note: `Hoàn kho: ${reason || 'Không xác định'}`
             }]);
@@ -414,8 +424,8 @@ export function useAppState() {
             const now = new Date().toISOString();
             setWarehouseTransactions(prev => [
                 ...prev,
-                { id: 'tx_out_' + crypto.randomUUID().replace(/-/g, ''), type: 'transfer_out', productId, productName: product?.name || 'N/A', storeId: fromStoreId, storeName: fromStore?.name || 'N/A', quantity: qty, date: now, note: `Chuyển đến ${toStore?.name}: ${note || ''}` },
-                { id: 'tx_in_' + crypto.randomUUID().replace(/-/g, ''), type: 'transfer_in', productId, productName: product?.name || 'N/A', storeId: toStoreId, storeName: toStore?.name || 'N/A', quantity: qty, date: now, note: `Nhận từ ${fromStore?.name}: ${note || ''}` }
+                { id: 'tx_out_' + generateId(), type: 'transfer_out', productId, productName: product?.name || 'N/A', storeId: fromStoreId, storeName: fromStore?.name || 'N/A', quantity: qty, costPrice: product?.costPrice || 0, unitPrice: product?.basePrice || 0, date: now, note: `Chuyển đến ${toStore?.name}: ${note || ''}` },
+                { id: 'tx_in_' + generateId(), type: 'transfer_in', productId, productName: product?.name || 'N/A', storeId: toStoreId, storeName: toStore?.name || 'N/A', quantity: qty, costPrice: product?.costPrice || 0, unitPrice: product?.basePrice || 0, date: now, note: `Nhận từ ${fromStore?.name}: ${note || ''}` }
             ]);
 
             setShowModal(null);
@@ -431,12 +441,26 @@ export function useAppState() {
             message: `Thêm "${productData.name}" vào danh mục?`,
             onConfirm: () => {
                 setGlobalProducts([...globalProducts, {
-                    ...productData, id: 'p_' + crypto.randomUUID().replace(/-/g, ''),
+                    ...productData, id: 'p_' + generateId(),
+                    costPrice: Number(productData.costPrice || 0),
                     warehouseStock: Number(productData.initialStock || 0),
-                    basePrice: Number(productData.basePrice)
+                    basePrice: Number(productData.basePrice),
+                    status: 'created'
                 }]);
                 setShowModal(null);
                 showToast("Đã tạo sản phẩm.");
+            }
+        });
+    };
+
+    const handleDeleteGlobalProduct = (productId, productName) => {
+        requestConfirm({
+            type: 'delete', title: 'Xóa sản phẩm',
+            message: `Xác nhận đánh dấu xóa sản phẩm "${productName}" khỏi hệ thống?`,
+            onConfirm: () => {
+                setGlobalProducts(globalProducts.map(p => p.id === productId ? { ...p, status: 'deleted' } : p));
+                setShowModal(null);
+                showToast("Đã chuyển trạng thái sản phẩm sang đã xóa.");
             }
         });
     };
@@ -460,11 +484,14 @@ export function useAppState() {
         const product = globalProducts.find(p => p.id === productId);
         setGlobalProducts(globalProducts.map(p => p.id === productId ? { ...p, warehouseStock: Number(p.warehouseStock) + qty } : p));
         setWarehouseTransactions(prev => [...prev, {
-            id: 'tx_' + crypto.randomUUID().replace(/-/g, ''), type: 'import', productId,
+            id: 'tx_' + generateId(), type: 'import', productId,
             productName: product?.name || 'N/A', quantity: qty,
+            costPrice: product?.costPrice || 0, unitPrice: product?.basePrice || 0,
             date: new Date().toISOString(),
             note: `Nhập ${qty} ${product?.unit || 'cái'} vào kho tổng`
         }]);
+        
+        setImportingItem(null); // Đóng modal sau khi nhập thành công
         showToast(`Đã nhập ${qty} SP vào kho tổng (Xử lý an toàn bởi Server).`);
         } catch (error) {
             showToast("Lỗi kết nối máy chủ!");
@@ -501,9 +528,10 @@ export function useAppState() {
             return s;
         }));
         setWarehouseTransactions(prev => [...prev, {
-            id: 'tx_' + crypto.randomUUID().replace(/-/g, ''), type: 'distribute', productId,
+            id: 'tx_' + generateId(), type: 'distribute', productId,
             productName: product?.name || 'N/A', storeId,
             storeName: store?.name || 'N/A', quantity: qty,
+            costPrice: product?.costPrice || 0, unitPrice: product?.basePrice || 0,
             date: new Date().toISOString(),
             note: `Phân phối ${qty} ${product?.unit || 'cái'} đến ${store?.name}`
         }]);
@@ -515,7 +543,7 @@ export function useAppState() {
     };
 
     const handleAddStore = (storeData) => {
-        setStores([...stores, { ...storeData, id: 's_' + crypto.randomUUID().replace(/-/g, ''), employees: [], inventory: [], transactions: [] }]);
+        setStores([...stores, { ...storeData, id: 's_' + generateId(), status: 'created', employees: [], inventory: [], transactions: [] }]);
         setShowModal(null);
         showToast("Đã mở chi nhánh.");
     };
@@ -532,7 +560,7 @@ export function useAppState() {
             type: 'delete', title: 'Xóa chi nhánh',
             message: `Xác nhận xóa hoàn toàn chi nhánh "${storeName}"?`,
             onConfirm: () => {
-                setStores(stores.filter(s => s.id !== storeId));
+                setStores(stores.map(s => s.id === storeId ? { ...s, status: 'deleted' } : s));
                 setSelectedStore(null);
                 setShowModal(null);
                 showToast("Đã xóa chi nhánh.");
@@ -567,10 +595,11 @@ export function useAppState() {
                 ? { ...i, quantity: Number(i.quantity) - qty, sold: Number(i.sold || 0) + qty } : i)
         } : s));
         setWarehouseTransactions(prev => [...prev, {
-            id: 'tx_' + crypto.randomUUID().replace(/-/g, ''), type: 'sell', productId,
+            id: 'tx_' + generateId(), type: 'sell', productId,
             productName: product?.name || 'N/A', storeId,
             storeName: store?.name || 'N/A', quantity: qty,
-            unitPrice: product?.basePrice || 0,
+            costPrice: product?.costPrice || 0, 
+            unitPrice: product?.basePrice || 0, 
             date: new Date().toISOString(),
             note: `Bán ${qty} ${product?.unit || 'cái'} tại ${store?.name}`
         }]);
@@ -588,15 +617,15 @@ export function useAppState() {
         // State
         user, stores, globalProducts, warehouseTransactions, categories, shiftSlots, stockRequests,
         activeTab, selectedStore, storeSubTab, showModal, pendingAction,
-        editingEmployee, editingStore, sellingItem, toast, showUserMenu, searchTerm, historyFilter, setUser,
+        editingEmployee, editingStore, sellingItem, importingItem, toast, showUserMenu, searchTerm, historyFilter, setUser,
         currentStore, allEmployees, totalValue,
         // Setters
         setCategories, setShiftSlots, setActiveTab, setSelectedStore, setStoreSubTab, setShowModal,
-        setPendingAction, setEditingEmployee, setEditingStore, setSellingItem, setShowUserMenu,
+        setPendingAction, setEditingEmployee, setEditingStore, setSellingItem, setImportingItem, setShowUserMenu,
         setSearchTerm, setHistoryFilter,
         // Handlers
-        handleLogin, handleLogout, handleSaveEmployee, handleDeleteEmployee, handleAddExistingEmployee, handleUpdateEmployeeStatus,
-        handleResetPassword, handleChangePassword, handleSaveGlobalProduct, handleImportToWarehouse, handleDistribute, handleAddStockRequest, handleProcessStockRequest, handleReceiveStockRequest, handleReturnStock, handleTransferStock,
+        handleLogin, handleLogout, handleSaveEmployee, handleDeleteEmployee, handleAddExistingEmployee, handleUpdateEmployeeStatus, handleResetPassword, handleChangePassword, 
+        handleSaveGlobalProduct, handleDeleteGlobalProduct, handleImportToWarehouse, handleDistribute, handleAddStockRequest, handleProcessStockRequest, handleReceiveStockRequest, handleReturnStock, handleTransferStock,
         handleAddStore, handleEditStore, handleDeleteStore, handleSellProduct,
         getProductInfo, showToast,
     };

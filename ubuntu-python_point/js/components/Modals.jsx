@@ -425,6 +425,25 @@ export function SellProductModal({ setShowModal, currentStore, product, handleSe
     );
 }
 
+export function ImportProductModal({ setShowModal, product, handleImportToWarehouse }) {
+    if (!product) return null;
+    return (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-6">
+            <div className="bg-white rounded-[50px] w-full max-w-md shadow-2xl overflow-hidden border animate-in zoom-in-95">
+                <div className="p-8 border-b flex justify-between items-center bg-slate-50/50"><h3 className="text-xl font-black text-slate-900 uppercase tracking-tight text-left leading-none">Nhập kho tổng</h3><button type="button" onClick={()=>setShowModal(null)} className="p-4 hover:bg-slate-200 rounded-2xl transition-all text-slate-400 flex items-center justify-center"><Icon name="x" size={24}/></button></div>
+                <form className="p-8 space-y-6" onSubmit={(e)=>{ e.preventDefault(); const fd = new FormData(e.target); handleImportToWarehouse(product.id, fd.get('qty')); }}>
+                    <div className="bg-slate-50 p-4 rounded-3xl border border-slate-100 text-left">
+                        <p className="font-black text-lg text-slate-900">{product.name}</p>
+                        <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Tồn kho hiện tại: <span className="text-blue-600">{product.warehouseStock} {product.unit}</span></p>
+                    </div>
+                    <Input label="Số lượng nhập thêm" name="qty" type="number" required min="1" defaultValue="1" autoFocus />
+                    <button type="submit" className="w-full py-5 bg-blue-600 text-white rounded-[30px] font-black shadow-lg hover:bg-blue-700 uppercase text-[11px] tracking-widest leading-none flex justify-center items-center gap-2 transition-all active:scale-95"><Icon name="download" size={18}/> Xác nhận nhập kho</button>
+                </form>
+            </div>
+        </div>
+    );
+}
+
 export function ProfileModal({ setShowModal, user, allEmployees, shiftSlots = [] }) {
     const emp = allEmployees.find(e => e.username === user.username);
     

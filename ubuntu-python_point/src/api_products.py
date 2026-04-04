@@ -28,6 +28,7 @@ def add_product():
     if not product or not product.get('name'): return jsonify({"error": "Product name required"}), 400
     config = read_config()
     product['id'] = product.get('id', f"p{uuid.uuid4().hex[:8]}")
+    product['status'] = 'created'
     config['products'].append(product)
     write_config(config)
     set_products_last_update()
@@ -37,7 +38,9 @@ def add_product():
 def modify_product(product_id):
     config = read_config()
     if request.method == 'DELETE':
-        config['products'] = [p for p in config.get('products', []) if p['id'] != product_id]
+        for p in config.get('products', []):
+            if p['id'] == product_id:
+                p['status'] = 'deleted'
         write_config(config)
         return jsonify({"message": f"Product {product_id} deleted"})
     

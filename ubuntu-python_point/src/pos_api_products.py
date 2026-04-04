@@ -1,6 +1,7 @@
 import uuid
+from datetime import datetime, timezone
 from flask import Blueprint, jsonify, request
-from pos_utils import read_config, write_config, get_products_last_update, set_products_last_update, config_lock
+from pos_utils import read_config, write_config, get_products_last_update, set_products_last_update, config_lock, read_transactions, write_transactions
 
 pos_products_bp = Blueprint('pos_products_bp', __name__)
 
@@ -28,6 +29,7 @@ def add_product():
     if not product or not product.get('name'): return jsonify({"error": "Product name required"}), 400
     config = read_config()
     product['id'] = product.get('id', f"p{uuid.uuid4().hex[:8]}")
+    product['status'] = 'created'
     config['products'].append(product)
     write_config(config)
     set_products_last_update()
@@ -37,7 +39,9 @@ def add_product():
 def modify_product(product_id):
     config = read_config()
     if request.method == 'DELETE':
-        config['products'] = [p for p in config.get('products', []) if p['id'] != product_id]
+        for p in config.get('products', []):
+            if p['id'] == product_id:
+                p['status'] = 'deleted'
         write_config(config)
         return jsonify({"message": f"Product {product_id} deleted"})
     
@@ -64,5 +68,17 @@ def secure_import(product_id):
         product['warehouseStock'] = int(product.get('warehouseStock', 0)) + qty
         write_config(config)
         set_products_last_update()
+        
+    # Ghi lại lịch sử giao dịch vào file riêng của Kho tổng
+    warehouse_txs = read_transactions('warehouse')
+    warehouse_txs.append({
+        'id': f"tx{uuid.uuid4().hex[:8]}", 'type': 'import', 'productId': product_id,
+        'productName': product.get('name', 'N/A'), 'quantity': qty,
+        'costPrice': product.get('costPrice', 0),
+        'unitPrice': product.get('basePrice', 0),
+        'date': datetime.now(timezone.utc).isoformat(),
+        'note': f"Nhập {qty} {product.get('unit', 'cái')} vào kho tổng"
+    })
+    write_transactions('warehouse', warehouse_txs)
         
     return jsonify({"message": "Nhập kho thành công", "newStock": product['warehouseStock']})

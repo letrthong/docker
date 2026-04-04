@@ -19,6 +19,7 @@ def handle_stores():
     elif request.method == 'POST':
         store = request.get_json()
         store['id'] = store.get('id', f"s{uuid.uuid4().hex[:8]}")
+        store['status'] = 'created'
         store.setdefault('employees', []); store.setdefault('inventory', []); store.setdefault('transactions', [])
         config['stores'].append(store)
         write_config(config)
@@ -28,7 +29,9 @@ def handle_stores():
 def modify_store(store_id):
     config = read_config()
     if request.method == 'DELETE':
-        config['stores'] = [s for s in config.get('stores', []) if s['id'] != store_id]
+        for s in config.get('stores', []):
+            if s['id'] == store_id:
+                s['status'] = 'deleted'
         write_config(config)
         return jsonify({"message": f"Store {store_id} deleted"})
     for store in config.get('stores', []):
@@ -147,6 +150,7 @@ def secure_sell(store_id):
         'id': f"tx{uuid.uuid4().hex[:8]}", 'type': 'sell', 'productId': product_id,
         'productName': product.get('name', 'N/A'), 'storeId': store_id,
         'storeName': target_store.get('name', 'N/A'), 'quantity': qty,
+        'costPrice': product.get('costPrice', 0),
         'unitPrice': product.get('basePrice', 0), 'date': datetime.now(timezone.utc).isoformat(),
         'note': f"Bán {qty} {product.get('unit', 'cái')} tại {target_store.get('name', 'N/A')}"
     })
@@ -185,10 +189,24 @@ def secure_distribute(store_id):
         'id': f"tx{uuid.uuid4().hex[:8]}", 'type': 'distribute', 'productId': product_id,
         'productName': product.get('name', 'N/A'), 'storeId': store_id,
         'storeName': target_store.get('name', 'N/A'), 'quantity': qty,
+        'costPrice': product.get('costPrice', 0),
+        'unitPrice': product.get('basePrice', 0),
         'date': datetime.now(timezone.utc).isoformat(),
         'note': f"Phân phối {qty} {product.get('unit', 'cái')} đến {target_store.get('name', 'N/A')}"
     })
     write_transactions(store_id, txs)
+    
+    warehouse_txs = read_transactions('warehouse')
+    warehouse_txs.append({
+        'id': f"tx_out_{uuid.uuid4().hex[:8]}", 'type': 'distribute', 'productId': product_id,
+        'productName': product.get('name', 'N/A'), 'storeId': store_id,
+        'costPrice': product.get('costPrice', 0),
+        'unitPrice': product.get('basePrice', 0),
+        'storeName': target_store.get('name', 'N/A'), 'quantity': qty,
+        'date': datetime.now(timezone.utc).isoformat(),
+        'note': f"Xuất kho tổng {qty} {product.get('unit', 'cái')} cho {target_store.get('name', 'N/A')}"
+    })
+    write_transactions('warehouse', warehouse_txs)
     
     return jsonify({"message": "Phân phối thành công"})
 
@@ -222,10 +240,24 @@ def secure_return(store_id):
         'id': f"tx{uuid.uuid4().hex[:8]}", 'type': 'return', 'productId': product_id,
         'productName': product.get('name', 'N/A'), 'storeId': store_id,
         'storeName': store.get('name', 'N/A'), 'quantity': qty,
+        'costPrice': product.get('costPrice', 0),
+        'unitPrice': product.get('basePrice', 0),
         'date': datetime.now(timezone.utc).isoformat(),
         'note': f"Hoàn kho: {note or 'Không xác định'}"
     })
     write_transactions(store_id, txs)
+    
+    warehouse_txs = read_transactions('warehouse')
+    warehouse_txs.append({
+        'id': f"tx_in_{uuid.uuid4().hex[:8]}", 'type': 'return', 'productId': product_id,
+        'productName': product.get('name', 'N/A'), 'storeId': store_id,
+        'storeName': store.get('name', 'N/A'), 'quantity': qty,
+        'costPrice': product.get('costPrice', 0),
+        'unitPrice': product.get('basePrice', 0),
+        'date': datetime.now(timezone.utc).isoformat(),
+        'note': f"Nhận hoàn trả từ {store.get('name', 'N/A')}: {note or 'Không xác định'}"
+    })
+    write_transactions('warehouse', warehouse_txs)
     
     return jsonify({"message": "Hoàn trả kho thành công"})
 
@@ -268,6 +300,7 @@ def secure_transfer(store_id):
         'id': f"tx_out_{uuid.uuid4().hex[:8]}", 'type': 'transfer_out', 'productId': product_id,
         'productName': product.get('name', 'N/A'), 'storeId': store_id,
         'storeName': from_store.get('name', 'N/A'), 'quantity': qty,
+        'costPrice': product.get('costPrice', 0), 'unitPrice': product.get('basePrice', 0),
         'date': now, 'note': f"Chuyển đến {to_store.get('name', 'N/A')}: {note}"
     })
     write_transactions(store_id, from_txs)
@@ -276,6 +309,7 @@ def secure_transfer(store_id):
     to_txs.append({
         'id': f"tx_in_{uuid.uuid4().hex[:8]}", 'type': 'transfer_in', 'productId': product_id,
         'productName': product.get('name', 'N/A'), 'storeId': to_store_id,
+        'costPrice': product.get('costPrice', 0), 'unitPrice': product.get('basePrice', 0),
         'storeName': to_store.get('name', 'N/A'), 'quantity': qty,
         'date': now, 'note': f"Nhận từ {from_store.get('name', 'N/A')}: {note}"
     })
