@@ -19,25 +19,16 @@ const initialShiftSlots = [
 
 export function useAppState() {
     const [user, setUser] = useState(() => getCache('chain_user', null));
-    const [stores, setStores] = useState(() => getCache('chain_stores', initialStores));
-    const [globalProducts, setGlobalProducts] = useState(() => getCache('chain_products', initialGlobalProducts));
-    const [warehouseTransactions, setWarehouseTransactions] = useState(() => getCache('chain_warehouse_tx', []));
-    const [categories, setCategories] = useState(() => getCache('chain_categories', initialCategories));
-    const [shiftSlots, setShiftSlots] = useState(() => getCache('chain_shift_slots', initialShiftSlots));
-    const [stockRequests, setStockRequests] = useState(() => getCache('chain_stock_requests', []));
-    const [allEmployees, setAllEmployees] = useState(() => {
-        const saved = getCache('chain_employees', null);
-        if (saved) return saved;
-        // Tự động Migrate dữ liệu nhân sự cũ từ stores sang Global
-        const s = getCache('chain_stores', initialStores);
-        return s.flatMap(store => (store.employees || []).map(e => ({
-            ...e,
-            assignedStores: [store.id],
-            schedule: { [store.id]: e.schedule || { Mon: [], Tue: [], Wed: [], Thu: [], Fri: [], Sat: [], Sun: [] } }
-        })));
-    });
+    const [stores, setStores] = useState(initialStores);
+    const [globalProducts, setGlobalProducts] = useState(initialGlobalProducts);
+    const [warehouseTransactions, setWarehouseTransactions] = useState([]);
+    const [categories, setCategories] = useState(initialCategories);
+    const [shiftSlots, setShiftSlots] = useState(initialShiftSlots);
+    const [stockRequests, setStockRequests] = useState([]);
+    const [allEmployees, setAllEmployees] = useState([]);
 
     const [activeTab, setActiveTab] = useState('dashboard');
+    const [isLoaded, setIsLoaded] = useState(false);
     const [selectedStore, setSelectedStore] = useState(null);
     const [storeSubTab, setStoreSubTab] = useState('inventory');
     const [showModal, setShowModal] = useState(null);
@@ -50,17 +41,46 @@ export function useAppState() {
     const [searchTerm, setSearchTerm] = useState('');
     const [historyFilter, setHistoryFilter] = useState({ type: 'all', year: String(new Date().getFullYear()), viewMode: 'year' });
 
+    // Khởi tạo: Lấy dữ liệu từ Backend khi mở ứng dụng (Ưu tiên Backend hơn LocalStorage)
+    useEffect(() => {
+        // Chủ động xóa bỏ dữ liệu nhạy cảm cũ có thể còn lưu ở LocalStorage của trình duyệt
+        localStorage.removeItem('chain_employees');
+        localStorage.removeItem('chain_products');
+        localStorage.removeItem('chain_stores');
+        localStorage.removeItem('chain_warehouse_tx');
+        localStorage.removeItem('chain_categories');
+        localStorage.removeItem('chain_shift_slots');
+        localStorage.removeItem('chain_stock_requests');
+
+        fetch('/pos/api/v1/config')
+            .then(res => res.json())
+            .then(data => {
+                if (data.stores && data.stores.length > 0) setStores(data.stores);
+                if (data.products && data.products.length > 0) setGlobalProducts(data.products);
+                if (data.allEmployees && data.allEmployees.length > 0) setAllEmployees(data.allEmployees);
+                if (data.stockRequests && data.stockRequests.length > 0) setStockRequests(data.stockRequests);
+                if (data.categories && data.categories.length > 0) setCategories(data.categories);
+                if (data.shiftSlots && data.shiftSlots.length > 0) setShiftSlots(data.shiftSlots);
+                setIsLoaded(true);
+            })
+            .catch(err => { console.error("Lỗi kết nối Backend:", err); setIsLoaded(true); });
+    }, []);
+
+    // Đồng bộ: Đẩy dữ liệu lên Backend mỗi khi có thay đổi (Auto-Save)
+    useEffect(() => {
+        if (!isLoaded) return;
+        if (stores.length === 0 && globalProducts.length === 0 && allEmployees.length === 0) return;
+        fetch('/pos/api/v1/config', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ stores, products: globalProducts, allEmployees, stockRequests, categories, shiftSlots })
+        }).catch(err => console.error("Lỗi đồng bộ Backend:", err));
+    }, [isLoaded, stores, globalProducts, allEmployees, stockRequests, categories, shiftSlots]);
+
     useEffect(() => {
         setCache('chain_user', user);
         if (user && user.role === 'staff') setActiveTab('my-store');
     }, [user]);
-    useEffect(() => { setCache('chain_stores', stores); }, [stores]);
-    useEffect(() => { setCache('chain_products', globalProducts); }, [globalProducts]);
-    useEffect(() => { setCache('chain_warehouse_tx', warehouseTransactions); }, [warehouseTransactions]);
-    useEffect(() => { setCache('chain_categories', categories); }, [categories]);
-    useEffect(() => { setCache('chain_shift_slots', shiftSlots); }, [shiftSlots]);
-    useEffect(() => { setCache('chain_stock_requests', stockRequests); }, [stockRequests]);
-    useEffect(() => { setCache('chain_employees', allEmployees); }, [allEmployees]);
 
     const currentStore = useMemo(() => {
         if (!user) return null;
@@ -81,24 +101,29 @@ export function useAppState() {
         setShowModal('confirmPopup');
     };
 
-    const handleLogin = (loginForm) => {
-        const inputUsername = loginForm.username.toLowerCase();
-        if (inputUsername === 'admin' && loginForm.password === 'admin') {
-            setUser({ username: 'Admin Manager', role: 'admin', name: 'Quản trị viên' });
-            setActiveTab('dashboard');
+    const handleLogin = async (loginForm) => {
+        try {
+            const res = await fetch('/pos/api/v1/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(loginForm)
+            });
+            const data = await res.json();
+            
+            if (!res.ok) {
+                return data.error || 'Sai tài khoản hoặc mật khẩu!';
+            }
+            
+            setCache('chain_token', data.token); // Lưu lại JWT token vào LocalStorage
+            setUser(data.user);
+            if (data.user.role === 'admin') {
+                setActiveTab('dashboard');
+            }
             return null;
+        } catch (error) {
+            console.error("Lỗi đăng nhập:", error);
+            return 'Lỗi kết nối máy chủ!';
         }
-        const found = allEmployees.find(emp => emp.username && emp.username.toLowerCase() === inputUsername && emp.password === loginForm.password);
-        if (found) {
-            const status = found.status || 'active'; // Hỗ trợ tương thích ngược với tài khoản cũ
-            if (status === 'create') return 'Tài khoản mới tạo, vui lòng chờ Admin phê duyệt!';
-            if (status === 'disable') return 'Tài khoản đã bị vô hiệu hóa!';
-
-            const defaultStoreId = found.assignedStores?.[0] || null;
-            setUser({ username: found.username, role: 'staff', assignedStores: found.assignedStores || [], storeId: defaultStoreId, name: found.name, staffRole: found.role });
-            return null;
-        }
-        return 'Sai tài khoản hoặc mật khẩu!';
     };
 
     const handleLogout = () => {
@@ -106,6 +131,7 @@ export function useAppState() {
         setSelectedStore(null);
         setShowUserMenu(false);
         localStorage.removeItem('chain_user');
+        localStorage.removeItem('chain_token');
     };
 
     const handleSaveEmployee = (storeId, employeeData) => {
@@ -220,7 +246,7 @@ export function useAppState() {
         }
         const store = stores.find(s => s.id === storeId);
         setStockRequests(prev => [{
-            id: 'req' + Date.now(),
+            id: 'req_' + crypto.randomUUID().replace(/-/g, ''),
             storeId, storeName: store?.name,
             productId, productName: product?.name,
             quantity: reqQty,
@@ -244,7 +270,7 @@ export function useAppState() {
             }
             setGlobalProducts(globalProducts.map(p => p.id === req.productId ? { ...p, warehouseStock: Number(p.warehouseStock) - req.quantity } : p));
             setWarehouseTransactions(prev => [...prev, {
-                id: 'tx' + Date.now(), type: 'distribute', productId: req.productId,
+                id: 'tx_' + crypto.randomUUID().replace(/-/g, ''), type: 'distribute', productId: req.productId,
                 productName: product?.name || 'N/A', storeId: req.storeId,
                 storeName: req.storeName || 'N/A', quantity: req.quantity,
                 date: new Date().toISOString(),
@@ -299,7 +325,7 @@ export function useAppState() {
             setStores(stores.map(s => s.id === storeId ? { ...s, inventory: s.inventory.map(i => i.productId === productId ? { ...i, quantity: Number(i.quantity) - qty } : i) } : s));
 
             setWarehouseTransactions(prev => [...prev, {
-                id: 'tx' + Date.now(), type: 'return', productId,
+                id: 'tx_' + crypto.randomUUID().replace(/-/g, ''), type: 'return', productId,
                 productName: product?.name || 'N/A', storeId,
                 storeName: store?.name || 'N/A', quantity: qty,
                 date: new Date().toISOString(),
@@ -349,8 +375,8 @@ export function useAppState() {
             const now = new Date().toISOString();
             setWarehouseTransactions(prev => [
                 ...prev,
-                { id: 'tx_out_' + Date.now() + '1', type: 'transfer_out', productId, productName: product?.name || 'N/A', storeId: fromStoreId, storeName: fromStore?.name || 'N/A', quantity: qty, date: now, note: `Chuyển đến ${toStore?.name}: ${note || ''}` },
-                { id: 'tx_in_' + Date.now() + '2', type: 'transfer_in', productId, productName: product?.name || 'N/A', storeId: toStoreId, storeName: toStore?.name || 'N/A', quantity: qty, date: now, note: `Nhận từ ${fromStore?.name}: ${note || ''}` }
+                { id: 'tx_out_' + crypto.randomUUID().replace(/-/g, ''), type: 'transfer_out', productId, productName: product?.name || 'N/A', storeId: fromStoreId, storeName: fromStore?.name || 'N/A', quantity: qty, date: now, note: `Chuyển đến ${toStore?.name}: ${note || ''}` },
+                { id: 'tx_in_' + crypto.randomUUID().replace(/-/g, ''), type: 'transfer_in', productId, productName: product?.name || 'N/A', storeId: toStoreId, storeName: toStore?.name || 'N/A', quantity: qty, date: now, note: `Nhận từ ${fromStore?.name}: ${note || ''}` }
             ]);
 
             setShowModal(null);
@@ -366,7 +392,7 @@ export function useAppState() {
             message: `Thêm "${productData.name}" vào danh mục?`,
             onConfirm: () => {
                 setGlobalProducts([...globalProducts, {
-                    ...productData, id: 'p' + Date.now(),
+                    ...productData, id: 'p_' + crypto.randomUUID().replace(/-/g, ''),
                     warehouseStock: Number(productData.initialStock || 0),
                     basePrice: Number(productData.basePrice)
                 }]);
@@ -395,7 +421,7 @@ export function useAppState() {
         const product = globalProducts.find(p => p.id === productId);
         setGlobalProducts(globalProducts.map(p => p.id === productId ? { ...p, warehouseStock: Number(p.warehouseStock) + qty } : p));
         setWarehouseTransactions(prev => [...prev, {
-            id: 'tx' + Date.now(), type: 'import', productId,
+            id: 'tx_' + crypto.randomUUID().replace(/-/g, ''), type: 'import', productId,
             productName: product?.name || 'N/A', quantity: qty,
             date: new Date().toISOString(),
             note: `Nhập ${qty} ${product?.unit || 'cái'} vào kho tổng`
@@ -436,7 +462,7 @@ export function useAppState() {
             return s;
         }));
         setWarehouseTransactions(prev => [...prev, {
-            id: 'tx' + Date.now(), type: 'distribute', productId,
+            id: 'tx_' + crypto.randomUUID().replace(/-/g, ''), type: 'distribute', productId,
             productName: product?.name || 'N/A', storeId,
             storeName: store?.name || 'N/A', quantity: qty,
             date: new Date().toISOString(),
@@ -450,7 +476,7 @@ export function useAppState() {
     };
 
     const handleAddStore = (storeData) => {
-        setStores([...stores, { ...storeData, id: 's' + Date.now(), employees: [], inventory: [], transactions: [] }]);
+        setStores([...stores, { ...storeData, id: 's_' + crypto.randomUUID().replace(/-/g, ''), employees: [], inventory: [], transactions: [] }]);
         setShowModal(null);
         showToast("Đã mở chi nhánh.");
     };
@@ -502,7 +528,7 @@ export function useAppState() {
                 ? { ...i, quantity: Number(i.quantity) - qty, sold: Number(i.sold || 0) + qty } : i)
         } : s));
         setWarehouseTransactions(prev => [...prev, {
-            id: 'tx' + Date.now(), type: 'sell', productId,
+            id: 'tx_' + crypto.randomUUID().replace(/-/g, ''), type: 'sell', productId,
             productName: product?.name || 'N/A', storeId,
             storeName: store?.name || 'N/A', quantity: qty,
             unitPrice: product?.basePrice || 0,

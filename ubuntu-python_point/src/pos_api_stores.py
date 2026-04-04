@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 from flask import Blueprint, jsonify, request
-from utils import read_config, write_config, config_lock, read_transactions, write_transactions
+from pos_utils import read_config, write_config, config_lock, read_transactions, write_transactions
 
 pos_stores_bp = Blueprint('pos_stores_bp', __name__)
 

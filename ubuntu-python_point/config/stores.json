@@ -1,19 +1,20 @@
 [
   {
-    "id": "1",
-    "name": "Chi nhánh Quận 1",
-    "location": "123 Lê Lợi, Phường Bến Thành, Q.1",
+    "closeTime": "22:00",
+    "employees": [],
+    "id": "s1775300073390",
     "inventory": [
-      { "productId": "p1", "quantity": 50, "sold": 12 },
-      { "productId": "p3", "quantity": 3, "sold": 1 }
+      {
+        "productId": "p1775300196380",
+        "quantity": 0,
+        "sold": 10
+      }
     ],
-    "transactions": []
-  },
-  {
-    "id": "2",
-    "name": "Chi nhánh Quận 7",
-    "location": "456 Nguyễn Văn Linh, Q.7",
-    "inventory": [],
+    "lat": 0,
+    "lng": 0,
+    "location": "b64:eHh4eA==",
+    "name": "b64:eHh4eA==",
+    "openTime": "08:00",
     "transactions": []
   }
 ]

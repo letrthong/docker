@@ -1,0 +1,38 @@
+[
+  {
+    "id": "tx96bf1476",
+    "type": "sell",
+    "productId": "p1775300196380",
+    "productName": "b64:eA==",
+    "storeId": "s1775300073390",
+    "storeName": "b64:eHh4eA==",
+    "quantity": 1,
+    "unitPrice": 12,
+    "date": "2026-04-04T10:57:26.134521+00:00",
+    "note": "b64:QsOhbiAxIDEwMCB04bqhaSB4eHh4"
+  },
+  {
+    "id": "txa359df5d",
+    "type": "sell",
+    "productId": "p1775300196380",
+    "productName": "b64:eA==",
+    "storeId": "s1775300073390",
+    "storeName": "b64:eHh4eA==",
+    "quantity": 5,
+    "unitPrice": 12,
+    "date": "2026-04-04T10:57:51.424520+00:00",
+    "note": "b64:QsOhbiA1IDEwMCB04bqhaSB4eHh4"
+  },
+  {
+    "id": "tx3ef0c914",
+    "type": "sell",
+    "productId": "p1775300196380",
+    "productName": "b64:eA==",
+    "storeId": "s1775300073390",
+    "storeName": "b64:eHh4eA==",
+    "quantity": 4,
+    "unitPrice": 12,
+    "date": "2026-04-04T10:58:52.935338+00:00",
+    "note": "b64:QsOhbiA0IDEwMCB04bqhaSB4eHh4"
+  }
+]

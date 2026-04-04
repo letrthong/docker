@@ -33,24 +33,20 @@ export default function App() {
     const [isLoggingIn, setIsLoggingIn] = useState(false);
     const [isShaking, setIsShaking] = useState(false);
 
-    const onLogin = (e) => {
+    const onLogin = async (e) => {
         e.preventDefault();
         setIsLoggingIn(true);
         setLoginError('');
 
-        // Giả lập thời gian chờ backend xử lý từ 3 đến 5 giây
-        const delay = Math.floor(Math.random() * 2000) + 3000;
-        setTimeout(() => {
-            const err = handleLogin(loginForm);
-            setIsLoggingIn(false);
-            if (err) {
-                setLoginError(err);
-                setIsShaking(true);
-                setTimeout(() => setIsShaking(false), 400);
-            } else {
-                setLoginForm({ username: '', password: '' });
-            }
-        }, delay);
+        const err = await handleLogin(loginForm);
+        setIsLoggingIn(false);
+        if (err) {
+            setLoginError(err);
+            setIsShaking(true);
+            setTimeout(() => setIsShaking(false), 400);
+        } else {
+            setLoginForm({ username: '', password: '' });
+        }
     };
 
     const onLogout = () => {

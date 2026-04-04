@@ -6,6 +6,7 @@ from pos_api_config import pos_config_bp
 from pos_api_products import pos_products_bp
 from pos_api_stores import pos_stores_bp
 from pos_api_transactions import pos_transactions_bp
+from pos_api_auth import pos_auth_bp
 
 app = Flask(__name__, static_folder=DIST_DIR, static_url_path='')
 
@@ -14,6 +15,7 @@ app.register_blueprint(pos_config_bp)
 app.register_blueprint(pos_products_bp)
 app.register_blueprint(pos_stores_bp)
 app.register_blueprint(pos_transactions_bp)
+app.register_blueprint(pos_auth_bp)
 
 # --- SPA ---
 @app.route('/')
