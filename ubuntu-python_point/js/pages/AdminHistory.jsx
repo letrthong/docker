@@ -50,9 +50,9 @@ export default function AdminHistory({ warehouseTransactions, historyFilter, set
     if (!availableYears.includes(year)) availableYears.push(year);
     availableYears.sort();
 
-    const typeLabel = { import: 'Nhập kho', distribute: 'Phân phối', sell: 'Bán hàng' };
-    const typeColor = { import: 'bg-emerald-50 text-emerald-600 border-emerald-100', distribute: 'bg-orange-50 text-orange-600 border-orange-100', sell: 'bg-blue-50 text-blue-600 border-blue-100' };
-    const typeIcon = { import: 'arrow-down-left', distribute: 'arrow-up-right', sell: 'shopping-cart' };
+    const typeLabel = { import: 'Nhập kho', distribute: 'Phân phối', sell: 'Bán hàng', return: 'Hoàn kho', transfer_out: 'Xuất luân chuyển', transfer_in: 'Nhận luân chuyển' };
+    const typeColor = { import: 'bg-emerald-50 text-emerald-600 border-emerald-100', distribute: 'bg-orange-50 text-orange-600 border-orange-100', sell: 'bg-blue-50 text-blue-600 border-blue-100', return: 'bg-rose-50 text-rose-600 border-rose-100', transfer_out: 'bg-indigo-50 text-indigo-600 border-indigo-100', transfer_in: 'bg-teal-50 text-teal-600 border-teal-100' };
+    const typeIcon = { import: 'arrow-down-left', distribute: 'arrow-up-right', sell: 'shopping-cart', return: 'corner-up-left', transfer_out: 'truck', transfer_in: 'package-check' };
 
     const salesByStore = {};
     yearTxs.filter(tx => tx.type === 'sell').forEach(tx => {
@@ -60,6 +60,29 @@ export default function AdminHistory({ warehouseTransactions, historyFilter, set
         salesByStore[tx.storeName].qty += tx.quantity;
         salesByStore[tx.storeName].value += tx.quantity * (tx.unitPrice || 0);
     });
+
+    const exportToCSV = () => {
+        const headers = ['Thời gian', 'Loại', 'Sản phẩm', 'Số lượng', 'Đơn giá', 'Thành tiền', 'Chi nhánh', 'Ghi chú'];
+        const rows = filteredTxs.map(tx => [
+            new Date(tx.date).toLocaleString('vi-VN').replace(',', ''),
+            typeLabel[tx.type] || tx.type,
+            `"${tx.productName || ''}"`,
+            tx.quantity,
+            tx.unitPrice || 0,
+            tx.type === 'sell' ? tx.quantity * (tx.unitPrice || 0) : 0,
+            `"${tx.storeName || ''}"`,
+            `"${tx.note || ''}"`
+        ]);
+        const csvContent = [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `bao_cao_giao_dich_nam_${year}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
 
     return (
         <div className="space-y-8 animate-fade-in">
@@ -75,7 +98,13 @@ export default function AdminHistory({ warehouseTransactions, historyFilter, set
                         <option value="import">Nhập kho</option>
                         <option value="distribute">Phân phối</option>
                         <option value="sell">Bán hàng</option>
+                        <option value="return">Hoàn kho</option>
+                        <option value="transfer_out">Xuất luân chuyển</option>
+                        <option value="transfer_in">Nhận luân chuyển</option>
                     </select>
+                    <button onClick={exportToCSV} className="px-5 py-3 bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-lg hover:bg-emerald-700 transition-all flex items-center gap-2 active:scale-95">
+                        <Icon name="download" size={18}/> Xuất CSV
+                    </button>
                 </div>
             </div>
 

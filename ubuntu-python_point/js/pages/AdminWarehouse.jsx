@@ -1,15 +1,26 @@
 import React, { useState } from 'react';
 import { Icon, SummaryMiniCard } from '../components/UI';
 
-export default function AdminWarehouse({ globalProducts, totalValue, setShowModal, handleImportToWarehouse, categories = [] }) {
+export default function AdminWarehouse({ globalProducts, totalValue, setShowModal, handleImportToWarehouse, categories = [], stockRequests = [], handleProcessStockRequest }) {
     const [filterCategory, setFilterCategory] = useState('all');
+    const [viewTab, setViewTab] = useState('inventory'); // 'inventory', 'requests'
 
     const displayedProducts = filterCategory === 'all' 
         ? globalProducts 
         : globalProducts.filter(p => p.category === filterCategory);
+    const pendingRequests = stockRequests.filter(r => r.status === 'pending');
 
     return (
         <div className="space-y-8 animate-fade-in">
+            <div className="flex space-x-2 bg-slate-100 w-fit p-2 rounded-3xl shadow-inner mb-2">
+                <button onClick={() => setViewTab('inventory')} className={`px-6 py-3.5 rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all ${viewTab === 'inventory' ? 'bg-white text-teal-600 shadow-md scale-105' : 'text-slate-400 hover:text-teal-600'}`}>Tồn kho</button>
+                <button onClick={() => setViewTab('requests')} className={`px-6 py-3.5 rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all flex items-center gap-2 ${viewTab === 'requests' ? 'bg-white text-orange-600 shadow-md scale-105' : 'text-slate-400 hover:text-orange-600'}`}>
+                    Yêu cầu cấp hàng {pendingRequests.length > 0 && <span className="bg-rose-500 text-white px-2 py-0.5 rounded-full text-[10px] leading-none">{pendingRequests.length}</span>}
+                </button>
+            </div>
+
+            {viewTab === 'inventory' ? (
+            <>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-8 rounded-[32px] border shadow-sm text-left">
                 <div className="flex items-center gap-6"><div className="p-4 bg-teal-50 text-teal-600 rounded-2xl"><Icon name="warehouse" size={32}/></div><div><h2 className="text-3xl font-black text-slate-900 leading-none">Quản Lý Kho Hàng</h2><p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-2">Dữ liệu hàng hóa toàn hệ thống</p></div></div>
                 <div className="flex gap-3 flex-wrap">
@@ -54,6 +65,38 @@ export default function AdminWarehouse({ globalProducts, totalValue, setShowModa
                     </tbody>
                 </table>
             </div>
+            </>
+            ) : (
+            <div className="bg-white rounded-[40px] border shadow-sm overflow-hidden p-2 text-left">
+                <table className="w-full text-left text-sm border-separate border-spacing-y-1">
+                    <thead className="bg-slate-50/50 border-b"><tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest"><th className="px-10 py-6">Thời gian</th><th className="px-10 py-6">Chi nhánh</th><th className="px-10 py-6">Sản phẩm</th><th className="px-10 py-6 text-center">Số lượng</th><th className="px-10 py-6">Ghi chú</th><th className="px-10 py-6 text-right pr-14">Trạng thái / Duyệt</th></tr></thead>
+                    <tbody className="divide-y divide-slate-50">
+                        {stockRequests.length === 0 && <tr><td colSpan="6" className="px-10 py-16 text-center text-slate-300 font-bold">Chưa có yêu cầu cấp hàng nào</td></tr>}
+                        {stockRequests.map(req => (
+                            <tr key={req.id} className="hover:bg-slate-50/50 transition-colors">
+                                <td className="px-10 py-6"><p className="font-bold text-slate-800">{new Date(req.date).toLocaleDateString('vi-VN')}</p><p className="text-[10px] text-slate-400">{new Date(req.date).toLocaleTimeString('vi-VN')}</p></td>
+                                <td className="px-10 py-6 font-black text-blue-600">{req.storeName}</td>
+                                <td className="px-10 py-6 font-bold text-slate-700">{req.productName}</td>
+                                <td className="px-10 py-6 text-center font-black text-lg text-orange-500">{req.quantity}</td>
+                                <td className="px-10 py-6 text-xs text-slate-500">{req.note}</td>
+                                <td className="px-10 py-6 text-right pr-14">
+                                    {req.status === 'pending' ? (
+                                        <div className="flex justify-end gap-2">
+                                            <button onClick={() => handleProcessStockRequest(req.id, 'shipping')} className="p-3 text-emerald-500 hover:bg-emerald-50 rounded-xl transition-all" title="Xuất hàng"><Icon name="check" size={18}/></button>
+                                            <button onClick={() => handleProcessStockRequest(req.id, 'rejected')} className="p-3 text-rose-500 hover:bg-rose-50 rounded-xl transition-all" title="Từ chối"><Icon name="x" size={18}/></button>
+                                        </div>
+                                    ) : (
+                                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase border ${req.status === 'completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : req.status === 'shipping' ? 'bg-blue-50 text-blue-600 border-blue-200' : 'bg-rose-50 text-rose-500 border-rose-200'}`}>
+                                            {req.status === 'completed' ? 'Đã nhận' : req.status === 'shipping' ? 'Đang giao' : 'Từ chối'}
+                                        </span>
+                                    )}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+            )}
         </div>
     );
 }

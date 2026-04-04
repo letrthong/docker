@@ -1,6 +1,7 @@
 import React from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
+import { Icon, StoreStatusBadge } from './UI';
 
 // Fix default marker icon issue with bundlers
 delete L.Icon.Default.prototype._getIconUrl;
@@ -36,7 +37,8 @@ export default function StoreMap({ stores, onSelectStore }) {
                             <Popup>
                                 <div className="text-center min-w-[160px]">
                                     <p className="font-bold text-sm mb-1">{store.name}</p>
-                                    <p className="text-xs text-gray-500 mb-2">{store.location}</p>
+                                    <p className="text-xs text-gray-500 mb-1">{store.location}</p>
+                                    {(store.openTime || store.closeTime) && <p className="text-xs text-orange-600 font-bold mb-2 flex items-center justify-center gap-1"><Icon name="clock" size={12}/>{store.openTime || '08:00'} - {store.closeTime || '22:00'} <StoreStatusBadge openTime={store.openTime} closeTime={store.closeTime} /></p>}
                                     <p className="text-xs text-gray-400">{store.employees.length} nhân viên · {store.inventory.reduce((a, i) => a + i.quantity, 0)} SP</p>
                                     {onSelectStore && (
                                         <button

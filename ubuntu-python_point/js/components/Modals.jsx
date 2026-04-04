@@ -111,30 +111,60 @@ export function CategoryManagerModal({ setShowModal, categories = [], setCategor
     );
 }
 
-export function EmployeeModal({ showModal, setShowModal, editingEmployee, setEditingEmployee, handleSaveEmployee, currentStoreId }) {
+export function AddExistingEmployeeModal({ setShowModal, allEmployees, currentStoreId, handleAddExistingEmployee, user }) {
+    const availableEmployees = allEmployees.filter(e => !e.assignedStores?.includes(currentStoreId));
+    
     return (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-6">
-            <div className="bg-white rounded-[60px] w-full max-w-4xl shadow-2xl overflow-hidden border animate-in zoom-in-95">
-                <div className="p-10 border-b flex justify-between items-center bg-slate-50/50"><h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight text-left leading-none">{showModal === 'addEmployee' ? 'Đăng ký nhân sự' : 'Cập nhật nhân sự'}</h3><button onClick={()=>{setShowModal(null); setEditingEmployee(null);}} className="p-4 hover:bg-slate-200 rounded-3xl transition-all text-slate-400 flex items-center justify-center"><Icon name="x" size={28}/></button></div>
-                <EmployeeForm initialData={editingEmployee} onSave={(data) => handleSaveEmployee(currentStoreId, data)} onCancel={() => { setShowModal(null); setEditingEmployee(null); }} />
+            <div className="bg-white rounded-[50px] w-full max-w-md shadow-2xl overflow-hidden border animate-in zoom-in-95">
+                <div className="p-8 border-b flex justify-between items-center bg-slate-50/50"><h3 className="text-xl font-black text-slate-900 uppercase tracking-tight text-left leading-none">Thêm nhân sự có sẵn</h3><button onClick={()=>setShowModal(null)} className="p-4 hover:bg-slate-200 rounded-2xl transition-all text-slate-400 flex items-center justify-center"><Icon name="x" size={24}/></button></div>
+                <form className="p-8 space-y-6" onSubmit={(e)=>{ e.preventDefault(); const fd = new FormData(e.target); handleAddExistingEmployee(fd.get('empId')); }}>
+                    <Select label="Chọn nhân viên từ hệ thống" name="empId" required>
+                        <option value="">-- Chọn nhân viên --</option>
+                        {availableEmployees.map(e => {
+                            const canViewCccd = user?.role === 'admin' || user?.username === e.username;
+                            return <option key={e.id} value={e.id}>{e.name} {canViewCccd ? `(CCCD: ${e.cccd || e.id})` : ''}</option>;
+                        })}
+                    </Select>
+                    {availableEmployees.length === 0 && <p className="text-xs text-rose-500 font-bold">Không có nhân sự nào ngoài hệ thống chưa được gán vào chi nhánh này.</p>}
+                    <button type="submit" disabled={availableEmployees.length === 0} className="w-full py-5 bg-blue-600 text-white rounded-[30px] font-black shadow-lg hover:bg-blue-700 uppercase text-[11px] tracking-widest transition-all active:scale-95 leading-none disabled:opacity-50 disabled:cursor-not-allowed">Thêm vào chi nhánh</button>
+                </form>
             </div>
         </div>
     );
 }
 
-export function AddStoreModal({ setShowModal, handleAddStore }) {
+export function EmployeeModal({ showModal, setShowModal, editingEmployee, setEditingEmployee, handleSaveEmployee, currentStoreId, user, stores }) {
+    const currentUser = user || JSON.parse(localStorage.getItem('chain_user') || 'null');
+    const isAdmin = currentUser?.role === 'admin';
+    return (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-6">
+            <div className="bg-white rounded-[60px] w-full max-w-4xl shadow-2xl overflow-hidden border animate-in zoom-in-95">
+                <div className="p-10 border-b flex justify-between items-center bg-slate-50/50"><h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight text-left leading-none">{showModal === 'addEmployee' ? 'Đăng ký nhân sự' : 'Cập nhật nhân sự'}</h3><button onClick={()=>{setShowModal(null); setEditingEmployee(null);}} className="p-4 hover:bg-slate-200 rounded-3xl transition-all text-slate-400 flex items-center justify-center"><Icon name="x" size={28}/></button></div>
+                <EmployeeForm initialData={editingEmployee} onSave={(data) => handleSaveEmployee(currentStoreId, data)} onCancel={() => { setShowModal(null); setEditingEmployee(null); }} isAdmin={isAdmin} stores={stores} currentStoreId={currentStoreId} currentUser={currentUser} />
+            </div>
+        </div>
+    );
+}
+
+export function StoreModal({ setShowModal, handleSaveStore, initialData }) {
+    const isEdit = !!initialData;
     return (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-6">
             <div className="bg-white rounded-[50px] w-full max-w-md shadow-2xl overflow-hidden border animate-in zoom-in-95">
-                <div className="p-8 border-b flex justify-between items-center bg-slate-50/50"><h3 className="text-xl font-black text-slate-900 uppercase tracking-tight text-left leading-none">Mở chi nhánh mới</h3><button onClick={()=>setShowModal(null)} className="p-4 hover:bg-slate-200 rounded-2xl transition-all text-slate-400 flex items-center justify-center"><Icon name="x" size={24}/></button></div>
-                <form className="p-8 space-y-6" onSubmit={(e)=>{ e.preventDefault(); const fd = new FormData(e.target); handleAddStore({ name: fd.get('name'), location: fd.get('location'), lat: parseFloat(fd.get('lat')) || 0, lng: parseFloat(fd.get('lng')) || 0 }); }}>
-                    <Input label="Tên chi nhánh" name="name" required placeholder="Cửa hàng Quận..." />
-                    <Input label="Địa chỉ cụ thể" name="location" required placeholder="Số 123..." />
+                <div className="p-8 border-b flex justify-between items-center bg-slate-50/50"><h3 className="text-xl font-black text-slate-900 uppercase tracking-tight text-left leading-none">{isEdit ? 'Cập nhật chi nhánh' : 'Mở chi nhánh mới'}</h3><button onClick={()=>setShowModal(null)} className="p-4 hover:bg-slate-200 rounded-2xl transition-all text-slate-400 flex items-center justify-center"><Icon name="x" size={24}/></button></div>
+                <form className="p-8 space-y-6" onSubmit={(e)=>{ e.preventDefault(); const fd = new FormData(e.target); handleSaveStore({ name: fd.get('name'), location: fd.get('location'), lat: parseFloat(fd.get('lat')) || 0, lng: parseFloat(fd.get('lng')) || 0, openTime: fd.get('openTime'), closeTime: fd.get('closeTime') }); }}>
+                    <Input label="Tên chi nhánh" name="name" defaultValue={initialData?.name} required placeholder="Cửa hàng Quận..." />
+                    <Input label="Địa chỉ cụ thể" name="location" defaultValue={initialData?.location} required placeholder="Số 123..." />
                     <div className="grid grid-cols-2 gap-4">
-                        <Input label="Vĩ độ (Lat)" name="lat" type="number" step="any" placeholder="10.7769" />
-                        <Input label="Kinh độ (Lng)" name="lng" type="number" step="any" placeholder="106.7009" />
+                        <Input label="Vĩ độ (Lat)" name="lat" type="number" step="any" defaultValue={initialData?.lat} placeholder="10.7769" />
+                        <Input label="Kinh độ (Lng)" name="lng" type="number" step="any" defaultValue={initialData?.lng} placeholder="106.7009" />
                     </div>
-                    <button type="submit" className="w-full py-5 bg-blue-600 text-white rounded-[30px] font-black shadow-lg hover:bg-blue-700 uppercase text-[11px] tracking-widest transition-all active:scale-95 leading-none">Kích hoạt ngay</button>
+                    <div className="grid grid-cols-2 gap-4">
+                        <Input label="Giờ mở cửa" name="openTime" type="time" defaultValue={initialData?.openTime || "08:00"} required />
+                        <Input label="Giờ đóng cửa" name="closeTime" type="time" defaultValue={initialData?.closeTime || "22:00"} required />
+                    </div>
+                    <button type="submit" className="w-full py-5 bg-blue-600 text-white rounded-[30px] font-black shadow-lg hover:bg-blue-700 uppercase text-[11px] tracking-widest transition-all active:scale-95 leading-none">{isEdit ? 'Lưu thay đổi' : 'Kích hoạt ngay'}</button>
                 </form>
             </div>
         </div>
@@ -151,6 +181,111 @@ export function DistributeModal({ setShowModal, stores, globalProducts, currentS
                     <Select label="Mặt hàng luân chuyển" name="pid"><option value="">-- Chọn mặt hàng --</option>{globalProducts.map(p => <option key={p.id} value={p.id}>{p.name} (Tồn tổng: {p.warehouseStock})</option>)}</Select>
                     <Input label="Số lượng xuất kho" name="qty" type="number" required min="1" />
                     <button type="submit" className="w-full py-5 bg-blue-600 text-white rounded-[30px] font-black shadow-lg hover:bg-blue-700 uppercase text-[11px] tracking-widest leading-none">Chuyển kho tức thì</button>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+export function RequestStockModal({ setShowModal, globalProducts, currentStore, handleAddStockRequest }) {
+    return (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-6">
+            <div className="bg-white rounded-[50px] w-full max-w-md shadow-2xl overflow-hidden border animate-in zoom-in-95">
+                <div className="p-8 border-b flex justify-between items-center bg-slate-50/50"><h3 className="text-xl font-black text-slate-900 uppercase tracking-tight text-left leading-none">Yêu cầu cấp hàng</h3><button type="button" onClick={()=>setShowModal(null)} className="p-4 hover:bg-slate-200 rounded-2xl transition-all text-slate-400 flex items-center justify-center"><Icon name="x" size={24}/></button></div>
+                <form className="p-8 space-y-6" onSubmit={(e)=>{ e.preventDefault(); const fd = new FormData(e.target); handleAddStockRequest(currentStore.id, fd.get('pid'), fd.get('qty'), fd.get('note')); }}>
+                    <Select label="Sản phẩm cần nhập" name="pid" required>
+                        <option value="">-- Chọn mặt hàng --</option>
+                        {globalProducts.map(p => <option key={p.id} value={p.id}>{p.name} (Tồn tổng: {p.warehouseStock})</option>)}
+                    </Select>
+                    <Input label="Số lượng cần cấp" name="qty" type="number" required min="1" />
+                    <Input label="Ghi chú (Lý do)" name="note" placeholder="Ví dụ: Bổ sung cho sự kiện..." />
+                    <button type="submit" className="w-full py-5 bg-orange-500 text-white rounded-[30px] font-black shadow-lg hover:bg-orange-600 uppercase text-[11px] tracking-widest leading-none">Gửi yêu cầu lên Kho Tổng</button>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+export function ReturnStockModal({ setShowModal, currentStore, globalProducts, handleReturnStock }) {
+    const availableItems = currentStore?.inventory.filter(i => i.quantity > 0) || [];
+    
+    return (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-6">
+            <div className="bg-white rounded-[50px] w-full max-w-md shadow-2xl overflow-hidden border animate-in zoom-in-95">
+                <div className="p-8 border-b flex justify-between items-center bg-slate-50/50"><h3 className="text-xl font-black text-slate-900 uppercase tracking-tight text-left leading-none">Hoàn trả hàng về kho</h3><button type="button" onClick={()=>setShowModal(null)} className="p-4 hover:bg-slate-200 rounded-2xl transition-all text-slate-400 flex items-center justify-center"><Icon name="x" size={24}/></button></div>
+                <form className="p-8 space-y-6" onSubmit={(e)=>{ e.preventDefault(); const fd = new FormData(e.target); handleReturnStock(currentStore.id, fd.get('pid'), fd.get('qty'), fd.get('note')); }}>
+                    <Select label="Sản phẩm hoàn trả" name="pid" required>
+                        <option value="">-- Chọn mặt hàng --</option>
+                        {availableItems.map(item => {
+                            const p = globalProducts.find(gp => gp.id === item.productId);
+                            return <option key={item.productId} value={item.productId}>{p?.name || item.productId} (Tồn: {item.quantity})</option>
+                        })}
+                    </Select>
+                    <Input label="Số lượng hoàn trả" name="qty" type="number" required min="1" />
+                    <Input label="Lý do trả hàng" name="note" placeholder="Hàng lỗi, cận date, dư thừa..." required />
+                    <button type="submit" className="w-full py-5 bg-rose-500 text-white rounded-[30px] font-black shadow-lg hover:bg-rose-600 uppercase text-[11px] tracking-widest leading-none flex justify-center items-center gap-2"><Icon name="arrow-up-right" size={18}/> Xác nhận xuất trả</button>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+export function TransferStockModal({ setShowModal, currentStore, stores, globalProducts, handleTransferStock }) {
+    const availableItems = currentStore?.inventory.filter(i => i.quantity > 0) || [];
+    const otherStores = stores.filter(s => s.id !== currentStore?.id);
+    
+    return (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-6">
+            <div className="bg-white rounded-[50px] w-full max-w-md shadow-2xl overflow-hidden border animate-in zoom-in-95">
+                <div className="p-8 border-b flex justify-between items-center bg-slate-50/50"><h3 className="text-xl font-black text-slate-900 uppercase tracking-tight text-left leading-none">Luân chuyển nội bộ</h3><button type="button" onClick={()=>setShowModal(null)} className="p-4 hover:bg-slate-200 rounded-2xl transition-all text-slate-400 flex items-center justify-center"><Icon name="x" size={24}/></button></div>
+                <form className="p-8 space-y-6" onSubmit={(e)=>{ e.preventDefault(); const fd = new FormData(e.target); handleTransferStock(currentStore.id, fd.get('toStoreId'), fd.get('pid'), fd.get('qty'), fd.get('note')); }}>
+                    <Select label="Chi nhánh nhận" name="toStoreId" required>
+                        <option value="">-- Chọn chi nhánh đích --</option>
+                        {otherStores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </Select>
+                    <Select label="Sản phẩm luân chuyển" name="pid" required>
+                        <option value="">-- Chọn mặt hàng --</option>
+                        {availableItems.map(item => {
+                            const p = globalProducts.find(gp => gp.id === item.productId);
+                            return <option key={item.productId} value={item.productId}>{p?.name || item.productId} (Tồn: {item.quantity})</option>
+                        })}
+                    </Select>
+                    <Input label="Số lượng chuyển" name="qty" type="number" required min="1" />
+                    <Input label="Ghi chú" name="note" placeholder="Lý do chuyển..." />
+                    <button type="submit" className="w-full py-5 bg-indigo-500 text-white rounded-[30px] font-black shadow-lg hover:bg-indigo-600 uppercase text-[11px] tracking-widest leading-none flex justify-center items-center gap-2"><Icon name="truck" size={18}/> Xác nhận chuyển hàng</button>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+export function ChangePasswordModal({ setShowModal, handleChangePassword }) {
+    const [error, setError] = React.useState('');
+    
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        const oldPw = fd.get('oldPassword');
+        const newPw = fd.get('newPassword');
+        const confirmPw = fd.get('confirmPassword');
+        if (newPw !== confirmPw) {
+            setError("Mật khẩu mới không khớp!");
+            return;
+        }
+        const err = handleChangePassword(oldPw, newPw);
+        if (err) setError(err);
+    };
+
+    return (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-6">
+            <div className="bg-white rounded-[50px] w-full max-w-md shadow-2xl overflow-hidden border animate-in zoom-in-95">
+                <div className="p-8 border-b flex justify-between items-center bg-slate-50/50"><h3 className="text-xl font-black text-slate-900 uppercase tracking-tight text-left leading-none">Đổi mật khẩu</h3><button type="button" onClick={()=>setShowModal(null)} className="p-4 hover:bg-slate-200 rounded-2xl transition-all text-slate-400 flex items-center justify-center"><Icon name="x" size={24}/></button></div>
+                <form className="p-8 space-y-6" onSubmit={handleSubmit}>
+                    {error && <div className="bg-rose-50 text-rose-600 p-4 rounded-xl text-xs font-bold border border-rose-100">{error}</div>}
+                    <Input label="Mật khẩu hiện tại" name="oldPassword" type="password" required placeholder="Nhập mật khẩu cũ..." />
+                    <Input label="Mật khẩu mới" name="newPassword" type="password" required placeholder="Nhập mật khẩu mới..." />
+                    <Input label="Xác nhận mật khẩu mới" name="confirmPassword" type="password" required placeholder="Nhập lại mật khẩu mới..." />
+                    <button type="submit" className="w-full py-5 bg-blue-600 text-white rounded-[30px] font-black shadow-lg hover:bg-blue-700 uppercase text-[11px] tracking-widest transition-all active:scale-95 leading-none">Xác nhận đổi</button>
                 </form>
             </div>
         </div>

@@ -9,7 +9,7 @@ export const Icon = ({ name, size = 18, className = "", ...props }) => {
 };
 
 export const TabButton = ({ active, onClick, icon, label }) => (
-    <button onClick={onClick} className={`group flex items-center space-x-3 px-6 h-12 rounded-2xl font-black text-xs uppercase tracking-widest transition-all duration-300 ${active ? 'bg-teal-600 text-white shadow-[0_8px_16px_-6px_rgba(13,148,136,0.4)]' : 'text-slate-400 hover:text-teal-600 hover:bg-teal-50 hover:-translate-y-0.5'}`}>
+    <button onClick={onClick} className={`group flex items-center space-x-3 px-6 h-12 rounded-2xl font-black text-xs uppercase tracking-widest transition-all duration-300 ${active ? 'bg-white text-teal-700 shadow-[0_8px_16px_-6px_rgba(0,0,0,0.2)]' : 'text-teal-100 hover:text-white hover:bg-white/10 hover:-translate-y-0.5'}`}>
         <Icon name={icon} size={18} className={`${active ? 'scale-110' : 'group-hover:scale-110 group-hover:rotate-3'} transition-transform duration-300`} /> <span>{label}</span>
     </button>
 );
@@ -54,3 +54,17 @@ export const Select = ({ label, children, value, onChange, ...props }) => (
         <div className="relative"><select value={value} {...props} className="w-full px-6 py-5 bg-slate-50 border border-slate-100 rounded-3xl outline-none focus:ring-4 focus:ring-teal-500/10 focus:bg-white font-bold text-slate-700 appearance-none shadow-inner cursor-pointer transition-all" onChange={e => onChange ? onChange(e.target.value) : null}>{children}</select><div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400"><Icon name="chevron-down" size={22} /></div></div>
     </div>
 );
+
+export const StoreStatusBadge = ({ openTime = '08:00', closeTime = '22:00' }) => {
+    const now = new Date();
+    const currentStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const isOpen = openTime <= closeTime 
+        ? currentStr >= openTime && currentStr <= closeTime 
+        : currentStr >= openTime || currentStr <= closeTime; // Xử lý ca qua ngày (VD: 08:00 - 02:00)
+    
+    return (
+        <span className={`ml-2 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border ${isOpen ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-rose-50 text-rose-500 border-rose-200'}`}>
+            {isOpen ? 'Đang mở cửa' : 'Đã đóng cửa'}
+        </span>
+    );
+};

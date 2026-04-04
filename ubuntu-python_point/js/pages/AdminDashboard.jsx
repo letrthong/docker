@@ -22,15 +22,16 @@ export default function AdminDashboard({ stores, globalProducts, allEmployees, s
                     <button onClick={() => setActiveTab('stores')} className="text-xs font-black text-teal-600 hover:underline uppercase">Tất cả chi nhánh</button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {stores.map(s => (
+                    {stores.map(s => {
+                        const storeEmpCount = allEmployees.filter(e => e.assignedStores?.includes(s.id)).length; return (
                         <div key={s.id} onClick={()=>{setSelectedStore(s); setActiveTab('stores')}} className="p-8 bg-slate-50 hover:bg-teal-50 rounded-[40px] border border-transparent hover:border-teal-200 transition-all cursor-pointer flex justify-between items-center group shadow-sm">
                             <div className="flex items-center gap-6">
                                 <div className="w-16 h-16 rounded-[25px] bg-white flex items-center justify-center text-teal-600 shadow-sm border group-hover:scale-105 transition-all"><Icon name="store" size={24}/></div>
-                                <div><p className="font-black text-xl text-slate-900 leading-none mb-1">{s.name}</p><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{s.employees.length} thành viên trực ca</p></div>
+                                <div><p className="font-black text-xl text-slate-900 leading-none mb-1">{s.name}</p><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{storeEmpCount} thành viên trực ca</p></div>
                             </div>
                             <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center text-slate-300 group-hover:text-teal-600 shadow-sm transition-all"><Icon name="chevron-right" size={20}/></div>
                         </div>
-                    ))}
+                    )})}
                 </div>
             </div>
         </div>
