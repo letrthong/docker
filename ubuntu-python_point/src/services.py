@@ -1,11 +1,11 @@
 from flask import Flask, jsonify, request, send_from_directory
-from utils import DIST_DIR
+from pos_utils import DIST_DIR
 
 # Import Blueprints từ các API phân hệ
-from api_config import pos_config_bp
-from api_products import pos_products_bp
-from api_stores import pos_stores_bp
-from api_transactions import pos_transactions_bp
+from pos_api_config import pos_config_bp
+from pos_api_products import pos_products_bp
+from pos_api_stores import pos_stores_bp
+from pos_api_transactions import pos_transactions_bp
 
 app = Flask(__name__, static_folder=DIST_DIR, static_url_path='')
 
