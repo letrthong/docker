@@ -14,3 +14,8 @@ echo "[3/3] Generating production build..."
 npm run build
 
 echo "  Deployment preparation finished!"
+
+
+docker exec -it telua_python_point bash
+
+docker cp telua_python_point:/app/dist/index.html ./index.html
