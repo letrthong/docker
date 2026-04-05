@@ -115,48 +115,7 @@ def delete_inventory(store_id, product_id):
 @pos_stores_bp.route('/pos/api/v1/employees', methods=['GET'])
 def get_all_employees():
     config = read_config()
-    employees = []
-    for store in config.get('stores', []):
-        for emp in store.get('employees', []):
-            employees.append({**emp, 'storeId': store['id'], 'storeName': store['name']})
-    return jsonify(employees)
-
-@pos_stores_bp.route('/pos/api/v1/stores/<store_id>/employees', methods=['PUT', 'POST'])
-def handle_employees(store_id):
-    config = read_config()
-    for store in config.get('stores', []):
-        if store['id'] == store_id:
-            if request.method == 'PUT':
-                store['employees'] = request.get_json()
-                write_config(config)
-                return jsonify({"message": "Employees updated"})
-            if request.method == 'POST':
-                emp = request.get_json()
-                emp['id'] = emp.get('id', f"e{uuid.uuid4().hex[:8]}")
-                store.setdefault('employees', []).append(emp)
-                write_config(config)
-                return jsonify({"message": "Employee added", "employee": emp}), 201
-    return jsonify({"error": "Store not found"}), 404
-
-@pos_stores_bp.route('/pos/api/v1/stores/<store_id>/employees/<emp_id>', methods=['PUT', 'DELETE'])
-def modify_employee(store_id, emp_id):
-    config = read_config()
-    for store in config.get('stores', []):
-        if store['id'] == store_id:
-            if request.method == 'DELETE':
-                for emp in store.get('employees', []):
-                    if emp['id'] == emp_id:
-                        emp['status'] = 'disable'
-                        write_config(config)
-                        return jsonify({"message": "Employee disabled"})
-                return jsonify({"error": "Employee not found"}), 404
-            for emp in store.get('employees', []):
-                if emp['id'] == emp_id:
-                    emp.update(request.get_json())
-                    emp['id'] = emp_id
-                    write_config(config)
-                    return jsonify({"message": "Employee updated"})
-    return jsonify({"error": "Store not found"}), 404
+    return jsonify(config.get('allEmployees', []))
 
 # --- SECURE INVENTORY ACTIONS ---
 @pos_stores_bp.route('/pos/api/v1/stores/<store_id>/action/sell', methods=['POST'])
@@ -181,7 +140,7 @@ def secure_sell(store_id):
         inventory_item['sold'] = int(inventory_item.get('sold', 0)) + qty
         
         # 3. Ghi đè lại cấu hình
-        write_config(config)
+        write_config({'stores': config['stores']}) # Chỉ ghi lại file stores.json
         
     # 4. Ghi lại luôn Lịch sử giao dịch (Log) vào Database
     product = next((p for p in config.get('products', []) if p['id'] == product_id), {})
@@ -230,7 +189,7 @@ def secure_distribute(store_id):
         }
         config.setdefault('stockRequests', []).append(new_req)
             
-        write_config(config)
+        write_config({'products': config['products'], 'stockRequests': config['stockRequests']})
         
     txs = read_transactions(store_id)
     txs.append({
@@ -281,7 +240,7 @@ def secure_return(store_id):
         inventory_item['quantity'] = int(inventory_item['quantity']) - qty
         product['warehouseStock'] = int(product.get('warehouseStock', 0)) + qty
             
-        write_config(config)
+        write_config({'stores': config['stores'], 'products': config['products']})
         
     txs = read_transactions(store_id)
     txs.append({
@@ -339,7 +298,7 @@ def secure_transfer(store_id):
         else:
             to_store.setdefault('inventory', []).append({'productId': product_id, 'quantity': qty, 'sold': 0})
             
-        write_config(config)
+        write_config({'stores': config['stores']})
         
     now = datetime.now(timezone.utc).isoformat()
     
@@ -429,6 +388,6 @@ def secure_request_action():
             })
             write_transactions(req['storeId'], txs)
             
-        write_config(config)
+        write_config({'stores': config.get('stores'), 'products': config.get('products'), 'stockRequests': config.get('stockRequests')})
         
     return jsonify({"message": "Xử lý yêu cầu thành công!", "request": req})

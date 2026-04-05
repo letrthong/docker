@@ -79,16 +79,25 @@ export function useAppState() {
             .catch(err => { console.error("Lỗi kết nối Backend:", err); setIsLoaded(true); });
     }, []);
 
-    // Đồng bộ: Đẩy dữ liệu lên Backend mỗi khi có thay đổi (Auto-Save)
+    // Đồng bộ độc lập: Cập nhật lại danh sách Nhân sự
     useEffect(() => {
-        if (!isLoaded) return;
-        if (stores.length === 0 && globalProducts.length === 0 && allEmployees.length === 0) return;
-        fetch('/pos/api/v1/config', {
+        if (!isLoaded || allEmployees.length === 0) return;
+        fetch('/pos/api/v1/employees/bulk', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ stores, products: globalProducts, allEmployees, stockRequests, categories, shiftSlots })
-        }).catch(err => console.error("Lỗi đồng bộ Backend:", err));
-    }, [isLoaded, stores, globalProducts, allEmployees, stockRequests, categories, shiftSlots]);
+            body: JSON.stringify(allEmployees)
+        }).catch(err => console.error("Lỗi đồng bộ NV:", err));
+    }, [allEmployees, isLoaded]);
+
+    // Đồng bộ độc lập: Cập nhật lại Yêu cầu kho
+    useEffect(() => {
+        if (!isLoaded || stockRequests.length === 0) return;
+        fetch('/pos/api/v1/requests/bulk', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(stockRequests)
+        }).catch(err => console.error("Lỗi đồng bộ Yêu cầu:", err));
+    }, [stockRequests, isLoaded]);
 
     useEffect(() => {
         setCache('chain_user', user);
@@ -526,16 +535,25 @@ export function useAppState() {
         requestConfirm({
             type: 'add', title: 'Tạo sản phẩm',
             message: `Thêm "${productData.name}" vào danh mục?`,
-            onConfirm: () => {
-                setGlobalProducts([...globalProducts, {
-                    ...productData, id: 'p_' + generateId(),
-                    costPrice: Number(productData.costPrice || 0),
-                    warehouseStock: Number(productData.initialStock || 0),
-                    basePrice: Number(productData.basePrice),
-                    status: 'created'
-                }]);
-                setShowModal(null);
-                showToast("Đã tạo sản phẩm.");
+                onConfirm: async () => {
+                    try {
+                        const res = await fetch('/pos/api/v1/products', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                ...productData,
+                                costPrice: Number(productData.costPrice || 0),
+                                warehouseStock: Number(productData.initialStock || 0),
+                                basePrice: Number(productData.basePrice)
+                            })
+                        });
+                        if (res.ok) {
+                            const result = await res.json();
+                            setGlobalProducts([...globalProducts, result.product]);
+                            setShowModal(null);
+                            showToast("Đã tạo sản phẩm thành công.");
+                        }
+                    } catch (error) { showToast("Lỗi kết nối máy chủ", "error"); }
             }
         });
     };
@@ -544,10 +562,15 @@ export function useAppState() {
         requestConfirm({
             type: 'delete', title: 'Xóa sản phẩm',
             message: `Xác nhận đánh dấu xóa sản phẩm "${productName}" khỏi hệ thống?`,
-            onConfirm: () => {
-                setGlobalProducts(globalProducts.map(p => p.id === productId ? { ...p, status: 'deleted' } : p));
-                setShowModal(null);
-                showToast("Đã chuyển trạng thái sản phẩm sang đã xóa.");
+                onConfirm: async () => {
+                    try {
+                        const res = await fetch(`/pos/api/v1/products/${productId}`, { method: 'DELETE' });
+                        if (res.ok) {
+                            setGlobalProducts(globalProducts.map(p => p.id === productId ? { ...p, status: 'deleted' } : p));
+                            setShowModal(null);
+                            showToast("Đã xóa sản phẩm thành công.");
+                        }
+                    } catch (error) { showToast("Lỗi kết nối", "error"); }
             }
         });
     };
@@ -680,11 +703,14 @@ export function useAppState() {
         requestConfirm({
             type: 'delete', title: 'Xóa chi nhánh',
             message: `Xác nhận xóa hoàn toàn chi nhánh "${storeName}"?`,
-            onConfirm: () => {
-                setStores(stores.map(s => s.id === storeId ? { ...s, status: 'deleted' } : s));
-                setSelectedStore(null);
-                setShowModal(null);
-                showToast("Đã xóa chi nhánh.");
+                onConfirm: async () => {
+                    try {
+                        await fetch(`/pos/api/v1/stores/${storeId}`, { method: 'DELETE' });
+                        setStores(stores.map(s => s.id === storeId ? { ...s, status: 'deleted' } : s));
+                        setSelectedStore(null);
+                        setShowModal(null);
+                        showToast("Đã xóa chi nhánh.");
+                    } catch (e) { showToast("Lỗi kết nối!", "error"); }
             }
         });
     };
@@ -734,6 +760,46 @@ export function useAppState() {
         }
     };
 
+    const handleUpdateCategories = async (newCategories) => {
+        try {
+            const res = await fetch('/pos/api/v1/categories', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newCategories)
+            });
+            if (res.ok) {
+                setCategories(newCategories);
+                showToast("Đã cập nhật danh mục thành công.");
+            } else {
+                const result = await res.json();
+                showToast(result.error || "Lỗi hệ thống khi cập nhật danh mục!", 'error');
+            }
+        } catch (error) {
+            console.error("Lỗi cập nhật danh mục:", error);
+            showToast("Lỗi kết nối máy chủ!", 'error');
+        }
+    };
+
+    const handleUpdateShiftSlots = async (newShiftSlots) => {
+        try {
+            const res = await fetch('/pos/api/v1/shift-slots', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newShiftSlots)
+            });
+            if (res.ok) {
+                setShiftSlots(newShiftSlots);
+                showToast("Đã cập nhật ca làm việc thành công.");
+            } else {
+                const result = await res.json();
+                showToast(result.error || "Lỗi hệ thống khi cập nhật ca làm việc!", 'error');
+            }
+        } catch (error) {
+            console.error("Lỗi cập nhật ca làm việc:", error);
+            showToast("Lỗi kết nối máy chủ!", 'error');
+        }
+    };
+
     const getProductInfo = (pid) => globalProducts.find(p => p.id === pid) || { name: 'N/A', sku: 'N/A', category: 'N/A', unit: 'cái' };
 
     return {
@@ -750,6 +816,6 @@ export function useAppState() {
         handleLogin, handleLogout, handleSaveEmployee, handleDeleteEmployee, handleAddExistingEmployee, handleUpdateEmployeeStatus, handleResetPassword, handleChangePassword, 
         handleSaveGlobalProduct, handleDeleteGlobalProduct, handleImportToWarehouse, handleDistribute, handleAddStockRequest, handleProcessStockRequest, handleReceiveStockRequest, handleReturnStock, handleTransferStock,
         handleAddStore, handleEditStore, handleDeleteStore, handleSellProduct,
-        getProductInfo, showToast,
+        handleUpdateCategories, handleUpdateShiftSlots, getProductInfo, showToast,
     };
 }

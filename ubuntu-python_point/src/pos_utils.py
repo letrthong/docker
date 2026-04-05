@@ -81,42 +81,45 @@ def read_config():
     Đọc cấu hình từ nhiều file JSON khác nhau và tổng hợp lại thành một object config.
     Hàm này cũng đảm nhiệm việc giải mã các trường dữ liệu nhạy cảm.
     """
-    # Đọc dữ liệu từ các file riêng lẻ
-    stores = _read_json_file(STORES_FILE, [])
-    all_employees = _read_json_file(EMPLOYEES_FILE, [])
-    stock_requests = _read_json_file(STOCK_REQUESTS_FILE, [])
-    
-    # Giải mã các trường nhạy cảm
-    for store in stores:
-        if 'name' in store: store['name'] = decode_b64_field(store['name'])
-        if 'location' in store: store['location'] = decode_b64_field(store['location'])
-            
-    for emp in all_employees:
-        if 'name' in emp: emp['name'] = decode_b64_field(emp['name'])
-        if 'cccd' in emp: emp['cccd'] = decode_b64_field(emp['cccd'])
-        if 'phone' in emp: emp['phone'] = decode_b64_field(emp['phone'])
+    with config_lock:
+        # Đọc dữ liệu từ các file riêng lẻ
+        stores = _read_json_file(STORES_FILE, [])
+        all_employees = _read_json_file(EMPLOYEES_FILE, [])
+        stock_requests = _read_json_file(STOCK_REQUESTS_FILE, [])
         
-        # Phục hồi URL ảnh cho frontend để tránh gửi nguyên chuỗi base64 nặng nề
-        if emp.get('hasImage'):
-            img_path = os.path.join(IMAGES_DIR, f"{emp.get('id')}.jpg")
-            if os.path.exists(img_path):
-                mtime = int(os.path.getmtime(img_path))
-                emp['cccdImage'] = f"/pos/api/v1/employees/{emp.get('id')}/image?t={mtime}"
-        
-    for req in stock_requests:
-        if 'storeName' in req: req['storeName'] = decode_b64_field(req['storeName'])
-        if 'productName' in req: req['productName'] = decode_b64_field(req['productName'])
-        if 'note' in req: req['note'] = decode_b64_field(req['note'])
+        # Giải mã các trường nhạy cảm
+        STORE_FIELDS_TO_DECODE = ['name', 'location']
+        EMP_FIELDS_TO_DECODE = ['name', 'cccd', 'phone']
+        REQ_FIELDS_TO_DECODE = ['storeName', 'productName', 'note']
 
-    # Tổng hợp lại thành object config cuối cùng
-    return {
-        "stores": stores,
-        "products": _read_json_file(PRODUCTS_FILE, []),
-        "allEmployees": all_employees,
-        "stockRequests": stock_requests,
-        "categories": _read_json_file(CATEGORIES_FILE, []),
-        "shiftSlots": _read_json_file(SHIFT_SLOTS_FILE, [])
-    }
+        for store in stores:
+            for field in STORE_FIELDS_TO_DECODE:
+                if field in store: store[field] = decode_b64_field(store[field])
+                
+        for emp in all_employees:
+            for field in EMP_FIELDS_TO_DECODE:
+                if field in emp: emp[field] = decode_b64_field(emp[field])
+            
+            # Phục hồi URL ảnh cho frontend để tránh gửi nguyên chuỗi base64 nặng nề
+            if emp.get('hasImage'):
+                img_path = os.path.join(IMAGES_DIR, f"{emp.get('id')}.jpg")
+                if os.path.exists(img_path):
+                    mtime = int(os.path.getmtime(img_path))
+                    emp['cccdImage'] = f"/pos/api/v1/employees/{emp.get('id')}/image?t={mtime}"
+            
+        for req in stock_requests:
+            for field in REQ_FIELDS_TO_DECODE:
+                if field in req: req[field] = decode_b64_field(req[field])
+
+        # Tổng hợp lại thành object config cuối cùng
+        return {
+            "stores": stores,
+            "products": _read_json_file(PRODUCTS_FILE, []),
+            "allEmployees": all_employees,
+            "stockRequests": stock_requests,
+            "categories": _read_json_file(CATEGORIES_FILE, []),
+            "shiftSlots": _read_json_file(SHIFT_SLOTS_FILE, [])
+        }
 
 def write_config(data):
     """
