@@ -69,8 +69,11 @@ def login():
     # Hạn sử dụng token (1 ngày), đổi thành dạng số nguyên (timestamp) để dễ chuyển thành JSON
     exp_timestamp = int((datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=1)).timestamp())
 
+    admin_username = os.environ.get('ADMIN_USERNAME', 'admin').lower()
+    admin_password = os.environ.get('ADMIN_PASSWORD', 'admin')
+
     # 1. Kiểm tra tài khoản Admin hệ thống
-    if username == 'admin' and password == 'admin':
+    if username == admin_username and password == admin_password:
         user_data = {
             'username': 'Admin Manager',
             'role': 'admin',
