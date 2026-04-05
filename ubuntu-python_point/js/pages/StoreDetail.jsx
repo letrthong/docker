@@ -90,10 +90,16 @@ export default function StoreDetail({ currentStore, storeTransactions = [], allE
                     <Icon name="chevron-left" size={14} className="mr-2"/> Quay lại danh mục chi nhánh
                 </button>
             )}
-            <div className="bg-white p-6 sm:p-8 rounded-[32px] border shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                <div className="flex items-center space-x-6">
-                    <div className="bg-blue-50 text-blue-600 w-16 h-16 rounded-2xl flex items-center justify-center shrink-0"><Icon name="store" size={32}/></div>
-                    <div>
+            <div className="bg-white rounded-[32px] border shadow-sm overflow-hidden flex flex-col">
+                {currentStore.image && (
+                    <div className="h-40 sm:h-56 w-full relative shrink-0">
+                        <img src={currentStore.image} alt={currentStore.name} className="w-full h-full object-cover" />
+                    </div>
+                )}
+                <div className="p-6 sm:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                    <div className="flex items-center space-x-6">
+                        {!currentStore.image && <div className="bg-blue-50 text-blue-600 w-16 h-16 rounded-2xl flex items-center justify-center shrink-0"><Icon name="store" size={32}/></div>}
+                        <div>
                     <div className="flex items-center gap-3 mb-1">
                         <h2 className="text-2xl font-black tracking-tight text-slate-900 leading-none">{currentStore.name}</h2>
                         {user.role === 'admin' && (
@@ -122,6 +128,7 @@ export default function StoreDetail({ currentStore, storeTransactions = [], allE
                     <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Mã sản phẩm</p><p className="text-2xl font-black text-slate-700 leading-none">{currentStore.inventory.length} <span className="text-sm opacity-50">SKU</span></p></div>
                 </div>
             </div>
+        </div>
             <div className="flex space-x-1 sm:space-x-2 bg-slate-100 w-full md:w-fit p-1.5 sm:p-2 rounded-2xl sm:rounded-3xl shadow-inner mb-6 overflow-x-auto no-scrollbar">
                 <SubTabButton active={storeSubTab === 'inventory'} onClick={() => setStoreSubTab('inventory')} label="Mặt hàng" icon="package"/>
                 <SubTabButton active={storeSubTab === 'employees'} onClick={() => setStoreSubTab('employees')} label="Nhân sự & Lịch trực" icon="users"/>

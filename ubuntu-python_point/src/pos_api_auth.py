@@ -46,6 +46,17 @@ def get_product_image(prod_id):
         return send_file(file_path, mimetype='image/webp')
     return jsonify({"error": "Không tìm thấy ảnh"}), 404
 
+@pos_auth_bp.route('/pos/api/v1/stores/<store_id>/image', methods=['GET'])
+def get_store_image(store_id):
+    safe_store_id = secure_filename(store_id)
+    if not safe_store_id:
+        return jsonify({"error": "ID không hợp lệ"}), 400
+        
+    file_path = os.path.join(CONFIG_DIR, 'images', f"store_{safe_store_id}.webp")
+    if os.path.exists(file_path):
+        return send_file(file_path, mimetype='image/webp')
+    return jsonify({"error": "Không tìm thấy ảnh"}), 404
+
 @pos_auth_bp.route('/pos/api/v1/login', methods=['POST'])
 def login():
     data = request.get_json()

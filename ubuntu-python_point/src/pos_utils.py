@@ -96,6 +96,12 @@ def read_config():
             for field in STORE_FIELDS_TO_DECODE:
                 if field in store: store[field] = decode_b64_field(store[field])
                 
+            if store.get('hasImage'):
+                img_path = os.path.join(IMAGES_DIR, f"store_{store.get('id')}.webp")
+                if os.path.exists(img_path):
+                    mtime = int(os.path.getmtime(img_path))
+                    store['image'] = f"/pos/api/v1/stores/{store.get('id')}/image?t={mtime}"
+
         for emp in all_employees:
             for field in EMP_FIELDS_TO_DECODE:
                 if field in emp: emp[field] = decode_b64_field(emp[field])
@@ -147,6 +153,22 @@ def write_config(data):
                 if 'location' in store: store['location'] = encode_b64_field(store['location'])
                 if 'website' in store: store['website'] = encode_b64_field(store['website'])
                 if 'hotline' in store: store['hotline'] = encode_b64_field(store['hotline'])
+                
+                img_data = store.get('image')
+                if img_data and isinstance(img_data, str) and img_data.startswith('data:image/'):
+                    try:
+                        header, encoded = img_data.split(",", 1)
+                        file_path = os.path.join(IMAGES_DIR, f"store_{store['id']}.webp")
+                        with open(file_path, "wb") as fh:
+                            fh.write(base64.b64decode(encoded))
+                        store['hasImage'] = True
+                    except Exception:
+                        pass
+                elif img_data and isinstance(img_data, str) and img_data.startswith('/pos/api/v1/stores/'):
+                    store['hasImage'] = True
+                
+                if 'image' in store:
+                    del store['image']
             _write_json_file(STORES_FILE, data_to_write['stores'])
 
         if 'allEmployees' in data_to_write:

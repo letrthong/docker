@@ -331,11 +331,40 @@ export function EmployeeModal({ showModal, setShowModal, editingEmployee, setEdi
 
 export function StoreModal({ setShowModal, handleSaveStore, initialData }) {
     const isEdit = !!initialData;
+    const [image, setImage] = React.useState(initialData?.image || '');
+
+    const handleImageUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 800; // Resize chuẩn cho banner
+                    let width = img.width;
+                    let height = img.height;
+                    if (width > MAX_WIDTH) {
+                        height = Math.round((height * MAX_WIDTH) / width);
+                        width = MAX_WIDTH;
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    setImage(canvas.toDataURL('image/webp', 0.8));
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     return (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-6">
-            <div className="bg-white rounded-[50px] w-full max-w-md shadow-2xl overflow-hidden border animate-in zoom-in-95">
+            <div className="bg-white rounded-[50px] w-full max-w-md shadow-2xl overflow-hidden border animate-in zoom-in-95 flex flex-col max-h-[90vh]">
                 <div className="p-8 border-b flex justify-between items-center bg-slate-50/50"><h3 className="text-xl font-black text-slate-900 uppercase tracking-tight text-left leading-none">{isEdit ? 'Cập nhật chi nhánh' : 'Mở chi nhánh mới'}</h3><button onClick={()=>setShowModal(null)} className="p-4 hover:bg-slate-200 rounded-2xl transition-all text-slate-400 flex items-center justify-center"><Icon name="x" size={24}/></button></div>
-                <form className="p-8 space-y-6" onSubmit={(e)=>{ e.preventDefault(); const fd = new FormData(e.target); handleSaveStore({ name: fd.get('name'), location: fd.get('location'), website: fd.get('website'), hotline: fd.get('hotline'), lat: parseFloat(fd.get('lat')) || 0, lng: parseFloat(fd.get('lng')) || 0, openTime: fd.get('openTime'), closeTime: fd.get('closeTime') }); }}>
+                <form className="p-8 space-y-6 overflow-y-auto flex-1" onSubmit={(e)=>{ e.preventDefault(); const fd = new FormData(e.target); handleSaveStore({ name: fd.get('name'), location: fd.get('location'), website: fd.get('website'), hotline: fd.get('hotline'), lat: parseFloat(fd.get('lat')) || 0, lng: parseFloat(fd.get('lng')) || 0, openTime: fd.get('openTime'), closeTime: fd.get('closeTime'), image }); }}>
                     <Input label="Tên chi nhánh" name="name" defaultValue={initialData?.name} required placeholder="Cửa hàng Quận..." />
                     <Input label="Địa chỉ cụ thể" name="location" defaultValue={initialData?.location} required placeholder="Số 123..." />
                     <div className="grid grid-cols-2 gap-4">
@@ -349,6 +378,13 @@ export function StoreModal({ setShowModal, handleSaveStore, initialData }) {
                     <div className="grid grid-cols-2 gap-4">
                         <Input label="Giờ mở cửa" name="openTime" type="time" defaultValue={initialData?.openTime || "08:00"} required />
                         <Input label="Giờ đóng cửa" name="closeTime" type="time" defaultValue={initialData?.closeTime || "22:00"} required />
+                    </div>
+                    <div className="space-y-2 w-full text-left">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Ảnh bìa (Banner tùy chọn)</label>
+                        <div className="flex items-center gap-4 bg-slate-50 p-3 rounded-3xl border border-slate-100 shadow-inner overflow-hidden">
+                            {image ? <img src={image} alt="Banner" className="h-14 w-24 object-cover rounded-xl border shadow-sm shrink-0 bg-white" /> : <div className="h-14 w-24 bg-slate-200 rounded-xl flex items-center justify-center text-slate-400 shrink-0"><Icon name="image" size={20}/></div>}
+                            <input type="file" accept="image/*" onChange={handleImageUpload} className="text-[10px] font-bold text-slate-500 w-full outline-none" />
+                        </div>
                     </div>
                     <button type="submit" className="w-full py-5 bg-blue-600 text-white rounded-[30px] font-black shadow-lg hover:bg-blue-700 uppercase text-[11px] tracking-widest transition-all active:scale-95 leading-none">{isEdit ? 'Lưu thay đổi' : 'Kích hoạt ngay'}</button>
                 </form>
