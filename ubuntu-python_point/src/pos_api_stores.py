@@ -1,9 +1,22 @@
+import os
 import uuid
 from datetime import datetime, timezone
 from flask import Blueprint, jsonify, request
-from pos_utils import read_config, write_config, config_lock, read_transactions, write_transactions
+from pos_utils import read_config, write_config, config_lock, read_transactions, write_transactions, STORES_FILE, PRODUCTS_FILE, EMPLOYEES_FILE, STOCK_REQUESTS_FILE, CATEGORIES_FILE, SHIFT_SLOTS_FILE
 
 pos_stores_bp = Blueprint('pos_stores_bp', __name__)
+
+# --- CONFIG STATUS (Dùng để polling tối ưu băng thông) ---
+@pos_stores_bp.route('/pos/api/v1/config/status', methods=['GET'])
+def get_config_status():
+    files = [STORES_FILE, PRODUCTS_FILE, EMPLOYEES_FILE, STOCK_REQUESTS_FILE, CATEGORIES_FILE, SHIFT_SLOTS_FILE]
+    max_mtime = 0
+    for f in files:
+        if os.path.exists(f):
+            mtime = os.path.getmtime(f)
+            if mtime > max_mtime:
+                max_mtime = mtime
+    return jsonify({"lastModified": max_mtime})
 
 # --- STORES ---
 @pos_stores_bp.route('/pos/api/v1/stores', methods=['GET', 'PUT', 'POST'])
@@ -42,6 +55,33 @@ def modify_store(store_id):
             write_config(config)
             return jsonify({"message": f"Store updated", "store": store})
     return jsonify({"error": "Store not found"}), 404
+
+# --- TRANSACTIONS ---
+@pos_stores_bp.route('/pos/api/v1/stores/<store_id>/transactions', methods=['GET'])
+def get_store_transactions(store_id):
+    from pos_utils import read_transactions
+    txs = read_transactions(store_id)
+    return jsonify(txs)
+
+@pos_stores_bp.route('/pos/api/v1/transactions/all', methods=['GET'])
+def get_all_transactions():
+    from pos_utils import read_config, read_transactions
+    config = read_config()
+    all_txs = []
+    
+    # 1. Lấy Lịch sử kho tổng
+    wh_txs = read_transactions('warehouse')
+    all_txs.extend(wh_txs)
+    
+    # 2. Lấy Lịch sử các chi nhánh (loại bỏ các giao dịch đã ghi nhận ở kho tổng để tránh tính đúp)
+    for store in config.get('stores', []):
+        st_txs = read_transactions(store['id'])
+        for tx in st_txs:
+            if tx.get('type') not in ['distribute', 'return']:
+                all_txs.append(tx)
+                
+    sorted_txs = sorted(all_txs, key=lambda x: x.get('date', ''), reverse=True)
+    return jsonify(sorted_txs)
 
 # --- INVENTORY ---
 @pos_stores_bp.route('/pos/api/v1/stores/<store_id>/inventory', methods=['GET', 'PUT', 'POST'])

@@ -14,7 +14,7 @@ import StoreDetail from './pages/StoreDetail';
 export default function App() {
     const state = useAppState();
     const {
-        user, stores, globalProducts, warehouseTransactions, shiftSlots, stockRequests,
+        user, stores, globalProducts, warehouseTransactions, storeTransactions, shiftSlots, stockRequests,
         activeTab, selectedStore, storeSubTab, showModal, pendingAction,
         editingEmployee, editingStore, sellingItem, toast, showUserMenu, searchTerm, historyFilter,
         currentStore, allEmployees, totalValue, categories,
@@ -172,7 +172,7 @@ export default function App() {
 
                 {/* Store Detail — shared by admin (selected store) and staff (my-store) */}
                 {currentStore && (activeTab === 'my-store' || selectedStore) && activeTab !== 'staff-global' && activeTab !== 'history' && (
-                    <StoreDetail currentStore={currentStore} allEmployees={allEmployees} user={user} storeSubTab={storeSubTab} setStoreSubTab={setStoreSubTab} setSelectedStore={setSelectedStore} setEditingEmployee={setEditingEmployee} setEditingStore={setEditingStore} setSellingItem={setSellingItem} setShowModal={setShowModal} handleSellProduct={handleSellProduct} handleDeleteEmployee={handleDeleteEmployee} handleResetPassword={handleResetPassword} handleUpdateEmployeeStatus={handleUpdateEmployeeStatus} getProductInfo={getProductInfo} warehouseTransactions={warehouseTransactions} stockRequests={stockRequests} handleReceiveStockRequest={handleReceiveStockRequest} shiftSlots={shiftSlots} />
+                    <StoreDetail currentStore={currentStore} storeTransactions={storeTransactions} allEmployees={allEmployees} user={user} storeSubTab={storeSubTab} setStoreSubTab={setStoreSubTab} setSelectedStore={setSelectedStore} setEditingEmployee={setEditingEmployee} setEditingStore={setEditingStore} setSellingItem={setSellingItem} setShowModal={setShowModal} handleSellProduct={handleSellProduct} handleDeleteEmployee={handleDeleteEmployee} handleResetPassword={handleResetPassword} handleUpdateEmployeeStatus={handleUpdateEmployeeStatus} getProductInfo={getProductInfo} warehouseTransactions={warehouseTransactions} stockRequests={stockRequests} handleReceiveStockRequest={handleReceiveStockRequest} shiftSlots={shiftSlots} />
                 )}
             </main>
 

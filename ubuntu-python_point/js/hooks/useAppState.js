@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { initialGlobalProducts, initialStores } from '../constants';
 
 const getCache = (key, fallback) => {
@@ -29,6 +29,7 @@ export function useAppState() {
     const [stores, setStores] = useState(initialStores);
     const [globalProducts, setGlobalProducts] = useState(initialGlobalProducts);
     const [warehouseTransactions, setWarehouseTransactions] = useState([]);
+    const [storeTransactions, setStoreTransactions] = useState([]);
     const [categories, setCategories] = useState(initialCategories);
     const [shiftSlots, setShiftSlots] = useState(initialShiftSlots);
     const [stockRequests, setStockRequests] = useState([]);
@@ -49,6 +50,9 @@ export function useAppState() {
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [historyFilter, setHistoryFilter] = useState({ type: 'all', year: String(new Date().getFullYear()), viewMode: 'year' });
+
+    const toastTimeoutRef = useRef(null);
+    const lastModifiedRef = useRef(0); // Cờ lưu trữ timestamp để kiểm tra update
 
     // Khởi tạo: Lấy dữ liệu từ Backend khi mở ứng dụng (Ưu tiên Backend hơn LocalStorage)
     useEffect(() => {
@@ -100,11 +104,45 @@ export function useAppState() {
         return globalProducts.reduce((sum, p) => sum + (Number(p.warehouseStock) * Number(p.basePrice)), 0);
     }, [globalProducts]);
 
+    useEffect(() => {
+        let ignore = false;
+        if (currentStore && currentStore.id) {
+            fetch(`/pos/api/v1/stores/${currentStore.id}/transactions`)
+                .then(res => res.json())
+                .then(data => {
+                    if (!ignore && Array.isArray(data)) setStoreTransactions(data);
+                })
+                .catch(err => { if (!ignore) console.error("Lỗi lấy lịch sử giao dịch:", err) });
+        } else {
+            setStoreTransactions([]);
+        }
+        return () => { ignore = true; };
+    }, [currentStore?.id]);
+
+    // Tự động tải toàn bộ lịch sử giao dịch (Warehouse + Stores) khi là Admin
+    useEffect(() => {
+        if (user && user.role === 'admin') {
+            fetch('/pos/api/v1/transactions/all')
+                .then(res => res.json())
+                .then(data => {
+                    if (Array.isArray(data)) setWarehouseTransactions(data);
+                })
+                .catch(err => console.error("Lỗi lấy lịch sử toàn hệ thống:", err));
+        }
+    }, [user?.role]);
+
     const showToast = (msg, type = 'success') => {
         setToast(msg);
         setToastType(type);
-        setTimeout(() => setToast(null), 3000);
+        if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+        toastTimeoutRef.current = setTimeout(() => setToast(null), 3000);
     };
+
+    useEffect(() => {
+        return () => {
+            if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+        };
+    }, []);
 
     const requestConfirm = (actionConfig) => {
         setPendingAction(actionConfig);
@@ -205,7 +243,7 @@ export function useAppState() {
         }
         setAllEmployees(prev => {
             if (isEdit) return prev.map(e => e.id === editingEmployee.id ? { ...employeeData, id: e.id } : e);
-            return [...prev, { ...employeeData, id: employeeData.cccd }];
+            return [...prev, { ...employeeData, id: 'e_' + generateId() }];
         });
         setShowModal(null);
         setEditingEmployee(null);
@@ -377,14 +415,16 @@ export function useAppState() {
             }));
 
             const product = globalProducts.find(p => p.id === req.productId);
-            setWarehouseTransactions(prev => [...prev, {
+            const tx = {
                 id: 'tx_in_' + generateId(), type: 'receive', productId: req.productId,
                 productName: product?.name || req.productName || 'N/A', storeId: req.storeId,
                 storeName: req.storeName || 'N/A', quantity: req.quantity,
                 costPrice: product?.costPrice || 0, unitPrice: product?.basePrice || 0,
                 date: new Date().toISOString(),
                 note: `Nhận ${req.quantity} ${product?.unit || 'cái'} từ kho tổng`
-            }]);
+            };
+            setWarehouseTransactions(prev => [...prev, tx]);
+            if (currentStore?.id === req.storeId) setStoreTransactions(prev => [...prev, tx]);
 
             setStockRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: 'completed' } : r));
             showToast("Đã xác nhận nhận hàng vào kho chi nhánh (Xử lý an toàn)!");
@@ -417,14 +457,16 @@ export function useAppState() {
             setGlobalProducts(globalProducts.map(p => p.id === productId ? { ...p, warehouseStock: Number(p.warehouseStock) + qty } : p));
             setStores(stores.map(s => s.id === storeId ? { ...s, inventory: s.inventory.map(i => i.productId === productId ? { ...i, quantity: Number(i.quantity) - qty } : i) } : s));
 
-            setWarehouseTransactions(prev => [...prev, {
+            const tx = {
                 id: 'tx_' + generateId(), type: 'return', productId,
                 productName: product?.name || 'N/A', storeId,
                 storeName: store?.name || 'N/A', quantity: qty,
                 costPrice: product?.costPrice || 0, unitPrice: product?.basePrice || 0,
                 date: new Date().toISOString(),
                 note: `Hoàn kho: ${reason || 'Không xác định'}`
-            }]);
+            };
+            setWarehouseTransactions(prev => [...prev, tx]);
+            if (currentStore?.id === storeId) setStoreTransactions(prev => [...prev, tx]);
 
             setShowModal(null);
             showToast(`Đã xuất trả ${qty} SP về kho tổng (An toàn từ Server).`);
@@ -467,11 +509,11 @@ export function useAppState() {
             }));
 
             const now = new Date().toISOString();
-            setWarehouseTransactions(prev => [
-                ...prev,
-                { id: 'tx_out_' + generateId(), type: 'transfer_out', productId, productName: product?.name || 'N/A', storeId: fromStoreId, storeName: fromStore?.name || 'N/A', quantity: qty, costPrice: product?.costPrice || 0, unitPrice: product?.basePrice || 0, date: now, note: `Chuyển đến ${toStore?.name}: ${note || ''}` },
-                { id: 'tx_in_' + generateId(), type: 'transfer_in', productId, productName: product?.name || 'N/A', storeId: toStoreId, storeName: toStore?.name || 'N/A', quantity: qty, costPrice: product?.costPrice || 0, unitPrice: product?.basePrice || 0, date: now, note: `Nhận từ ${fromStore?.name}: ${note || ''}` }
-            ]);
+            const txOut = { id: 'tx_out_' + generateId(), type: 'transfer_out', productId, productName: product?.name || 'N/A', storeId: fromStoreId, storeName: fromStore?.name || 'N/A', quantity: qty, costPrice: product?.costPrice || 0, unitPrice: product?.basePrice || 0, date: now, note: `Chuyển đến ${toStore?.name}: ${note || ''}` };
+            const txIn = { id: 'tx_in_' + generateId(), type: 'transfer_in', productId, productName: product?.name || 'N/A', storeId: toStoreId, storeName: toStore?.name || 'N/A', quantity: qty, costPrice: product?.costPrice || 0, unitPrice: product?.basePrice || 0, date: now, note: `Nhận từ ${fromStore?.name}: ${note || ''}` };
+            setWarehouseTransactions(prev => [...prev, txOut, txIn]);
+            if (currentStore?.id === fromStoreId) setStoreTransactions(prev => [...prev, txOut]);
+            if (currentStore?.id === toStoreId) setStoreTransactions(prev => [...prev, txIn]);
 
             setShowModal(null);
             showToast(`Đã luân chuyển ${qty} SP đến ${toStore?.name} (An toàn từ Server).`);
@@ -595,17 +637,43 @@ export function useAppState() {
         }
     };
 
-    const handleAddStore = (storeData) => {
-        setStores([...stores, { ...storeData, id: 's_' + generateId(), status: 'created', employees: [], inventory: [], transactions: [] }]);
-        setShowModal(null);
-        showToast("Đã mở chi nhánh.");
+    // VÍ DỤ: MẪU CÁC HÀM CRUD GỌI API ĐỘC LẬP TỪ NAY VỀ SAU
+    const handleAddStore = async (storeData) => {
+        try {
+            const res = await fetch('/pos/api/v1/stores', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(storeData)
+            });
+            if (res.ok) {
+                const result = await res.json();
+                setStores([...stores, result.store]); // Lấy Store với ID do Backend cấp
+                setShowModal(null);
+                showToast("Đã mở chi nhánh thành công.");
+            } else {
+                showToast("Lỗi từ hệ thống khi mở chi nhánh!", 'error');
+            }
+        } catch (error) {
+            showToast("Lỗi kết nối máy chủ!", 'error');
+        }
     };
 
-    const handleEditStore = (storeId, storeData) => {
-        setStores(stores.map(s => s.id === storeId ? { ...s, ...storeData } : s));
-        setShowModal(null);
-        setEditingStore(null);
-        showToast("Đã cập nhật chi nhánh.");
+    const handleEditStore = async (storeId, storeData) => {
+        try {
+            const res = await fetch(`/pos/api/v1/stores/${storeId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(storeData)
+            });
+            if (res.ok) {
+                setStores(stores.map(s => s.id === storeId ? { ...s, ...storeData } : s));
+                setShowModal(null);
+                setEditingStore(null);
+                showToast("Đã cập nhật chi nhánh.");
+            } else showToast("Lỗi hệ thống khi cập nhật!", 'error');
+        } catch (error) {
+            showToast("Lỗi kết nối!", 'error');
+        }
     };
 
     const handleDeleteStore = (storeId, storeName) => {
@@ -647,7 +715,7 @@ export function useAppState() {
             ...s, inventory: s.inventory.map(i => i.productId === productId
                 ? { ...i, quantity: Number(i.quantity) - qty, sold: Number(i.sold || 0) + qty } : i)
         } : s));
-        setWarehouseTransactions(prev => [...prev, {
+        const tx = {
             id: 'tx_' + generateId(), type: 'sell', productId,
             productName: product?.name || 'N/A', storeId,
             storeName: store?.name || 'N/A', quantity: qty,
@@ -655,7 +723,9 @@ export function useAppState() {
             unitPrice: product?.basePrice || 0, 
             date: new Date().toISOString(),
             note: `Bán ${qty} ${product?.unit || 'cái'} tại ${store?.name}`
-        }]);
+        };
+        setWarehouseTransactions(prev => [...prev, tx]);
+        if (currentStore?.id === storeId) setStoreTransactions(prev => [...prev, tx]);
         setShowModal(null);
         setSellingItem(null);
         showToast(`Đã ghi nhận bán ${qty} SP (Xử lý an toàn bởi Server).`);
@@ -668,7 +738,7 @@ export function useAppState() {
 
     return {
         // State
-        user, stores, globalProducts, warehouseTransactions, categories, shiftSlots, stockRequests,
+        user, stores, globalProducts, warehouseTransactions, storeTransactions, categories, shiftSlots, stockRequests,
         activeTab, selectedStore, storeSubTab, showModal, pendingAction,
         editingEmployee, editingStore, sellingItem, importingItem, toast, toastType, showUserMenu, searchTerm, historyFilter, setUser,
         currentStore, allEmployees, totalValue,
