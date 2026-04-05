@@ -70,7 +70,7 @@ export default function App() {
                 <div className={`w-full max-w-[380px] bg-white rounded-[32px] shadow-2xl p-10 text-center ${isShaking ? 'animate-[shake_0.4s_ease-in-out]' : ''}`}>
                     <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-teal-50 text-teal-600 mb-6"><Icon name="package" size={32} /></div>
                     <h1 className="text-2xl font-black text-slate-900 tracking-tight mb-2 uppercase">ĐĂNG NHẬP</h1>
-                    <p className="text-slate-400 text-sm mb-8 font-medium leading-relaxed">Hệ thống quản lý chuỗi @ 2026 telua</p>
+                    <p className="text-slate-400 text-sm mb-8 font-medium leading-relaxed">Hệ thống quản lý chuỗi cung ứng</p>
                     <form onSubmit={onLogin} className="space-y-4">
                         {loginError && <div className="bg-rose-50 text-rose-600 p-4 rounded-xl text-xs font-bold border border-rose-100">{loginError}</div>}
                         <input type="text" disabled={isLoggingIn} required className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-teal-500 font-bold disabled:opacity-50 disabled:cursor-not-allowed" placeholder="Username" value={loginForm.username} onChange={e => setLoginForm({...loginForm, username: e.target.value})} />

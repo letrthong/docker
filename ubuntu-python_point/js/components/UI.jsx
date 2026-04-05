@@ -30,13 +30,13 @@ export const SummaryMiniCard = ({ label, value, color = "text-slate-900", icon }
 );
 
 export const SummaryBigCard = ({ icon, color, label, value }) => (
-    <div className={`${color} p-10 rounded-[50px] shadow-2xl flex items-center space-x-8 hover:-translate-y-2 transition-all group text-white`}>
-        <div className="bg-white/20 p-6 rounded-[35px] backdrop-blur-md border border-white/30 shadow-xl group-hover:scale-110 transition-transform text-white flex items-center justify-center">
-            <Icon name={icon} size={28} />
+    <div className={`${color} p-6 sm:p-8 rounded-[35px] shadow-xl flex items-center space-x-5 hover:-translate-y-1 transition-all group text-white`}>
+        <div className="bg-white/20 p-4 sm:p-5 rounded-[20px] sm:rounded-[25px] backdrop-blur-md border border-white/30 shadow-lg group-hover:scale-105 transition-transform text-white flex items-center justify-center shrink-0">
+            <Icon name={icon} size={24} />
         </div>
         <div>
-            <p className="text-[11px] font-black text-white/70 uppercase tracking-[0.3em] mb-1 leading-none">{label}</p>
-            <h3 className="text-4xl font-black leading-none tracking-tighter">{value}</h3>
+            <p className="text-[10px] sm:text-[11px] font-black text-white/80 uppercase tracking-[0.2em] mb-1 sm:mb-1.5 leading-none">{label}</p>
+            <h3 className="text-2xl sm:text-3xl font-black leading-none tracking-tighter">{value}</h3>
         </div>
     </div>
 );

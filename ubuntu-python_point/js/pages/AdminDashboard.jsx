@@ -9,8 +9,8 @@ export default function AdminDashboard({ stores, globalProducts, allEmployees, s
     };
 
     return (
-        <div className="space-y-10 animate-fade-in">
-            <div className="bg-white p-3 sm:p-4 rounded-[40px] sm:rounded-[48px] border shadow-sm grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 text-white text-left">
+        <div className="space-y-6 sm:space-y-10 animate-fade-in">
+            <div className="bg-white p-3 sm:p-4 rounded-[30px] sm:rounded-[40px] border shadow-sm grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 text-white text-left">
                 <SummaryBigCard color="bg-teal-600 hover:bg-teal-500" label="Sản phẩm kho tổng" value={globalProducts.reduce((a,p)=>a+Number(p.warehouseStock), 0)} icon="warehouse"/>
                 <SummaryBigCard color="bg-amber-500 hover:bg-amber-400" label="Hàng tại cửa hàng" value={stores.reduce((a,s)=>a+s.inventory.reduce((sum,i)=>sum+Number(i.quantity),0), 0)} icon="package"/>
                 <SummaryBigCard color="bg-indigo-400 hover:bg-indigo-300" label="Nhân sự hệ thống" value={allEmployees.length} icon="users"/>
