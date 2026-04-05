@@ -19,16 +19,55 @@ export function ConfirmModal({ pendingAction, setShowModal, setPendingAction }) 
 }
 
 export function AddProductModal({ setShowModal, handleSaveGlobalProduct, categories = [] }) {
+    const [image, setImage] = React.useState('');
     const activeCategories = categories.filter(c => !c.hidden);
+
+    const handleImageUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 800; // Resize ảnh để tiết kiệm dung lượng
+                    let width = img.width;
+                    let height = img.height;
+                    if (width > MAX_WIDTH) {
+                        height = Math.round((height * MAX_WIDTH) / width);
+                        width = MAX_WIDTH;
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    // Convert sang chuẩn WebP
+                    setImage(canvas.toDataURL('image/webp', 0.8));
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     return (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-6">
             <div className="bg-white rounded-[60px] w-full max-w-2xl shadow-2xl overflow-hidden border animate-in zoom-in-95">
                 <div className="p-10 border-b flex justify-between items-center bg-slate-50/50"><h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight text-left leading-none">Thêm sản phẩm hệ thống</h3><button onClick={()=>setShowModal(null)} className="p-4 hover:bg-slate-200 rounded-3xl transition-all text-slate-400 flex items-center justify-center"><Icon name="x" size={28}/></button></div>
-                <form className="p-10 space-y-8" onSubmit={(e)=>{ e.preventDefault(); const fd = new FormData(e.target); handleSaveGlobalProduct({ sku: fd.get('sku'), name: fd.get('name'), category: fd.get('category'), basePrice: fd.get('price'), initialStock: fd.get('stock'), unit: fd.get('unit'), description: fd.get('desc') }); }}>
+                <form className="p-10 space-y-8" onSubmit={(e)=>{ e.preventDefault(); const fd = new FormData(e.target); handleSaveGlobalProduct({ sku: fd.get('sku'), name: fd.get('name'), category: fd.get('category'), basePrice: fd.get('price'), initialStock: fd.get('stock'), unit: fd.get('unit'), description: fd.get('desc'), image }); }}>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6"><Input label="Mã SKU" name="sku" required placeholder="Ví dụ: SP-001" /><Input label="Tên sản phẩm" name="name" required placeholder="Tên hàng hóa..." /></div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-left"><Select label="Phân loại" name="category" required>{activeCategories.map(c => <option key={c.id} value={c.name}>{c.icon} {c.name}</option>)}</Select><Input label="Đơn vị tính" name="unit" required placeholder="cái, bao..." /><Input label="Giá vốn niêm yết" name="price" type="number" required placeholder="VNĐ" /></div>
                     <Input label="Mô tả hàng hóa" name="desc" placeholder="Thông tin chi tiết sản phẩm..." />
-                    <Input label="Số lượng thực nhập đầu kỳ" name="stock" type="number" defaultValue="0" />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-end">
+                        <Input label="Số lượng thực nhập đầu kỳ" name="stock" type="number" defaultValue="0" />
+                        <div className="space-y-2 w-full text-left">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Ảnh sản phẩm</label>
+                            <div className="flex items-center gap-4 bg-slate-50 p-3 rounded-3xl border border-slate-100 shadow-inner overflow-hidden">
+                                {image ? <img src={image} alt="Product" className="h-12 w-16 object-cover rounded-xl border shadow-sm shrink-0 bg-white" /> : <div className="h-12 w-16 bg-slate-200 rounded-xl flex items-center justify-center text-slate-400 shrink-0"><Icon name="image" size={20}/></div>}
+                                <input type="file" accept="image/*" onChange={handleImageUpload} className="text-[10px] font-bold text-slate-500 w-full outline-none" />
+                            </div>
+                        </div>
+                    </div>
                     <button type="submit" className="w-full py-6 bg-blue-600 text-white rounded-[30px] font-black shadow-2xl hover:bg-blue-700 uppercase text-[11px] tracking-widest transition-all active:scale-95 leading-none">Khai báo danh mục</button>
                 </form>
             </div>
@@ -296,9 +335,13 @@ export function StoreModal({ setShowModal, handleSaveStore, initialData }) {
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-6">
             <div className="bg-white rounded-[50px] w-full max-w-md shadow-2xl overflow-hidden border animate-in zoom-in-95">
                 <div className="p-8 border-b flex justify-between items-center bg-slate-50/50"><h3 className="text-xl font-black text-slate-900 uppercase tracking-tight text-left leading-none">{isEdit ? 'Cập nhật chi nhánh' : 'Mở chi nhánh mới'}</h3><button onClick={()=>setShowModal(null)} className="p-4 hover:bg-slate-200 rounded-2xl transition-all text-slate-400 flex items-center justify-center"><Icon name="x" size={24}/></button></div>
-                <form className="p-8 space-y-6" onSubmit={(e)=>{ e.preventDefault(); const fd = new FormData(e.target); handleSaveStore({ name: fd.get('name'), location: fd.get('location'), lat: parseFloat(fd.get('lat')) || 0, lng: parseFloat(fd.get('lng')) || 0, openTime: fd.get('openTime'), closeTime: fd.get('closeTime') }); }}>
+                <form className="p-8 space-y-6" onSubmit={(e)=>{ e.preventDefault(); const fd = new FormData(e.target); handleSaveStore({ name: fd.get('name'), location: fd.get('location'), website: fd.get('website'), hotline: fd.get('hotline'), lat: parseFloat(fd.get('lat')) || 0, lng: parseFloat(fd.get('lng')) || 0, openTime: fd.get('openTime'), closeTime: fd.get('closeTime') }); }}>
                     <Input label="Tên chi nhánh" name="name" defaultValue={initialData?.name} required placeholder="Cửa hàng Quận..." />
                     <Input label="Địa chỉ cụ thể" name="location" defaultValue={initialData?.location} required placeholder="Số 123..." />
+                    <div className="grid grid-cols-2 gap-4">
+                        <Input label="Hotline (SĐT)" name="hotline" type="tel" defaultValue={initialData?.hotline} placeholder="0909..." />
+                        <Input label="Website / Fanpage" name="website" type="url" defaultValue={initialData?.website} placeholder="https://..." />
+                    </div>
                     <div className="grid grid-cols-2 gap-4">
                         <Input label="Vĩ độ (Lat)" name="lat" type="number" step="any" defaultValue={initialData?.lat} placeholder="10.7769" />
                         <Input label="Kinh độ (Lng)" name="lng" type="number" step="any" defaultValue={initialData?.lng} placeholder="106.7009" />
@@ -413,9 +456,16 @@ export function SellProductModal({ setShowModal, currentStore, product, handleSe
             <div className="bg-white rounded-[50px] w-full max-w-md shadow-2xl overflow-hidden border animate-in zoom-in-95">
                 <div className="p-8 border-b flex justify-between items-center bg-slate-50/50"><h3 className="text-xl font-black text-slate-900 uppercase tracking-tight text-left leading-none">Xuất bán sản phẩm</h3><button type="button" onClick={()=>setShowModal(null)} className="p-4 hover:bg-slate-200 rounded-2xl transition-all text-slate-400 flex items-center justify-center"><Icon name="x" size={24}/></button></div>
                 <form className="p-8 space-y-6" onSubmit={(e)=>{ e.preventDefault(); const fd = new FormData(e.target); handleSellProduct(currentStore.id, product.productId, fd.get('qty')); }}>
-                    <div className="bg-slate-50 p-4 rounded-3xl border border-slate-100 text-left">
-                        <p className="font-black text-lg text-slate-900">{product.name}</p>
-                        <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Tồn kho hiện tại: <span className="text-blue-600">{product.quantity} {product.unit}</span></p>
+                    <div className="bg-slate-50 p-4 rounded-3xl border border-slate-100 text-left flex items-center gap-4">
+                        {product.image ? (
+                            <img src={product.image} alt={product.name} className="w-16 h-16 rounded-xl object-cover border shadow-sm shrink-0 bg-white" />
+                        ) : (
+                            <div className="w-16 h-16 rounded-xl bg-slate-200 flex items-center justify-center text-slate-400 shrink-0"><Icon name="package" size={24}/></div>
+                        )}
+                        <div>
+                            <p className="font-black text-lg text-slate-900 leading-tight">{product.name}</p>
+                            <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Tồn kho hiện tại: <span className="text-blue-600">{product.quantity} {product.unit}</span></p>
+                        </div>
                     </div>
                     <Input label="Số lượng xuất bán" name="qty" type="number" required min="1" max={product.quantity} defaultValue="1" autoFocus />
                     <button type="submit" className="w-full py-5 bg-blue-600 text-white rounded-[30px] font-black shadow-lg hover:bg-blue-700 uppercase text-[11px] tracking-widest leading-none flex justify-center items-center gap-2 transition-all active:scale-95"><Icon name="shopping-cart" size={18}/> Xác nhận bán</button>
@@ -432,9 +482,16 @@ export function ImportProductModal({ setShowModal, product, handleImportToWareho
             <div className="bg-white rounded-[50px] w-full max-w-md shadow-2xl overflow-hidden border animate-in zoom-in-95">
                 <div className="p-8 border-b flex justify-between items-center bg-slate-50/50"><h3 className="text-xl font-black text-slate-900 uppercase tracking-tight text-left leading-none">Nhập kho tổng</h3><button type="button" onClick={()=>setShowModal(null)} className="p-4 hover:bg-slate-200 rounded-2xl transition-all text-slate-400 flex items-center justify-center"><Icon name="x" size={24}/></button></div>
                 <form className="p-8 space-y-6" onSubmit={(e)=>{ e.preventDefault(); const fd = new FormData(e.target); handleImportToWarehouse(product.id, fd.get('qty')); }}>
-                    <div className="bg-slate-50 p-4 rounded-3xl border border-slate-100 text-left">
-                        <p className="font-black text-lg text-slate-900">{product.name}</p>
-                        <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Tồn kho hiện tại: <span className="text-blue-600">{product.warehouseStock} {product.unit}</span></p>
+                    <div className="bg-slate-50 p-4 rounded-3xl border border-slate-100 text-left flex items-center gap-4">
+                        {product.image ? (
+                            <img src={product.image} alt={product.name} className="w-16 h-16 rounded-xl object-cover border shadow-sm shrink-0 bg-white" />
+                        ) : (
+                            <div className="w-16 h-16 rounded-xl bg-slate-200 flex items-center justify-center text-slate-400 shrink-0"><Icon name="package" size={24}/></div>
+                        )}
+                        <div>
+                            <p className="font-black text-lg text-slate-900 leading-tight">{product.name}</p>
+                            <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Tồn kho hiện tại: <span className="text-blue-600">{product.warehouseStock} {product.unit}</span></p>
+                        </div>
                     </div>
                     <Input label="Số lượng nhập thêm" name="qty" type="number" required min="1" defaultValue="1" autoFocus />
                     <button type="submit" className="w-full py-5 bg-blue-600 text-white rounded-[30px] font-black shadow-lg hover:bg-blue-700 uppercase text-[11px] tracking-widest leading-none flex justify-center items-center gap-2 transition-all active:scale-95"><Icon name="download" size={18}/> Xác nhận nhập kho</button>

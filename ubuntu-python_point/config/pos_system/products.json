@@ -9,5 +9,33 @@
     "sku": "x",
     "unit": "100",
     "warehouseStock": 194
+  },
+  {
+    "sku": "xxxxxx",
+    "name": "xxxxxxxxx",
+    "category": "s",
+    "basePrice": 33,
+    "initialStock": "2",
+    "unit": "xxxxxx",
+    "description": "xxxxxx",
+    "costPrice": 0,
+    "warehouseStock": 1,
+    "id": "p8d5b1c41",
+    "status": "created",
+    "hasImage": true
+  },
+  {
+    "sku": "xxxx",
+    "name": "xxx",
+    "category": "s",
+    "basePrice": 2,
+    "initialStock": "2",
+    "unit": "2",
+    "description": "dssssss",
+    "costPrice": 0,
+    "warehouseStock": 0,
+    "id": "p76f82334",
+    "status": "created",
+    "hasImage": true
   }
 ]

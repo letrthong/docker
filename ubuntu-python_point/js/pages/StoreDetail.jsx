@@ -104,6 +104,12 @@ export default function StoreDetail({ currentStore, storeTransactions = [], allE
                     </div>
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-slate-500 font-medium text-sm">
                             <p className="flex items-center"><Icon name="map-pin" size={16} className="mr-1.5 text-blue-500" /> {currentStore.location}</p>
+                            {currentStore.hotline && (
+                                <p className="flex items-center"><Icon name="phone" size={16} className="mr-1.5 text-rose-500" /> <a href={`tel:${currentStore.hotline}`} className="hover:text-rose-600 hover:underline">{currentStore.hotline}</a></p>
+                            )}
+                            {currentStore.website && (
+                                <p className="flex items-center"><Icon name="globe" size={16} className="mr-1.5 text-emerald-500" /> <a href={currentStore.website} target="_blank" rel="noopener noreferrer" className="hover:text-emerald-600 hover:underline">{currentStore.website}</a></p>
+                            )}
                             {(currentStore.openTime || currentStore.closeTime) && (
                                 <p className="flex items-center"><Icon name="clock" size={16} className="mr-1.5 text-orange-500" /> {currentStore.openTime || '08:00'} - {currentStore.closeTime || '22:00'} <span className="ml-2"><StoreStatusBadge openTime={currentStore.openTime} closeTime={currentStore.closeTime} /></span></p>
                             )}
@@ -163,13 +169,25 @@ export default function StoreDetail({ currentStore, storeTransactions = [], allE
                                 const info = getProductInfo(item.productId);
                                 return (
                                     <tr key={item.productId} className="hover:bg-blue-50/20 transition-all rounded-3xl group">
-                                        <td className="px-10 py-8 min-w-[300px] text-left"><p className="font-black text-xl text-slate-800 mb-1 leading-none">{info.name}</p><p className="text-[10px] text-slate-400 font-black uppercase tracking-widest leading-none">{info.category}</p></td>
+                                        <td className="px-10 py-6 min-w-[300px] text-left">
+                                            <div className="flex items-center gap-4">
+                                                {info.image ? (
+                                                    <img src={info.image} alt={info.name} className="w-12 h-12 rounded-xl object-cover border shadow-sm shrink-0 bg-white" />
+                                                ) : (
+                                                    <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-300 shrink-0 border border-slate-200"><Icon name="package" size={20}/></div>
+                                                )}
+                                                <div>
+                                                    <p className="font-black text-xl text-slate-800 mb-1 leading-none">{info.name}</p>
+                                                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest leading-none">{info.category}</p>
+                                                </div>
+                                            </div>
+                                        </td>
                                         <td className="px-10 py-8 font-mono font-bold text-slate-400 text-xs text-center">{info.sku}</td>
                                     <td className="px-10 py-8 text-center font-black"><span className={`px-6 py-2 rounded-full text-xs border-2 ${item.quantity < 5 ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>{item.quantity}</span></td>
                                     <td className="px-10 py-8 text-center font-bold text-slate-500">{info.unit}</td>
                                     <td className="px-10 py-8 text-center font-black text-slate-800">{(info.basePrice || 0).toLocaleString()} đ</td>
                                         <td className="px-10 py-8 text-center"><span className="px-6 py-2 rounded-full bg-emerald-50 text-emerald-600 font-black text-xs border-2 border-emerald-100">+{item.sold || 0}</span></td>
-                                        <td className="px-10 py-8 text-right pr-14"><button onClick={() => { setSellingItem({ ...item, name: info.name, unit: info.unit }); setShowModal('sellProduct'); }} disabled={item.quantity === 0} className={`px-8 py-4 rounded-[20px] text-[11px] font-black uppercase tracking-widest transition-all shadow-xl active:scale-95 ${item.quantity > 0 ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-100' : 'bg-slate-100 text-slate-300 cursor-not-allowed shadow-none'}`}>{item.quantity > 0 ? 'Xuất bán' : 'Hết hàng'}</button></td>
+                                        <td className="px-10 py-8 text-right pr-14"><button onClick={() => { setSellingItem({ ...item, name: info.name, unit: info.unit, image: info.image }); setShowModal('sellProduct'); }} disabled={item.quantity === 0} className={`px-8 py-4 rounded-[20px] text-[11px] font-black uppercase tracking-widest transition-all shadow-xl active:scale-95 ${item.quantity > 0 ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-100' : 'bg-slate-100 text-slate-300 cursor-not-allowed shadow-none'}`}>{item.quantity > 0 ? 'Xuất bán' : 'Hết hàng'}</button></td>
                                     </tr>
                                 );
                             })}

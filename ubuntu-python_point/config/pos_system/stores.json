@@ -8,6 +8,16 @@
         "productId": "p1775300196380",
         "quantity": 35,
         "sold": 21
+      },
+      {
+        "productId": "p8d5b1c41",
+        "quantity": 1,
+        "sold": 0
+      },
+      {
+        "productId": "p76f82334",
+        "quantity": 2,
+        "sold": 0
       }
     ],
     "lat": 0,
@@ -15,6 +25,8 @@
     "location": "b64:eHh4eA==",
     "name": "b64:eHh4eA==",
     "openTime": "08:00",
-    "transactions": []
+    "transactions": [],
+    "website": "b64:aHRwczovL3RoZWdpb2lpYy52bg==",
+    "hotline": ""
   }
 ]

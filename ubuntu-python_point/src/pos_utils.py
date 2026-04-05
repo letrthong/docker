@@ -88,7 +88,7 @@ def read_config():
         stock_requests = _read_json_file(STOCK_REQUESTS_FILE, [])
         
         # Giải mã các trường nhạy cảm
-        STORE_FIELDS_TO_DECODE = ['name', 'location']
+        STORE_FIELDS_TO_DECODE = ['name', 'location', 'website', 'hotline']
         EMP_FIELDS_TO_DECODE = ['name', 'cccd', 'phone']
         REQ_FIELDS_TO_DECODE = ['storeName', 'productName', 'note']
 
@@ -107,6 +107,14 @@ def read_config():
                     mtime = int(os.path.getmtime(img_path))
                     emp['cccdImage'] = f"/pos/api/v1/employees/{emp.get('id')}/image?t={mtime}"
             
+        products = _read_json_file(PRODUCTS_FILE, [])
+        for prod in products:
+            if prod.get('hasImage'):
+                img_path = os.path.join(IMAGES_DIR, f"prod_{prod.get('id')}.webp")
+                if os.path.exists(img_path):
+                    mtime = int(os.path.getmtime(img_path))
+                    prod['image'] = f"/pos/api/v1/products/{prod.get('id')}/image?t={mtime}"
+
         for req in stock_requests:
             for field in REQ_FIELDS_TO_DECODE:
                 if field in req: req[field] = decode_b64_field(req[field])
@@ -114,7 +122,7 @@ def read_config():
         # Tổng hợp lại thành object config cuối cùng
         return {
             "stores": stores,
-            "products": _read_json_file(PRODUCTS_FILE, []),
+            "products": products,
             "allEmployees": all_employees,
             "stockRequests": stock_requests,
             "categories": _read_json_file(CATEGORIES_FILE, []),
@@ -137,6 +145,8 @@ def write_config(data):
             for store in data_to_write['stores']:
                 if 'name' in store: store['name'] = encode_b64_field(store['name'])
                 if 'location' in store: store['location'] = encode_b64_field(store['location'])
+                if 'website' in store: store['website'] = encode_b64_field(store['website'])
+                if 'hotline' in store: store['hotline'] = encode_b64_field(store['hotline'])
             _write_json_file(STORES_FILE, data_to_write['stores'])
 
         if 'allEmployees' in data_to_write:
@@ -173,6 +183,22 @@ def write_config(data):
             _write_json_file(STOCK_REQUESTS_FILE, data_to_write['stockRequests'])
 
         if 'products' in data_to_write:
+            for prod in data_to_write['products']:
+                img_data = prod.get('image')
+                if img_data and isinstance(img_data, str) and img_data.startswith('data:image/'):
+                    try:
+                        header, encoded = img_data.split(",", 1)
+                        file_path = os.path.join(IMAGES_DIR, f"prod_{prod['id']}.webp")
+                        with open(file_path, "wb") as fh:
+                            fh.write(base64.b64decode(encoded))
+                        prod['hasImage'] = True
+                    except Exception:
+                        pass
+                elif img_data and isinstance(img_data, str) and img_data.startswith('/pos/api/v1/products/'):
+                    prod['hasImage'] = True
+                
+                if 'image' in prod:
+                    del prod['image']
             _write_json_file(PRODUCTS_FILE, data_to_write['products'])
         
         if 'categories' in data_to_write:

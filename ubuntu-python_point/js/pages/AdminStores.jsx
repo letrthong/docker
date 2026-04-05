@@ -16,6 +16,8 @@ export default function AdminStores({ stores, allEmployees = [], setSelectedStor
                         <h3 className="font-black text-2xl text-slate-900 mb-2 text-left">{s.name}</h3>
                         <div className="mb-auto space-y-2">
                             <p className="text-sm text-slate-400 flex items-center font-medium text-left leading-relaxed"><Icon name="map-pin" size={14} className="mr-2 text-blue-500 shrink-0"/> {s.location}</p>
+                            {s.hotline && <p className="text-sm text-slate-400 flex items-center font-medium text-left leading-relaxed"><Icon name="phone" size={14} className="mr-2 text-rose-500 shrink-0"/> <a href={`tel:${s.hotline}`} className="hover:text-rose-600 hover:underline truncate">{s.hotline}</a></p>}
+                            {s.website && <p className="text-sm text-slate-400 flex items-center font-medium text-left leading-relaxed"><Icon name="globe" size={14} className="mr-2 text-emerald-500 shrink-0"/> <a href={s.website} target="_blank" rel="noopener noreferrer" className="hover:text-emerald-600 hover:underline truncate">{s.website}</a></p>}
                             {(s.openTime || s.closeTime) && <p className="text-sm text-slate-400 flex items-center font-medium text-left leading-relaxed"><Icon name="clock" size={14} className="mr-2 text-orange-500 shrink-0"/> {s.openTime || '08:00'} - {s.closeTime || '22:00'} <StoreStatusBadge openTime={s.openTime} closeTime={s.closeTime} /></p>}
                         </div>
                         <div className="mt-8 pt-6 border-t flex items-center justify-between">
