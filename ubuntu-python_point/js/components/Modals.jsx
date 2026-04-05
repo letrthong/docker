@@ -339,8 +339,8 @@ export function StoreModal({ setShowModal, handleSaveStore, initialData }) {
                     <Input label="Tên chi nhánh" name="name" defaultValue={initialData?.name} required placeholder="Cửa hàng Quận..." />
                     <Input label="Địa chỉ cụ thể" name="location" defaultValue={initialData?.location} required placeholder="Số 123..." />
                     <div className="grid grid-cols-2 gap-4">
-                        <Input label="Hotline (SĐT)" name="hotline" type="tel" defaultValue={initialData?.hotline} placeholder="0909..." />
-                        <Input label="Website / Fanpage" name="website" type="url" defaultValue={initialData?.website} placeholder="https://..." />
+                        <Input label="Hotline (Không bắt buộc)" name="hotline" type="tel" defaultValue={initialData?.hotline} placeholder="0909..." />
+                        <Input label="Website / Fanpage (Không bắt buộc)" name="website" type="url" defaultValue={initialData?.website} placeholder="https://..." />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <Input label="Vĩ độ (Lat)" name="lat" type="number" step="any" defaultValue={initialData?.lat} placeholder="10.7769" />
