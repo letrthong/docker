@@ -2,7 +2,8 @@ import os
 import uuid
 from datetime import datetime, timezone
 from flask import Blueprint, jsonify, request
-from pos_utils import read_config, write_stores, write_products, write_stock_requests, config_lock, read_transactions, write_transactions, STORES_FILE, PRODUCTS_FILE, EMPLOYEES_FILE, STOCK_REQUESTS_FILE, CATEGORIES_FILE, SHIFT_SLOTS_FILE
+from pos_utils import read_config, write_stores, write_products, write_stock_requests, config_lock, read_transactions, write_transactions
+from pos_utils import STORES_FILE, PRODUCTS_FILE, EMPLOYEES_FILE, STOCK_REQUESTS_FILE, CATEGORIES_FILE, SHIFT_SLOTS_FILE
 
 pos_stores_bp = Blueprint('pos_stores_bp', __name__)
 
@@ -59,13 +60,11 @@ def modify_store(store_id):
 # --- TRANSACTIONS ---
 @pos_stores_bp.route('/pos/api/v1/stores/<store_id>/transactions', methods=['GET'])
 def get_store_transactions(store_id):
-    from pos_utils import read_transactions
     txs = read_transactions(store_id)
     return jsonify(txs)
 
 @pos_stores_bp.route('/pos/api/v1/transactions/all', methods=['GET'])
 def get_all_transactions():
-    from pos_utils import read_config, read_transactions
     config = read_config()
     all_txs = []
     
