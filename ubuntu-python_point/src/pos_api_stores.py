@@ -27,7 +27,7 @@ def handle_stores():
     elif request.method == 'PUT':
         stores = request.get_json()
         config['stores'] = stores
-        write_config(config)
+        write_config({'stores': config['stores']})
         return jsonify({"message": "Stores saved", "count": len(stores)})
     elif request.method == 'POST':
         store = request.get_json()
@@ -35,7 +35,7 @@ def handle_stores():
         store['status'] = 'created'
         store.setdefault('employees', []); store.setdefault('inventory', []); store.setdefault('transactions', [])
         config['stores'].append(store)
-        write_config(config)
+        write_config({'stores': config['stores']})
         return jsonify({"message": "Store added", "store": store}), 201
 
 @pos_stores_bp.route('/pos/api/v1/stores/<store_id>', methods=['GET', 'PUT', 'DELETE'])
@@ -45,14 +45,14 @@ def modify_store(store_id):
         for s in config.get('stores', []):
             if s['id'] == store_id:
                 s['status'] = 'deleted'
-        write_config(config)
+        write_config({'stores': config['stores']})
         return jsonify({"message": f"Store {store_id} deleted"})
     for store in config.get('stores', []):
         if store['id'] == store_id:
             if request.method == 'GET': return jsonify(store)
             store.update(request.get_json())
             store['id'] = store_id
-            write_config(config)
+            write_config({'stores': config['stores']})
             return jsonify({"message": f"Store updated", "store": store})
     return jsonify({"error": "Store not found"}), 404
 
@@ -92,12 +92,12 @@ def handle_inventory(store_id):
             if request.method == 'GET': return jsonify(store.get('inventory', []))
             if request.method == 'PUT':
                 store['inventory'] = request.get_json()
-                write_config(config)
+                write_config({'stores': config['stores']})
                 return jsonify({"message": "Inventory updated"})
             if request.method == 'POST':
                 item = request.get_json()
                 store.setdefault('inventory', []).append(item)
-                write_config(config)
+                write_config({'stores': config['stores']})
                 return jsonify({"message": "Item added", "item": item}), 201
     return jsonify({"error": "Store not found"}), 404
 
@@ -107,7 +107,7 @@ def delete_inventory(store_id, product_id):
     for store in config.get('stores', []):
         if store['id'] == store_id:
             store['inventory'] = [i for i in store.get('inventory', []) if i['productId'] != product_id]
-            write_config(config)
+            write_config({'stores': config['stores']})
             return jsonify({"message": "Item deleted"})
     return jsonify({"error": "Store not found"}), 404
 

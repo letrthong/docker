@@ -762,9 +762,13 @@ export function useAppState() {
 
     const handleUpdateCategories = async (newCategories) => {
         try {
+            const token = getCache('chain_token', '');
             const res = await fetch('/pos/api/v1/categories', {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify(newCategories)
             });
             if (res.ok) {
@@ -780,11 +784,40 @@ export function useAppState() {
         }
     };
 
+    const handleAddCategory = async (newCategory) => {
+        try {
+            const token = getCache('chain_token', '');
+            const res = await fetch('/pos/api/v1/categories', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(newCategory)
+            });
+            if (res.ok) {
+                const result = await res.json();
+                setCategories([...categories, result.category]);
+                showToast("Đã thêm danh mục thành công.");
+            } else {
+                const result = await res.json();
+                showToast(result.error || "Lỗi hệ thống khi thêm danh mục!", 'error');
+            }
+        } catch (error) {
+            console.error("Lỗi thêm danh mục:", error);
+            showToast("Lỗi kết nối máy chủ!", 'error');
+        }
+    };
+
     const handleUpdateShiftSlots = async (newShiftSlots) => {
         try {
+            const token = getCache('chain_token', '');
             const res = await fetch('/pos/api/v1/shift-slots', {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify(newShiftSlots)
             });
             if (res.ok) {
@@ -816,6 +849,6 @@ export function useAppState() {
         handleLogin, handleLogout, handleSaveEmployee, handleDeleteEmployee, handleAddExistingEmployee, handleUpdateEmployeeStatus, handleResetPassword, handleChangePassword, 
         handleSaveGlobalProduct, handleDeleteGlobalProduct, handleImportToWarehouse, handleDistribute, handleAddStockRequest, handleProcessStockRequest, handleReceiveStockRequest, handleReturnStock, handleTransferStock,
         handleAddStore, handleEditStore, handleDeleteStore, handleSellProduct,
-        handleUpdateCategories, handleUpdateShiftSlots, getProductInfo, showToast,
+        handleUpdateCategories, handleAddCategory, handleUpdateShiftSlots, getProductInfo, showToast,
     };
 }
