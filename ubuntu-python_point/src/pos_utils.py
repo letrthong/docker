@@ -137,99 +137,109 @@ def read_config():
             "shiftSlots": _read_json_file(SHIFT_SLOTS_FILE, [])
         }
 
-def write_config(data):
-    """
-    Nhận vào một object config lớn, sau đó tách và ghi ra nhiều file JSON riêng lẻ.
-    Hàm này cũng đảm nhiệm việc mã hóa các trường dữ liệu nhạy cảm trước khi ghi.
-    """
+def write_products(products_data):
+    """Hàm ghi độc lập chỉ dành cho Cấu hình Sản phẩm"""
     os.makedirs(CONFIG_DIR, exist_ok=True)
     os.makedirs(IMAGES_DIR, exist_ok=True)
     with config_lock:
-        # Copy ra một bản sao để tránh làm thay đổi data trên RAM (tránh lỗi hiển thị API)
-        data_to_write = copy.deepcopy(data)
-
-        # Xử lý và ghi từng phần của config nếu có
-        if 'stores' in data_to_write:
-            for store in data_to_write['stores']:
-                if 'name' in store: store['name'] = encode_b64_field(store['name'])
-                if 'location' in store: store['location'] = encode_b64_field(store['location'])
-                if 'website' in store: store['website'] = encode_b64_field(store['website'])
-                if 'hotline' in store: store['hotline'] = encode_b64_field(store['hotline'])
-                
-                img_data = store.get('image')
-                if img_data and isinstance(img_data, str) and img_data.startswith('data:image/'):
-                    try:
-                        header, encoded = img_data.split(",", 1)
-                        file_path = os.path.join(IMAGES_DIR, f"store_{store['id']}.webp")
-                        with open(file_path, "wb") as fh:
-                            fh.write(base64.b64decode(encoded))
-                        store['hasImage'] = True
-                    except Exception:
-                        pass
-                elif img_data and isinstance(img_data, str) and img_data.startswith('/pos/api/v1/stores/'):
-                    store['hasImage'] = True
-                
-                if 'image' in store:
-                    del store['image']
-            _write_json_file(STORES_FILE, data_to_write['stores'])
-
-        if 'allEmployees' in data_to_write:
-            for emp in data_to_write['allEmployees']:
-                if 'name' in emp: emp['name'] = encode_b64_field(emp['name'])
-                if 'cccd' in emp: emp['cccd'] = encode_b64_field(emp['cccd'])
-                if 'phone' in emp: emp['phone'] = encode_b64_field(emp['phone'])
-                
-                # Tách ảnh cccdImage ra file riêng để giảm dung lượng file json
-                img_data = emp.get('cccdImage')
-                if img_data and isinstance(img_data, str) and img_data.startswith('data:image/'):
-                    try:
-                        header, encoded = img_data.split(",", 1)
-                        file_path = os.path.join(IMAGES_DIR, f"{emp['id']}.jpg")
-                        with open(file_path, "wb") as fh:
-                            fh.write(base64.b64decode(encoded))
-                        emp['hasImage'] = True
-                    except Exception:
-                        pass
-                elif img_data and isinstance(img_data, str) and img_data.startswith('/pos/api/v1/employees/'):
-                    # Nếu url đã được tạo ra ở hàm read_config, đánh dấu cờ hasImage
-                    emp['hasImage'] = True
-                
-                # Xóa cccdImage khỏi json file để tiết kiệm dung lượng
-                if 'cccdImage' in emp:
-                    del emp['cccdImage']
-            _write_json_file(EMPLOYEES_FILE, data_to_write['allEmployees'])
-
-        if 'stockRequests' in data_to_write:
-            for req in data_to_write['stockRequests']:
-                if 'storeName' in req: req['storeName'] = encode_b64_field(req['storeName'])
-                if 'productName' in req: req['productName'] = encode_b64_field(req['productName'])
-                if 'note' in req: req['note'] = encode_b64_field(req['note'])
-            _write_json_file(STOCK_REQUESTS_FILE, data_to_write['stockRequests'])
-
-        if 'products' in data_to_write:
-            for prod in data_to_write['products']:
-                img_data = prod.get('image')
-                if img_data and isinstance(img_data, str) and img_data.startswith('data:image/'):
-                    try:
-                        header, encoded = img_data.split(",", 1)
-                        file_path = os.path.join(IMAGES_DIR, f"prod_{prod['id']}.webp")
-                        with open(file_path, "wb") as fh:
-                            fh.write(base64.b64decode(encoded))
-                        prod['hasImage'] = True
-                    except Exception:
-                        pass
-                elif img_data and isinstance(img_data, str) and img_data.startswith('/pos/api/v1/products/'):
+        data_to_write = copy.deepcopy(products_data)
+        for prod in data_to_write:
+            img_data = prod.get('image')
+            if img_data and isinstance(img_data, str) and img_data.startswith('data:image/'):
+                try:
+                    header, encoded = img_data.split(",", 1)
+                    file_path = os.path.join(IMAGES_DIR, f"prod_{prod['id']}.webp")
+                    with open(file_path, "wb") as fh:
+                        fh.write(base64.b64decode(encoded))
                     prod['hasImage'] = True
-                
-                if 'image' in prod:
-                    del prod['image']
-            _write_json_file(PRODUCTS_FILE, data_to_write['products'])
-        
-        if 'categories' in data_to_write:
-            _write_json_file(CATEGORIES_FILE, data_to_write['categories'])
+                except Exception:
+                    pass
+            elif img_data and isinstance(img_data, str) and img_data.startswith('/pos/api/v1/products/'):
+                prod['hasImage'] = True
+            
+            if 'image' in prod:
+                del prod['image']
+        _write_json_file(PRODUCTS_FILE, data_to_write)
 
-        if 'shiftSlots' in data_to_write:
-            _write_json_file(SHIFT_SLOTS_FILE, data_to_write['shiftSlots'])
+def write_categories(categories_data):
+    """Hàm ghi độc lập chỉ dành cho Cấu hình Danh mục (Categories)"""
+    os.makedirs(CONFIG_DIR, exist_ok=True)
+    with config_lock:
+        _write_json_file(CATEGORIES_FILE, categories_data)
+
+def write_stores(stores_data):
+    """Hàm ghi độc lập chỉ dành cho Cấu hình Cửa hàng (Stores)"""
+    os.makedirs(CONFIG_DIR, exist_ok=True)
+    os.makedirs(IMAGES_DIR, exist_ok=True)
+    with config_lock:
+        data_to_write = copy.deepcopy(stores_data)
+        for store in data_to_write:
+            if 'name' in store: store['name'] = encode_b64_field(store['name'])
+            if 'location' in store: store['location'] = encode_b64_field(store['location'])
+            if 'website' in store: store['website'] = encode_b64_field(store['website'])
+            if 'hotline' in store: store['hotline'] = encode_b64_field(store['hotline'])
+            
+            img_data = store.get('image')
+            if img_data and isinstance(img_data, str) and img_data.startswith('data:image/'):
+                try:
+                    header, encoded = img_data.split(",", 1)
+                    file_path = os.path.join(IMAGES_DIR, f"store_{store['id']}.webp")
+                    with open(file_path, "wb") as fh:
+                        fh.write(base64.b64decode(encoded))
+                    store['hasImage'] = True
+                except Exception:
+                    pass
+            elif img_data and isinstance(img_data, str) and img_data.startswith('/pos/api/v1/stores/'):
+                store['hasImage'] = True
+            
+            if 'image' in store:
+                del store['image']
+        _write_json_file(STORES_FILE, data_to_write)
+
+def write_employees(employees_data):
+    """Hàm ghi độc lập chỉ dành cho Cấu hình Nhân sự (Employees)"""
+    os.makedirs(CONFIG_DIR, exist_ok=True)
+    os.makedirs(IMAGES_DIR, exist_ok=True)
+    with config_lock:
+        data_to_write = copy.deepcopy(employees_data)
+        for emp in data_to_write:
+            if 'name' in emp: emp['name'] = encode_b64_field(emp['name'])
+            if 'cccd' in emp: emp['cccd'] = encode_b64_field(emp['cccd'])
+            if 'phone' in emp: emp['phone'] = encode_b64_field(emp['phone'])
+            
+            img_data = emp.get('cccdImage')
+            if img_data and isinstance(img_data, str) and img_data.startswith('data:image/'):
+                try:
+                    header, encoded = img_data.split(",", 1)
+                    file_path = os.path.join(IMAGES_DIR, f"{emp['id']}.jpg")
+                    with open(file_path, "wb") as fh:
+                        fh.write(base64.b64decode(encoded))
+                    emp['hasImage'] = True
+                except Exception:
+                    pass
+            elif img_data and isinstance(img_data, str) and img_data.startswith('/pos/api/v1/employees/'):
+                emp['hasImage'] = True
+            
+            if 'cccdImage' in emp:
+                del emp['cccdImage']
+        _write_json_file(EMPLOYEES_FILE, data_to_write)
+
+def write_stock_requests(requests_data):
+    """Hàm ghi độc lập chỉ dành cho Cấu hình Yêu cầu kho (Stock Requests)"""
+    os.makedirs(CONFIG_DIR, exist_ok=True)
+    with config_lock:
+        data_to_write = copy.deepcopy(requests_data)
+        for req in data_to_write:
+            if 'storeName' in req: req['storeName'] = encode_b64_field(req['storeName'])
+            if 'productName' in req: req['productName'] = encode_b64_field(req['productName'])
+            if 'note' in req: req['note'] = encode_b64_field(req['note'])
+        _write_json_file(STOCK_REQUESTS_FILE, data_to_write)
+
+def write_shift_slots(slots_data):
+    """Hàm ghi độc lập chỉ dành cho Cấu hình Ca trực (Shift Slots)"""
+    os.makedirs(CONFIG_DIR, exist_ok=True)
+    with config_lock:
+        _write_json_file(SHIFT_SLOTS_FILE, slots_data)
 
 def get_transactions_file(store_id):
     return os.path.join(CONFIG_DIR, f'transactions_{store_id}.json')

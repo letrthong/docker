@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 from flask import Blueprint, jsonify, request
-from pos_utils import read_config, write_config, get_products_last_update, set_products_last_update, config_lock, read_transactions, write_transactions
+from pos_utils import read_config, write_products, get_products_last_update, set_products_last_update, config_lock, read_transactions, write_transactions
 
 pos_products_bp = Blueprint('pos_products_bp', __name__)
 
@@ -19,7 +19,7 @@ def update_products():
     if not isinstance(products, list): return jsonify({"error": "Expected array"}), 400
     config = read_config()
     config['products'] = products
-    write_config(config)
+    write_products(config['products'])
     set_products_last_update()
     return jsonify({"message": "Products saved", "count": len(products)})
 
@@ -31,7 +31,7 @@ def add_product():
     product['id'] = product.get('id', f"p{uuid.uuid4().hex[:8]}")
     product['status'] = 'created'
     config['products'].append(product)
-    write_config(config)
+    write_products(config['products'])
     set_products_last_update()
     return jsonify({"message": "Product added", "product": product}), 201
 
@@ -42,14 +42,14 @@ def modify_product(product_id):
         for p in config.get('products', []):
             if p['id'] == product_id:
                 p['status'] = 'deleted'
-        write_config(config)
+        write_products(config['products'])
         return jsonify({"message": f"Product {product_id} deleted"})
     
     for prod in config.get('products', []):
         if prod['id'] == product_id:
             prod.update(request.get_json())
             prod['id'] = product_id
-            write_config(config)
+            write_products(config['products'])
             set_products_last_update()
             return jsonify({"message": f"Product {product_id} updated", "product": prod})
     return jsonify({"error": "Product not found"}), 404
@@ -66,7 +66,7 @@ def secure_import(product_id):
         if not product: return jsonify({"error": "Không tìm thấy sản phẩm!"}), 404
         
         product['warehouseStock'] = int(product.get('warehouseStock', 0)) + qty
-        write_config(config)
+        write_products(config['products'])
         set_products_last_update()
         
     # Ghi lại lịch sử giao dịch vào file riêng của Kho tổng

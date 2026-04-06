@@ -2,7 +2,7 @@ import os
 import uuid
 from datetime import datetime, timezone
 from flask import Blueprint, jsonify, request
-from pos_utils import read_config, write_config, config_lock, read_transactions, write_transactions, STORES_FILE, PRODUCTS_FILE, EMPLOYEES_FILE, STOCK_REQUESTS_FILE, CATEGORIES_FILE, SHIFT_SLOTS_FILE
+from pos_utils import read_config, write_stores, write_products, write_stock_requests, config_lock, read_transactions, write_transactions, STORES_FILE, PRODUCTS_FILE, EMPLOYEES_FILE, STOCK_REQUESTS_FILE, CATEGORIES_FILE, SHIFT_SLOTS_FILE
 
 pos_stores_bp = Blueprint('pos_stores_bp', __name__)
 
@@ -27,7 +27,7 @@ def handle_stores():
     elif request.method == 'PUT':
         stores = request.get_json()
         config['stores'] = stores
-        write_config({'stores': config['stores']})
+        write_stores(config['stores'])
         return jsonify({"message": "Stores saved", "count": len(stores)})
     elif request.method == 'POST':
         store = request.get_json()
@@ -35,7 +35,7 @@ def handle_stores():
         store['status'] = 'created'
         store.setdefault('employees', []); store.setdefault('inventory', []); store.setdefault('transactions', [])
         config['stores'].append(store)
-        write_config({'stores': config['stores']})
+        write_stores(config['stores'])
         return jsonify({"message": "Store added", "store": store}), 201
 
 @pos_stores_bp.route('/pos/api/v1/stores/<store_id>', methods=['GET', 'PUT', 'DELETE'])
@@ -45,14 +45,14 @@ def modify_store(store_id):
         for s in config.get('stores', []):
             if s['id'] == store_id:
                 s['status'] = 'deleted'
-        write_config({'stores': config['stores']})
+        write_stores(config['stores'])
         return jsonify({"message": f"Store {store_id} deleted"})
     for store in config.get('stores', []):
         if store['id'] == store_id:
             if request.method == 'GET': return jsonify(store)
             store.update(request.get_json())
             store['id'] = store_id
-            write_config({'stores': config['stores']})
+            write_stores(config['stores'])
             return jsonify({"message": f"Store updated", "store": store})
     return jsonify({"error": "Store not found"}), 404
 
@@ -92,12 +92,12 @@ def handle_inventory(store_id):
             if request.method == 'GET': return jsonify(store.get('inventory', []))
             if request.method == 'PUT':
                 store['inventory'] = request.get_json()
-                write_config({'stores': config['stores']})
+                write_stores(config['stores'])
                 return jsonify({"message": "Inventory updated"})
             if request.method == 'POST':
                 item = request.get_json()
                 store.setdefault('inventory', []).append(item)
-                write_config({'stores': config['stores']})
+                write_stores(config['stores'])
                 return jsonify({"message": "Item added", "item": item}), 201
     return jsonify({"error": "Store not found"}), 404
 
@@ -107,7 +107,7 @@ def delete_inventory(store_id, product_id):
     for store in config.get('stores', []):
         if store['id'] == store_id:
             store['inventory'] = [i for i in store.get('inventory', []) if i['productId'] != product_id]
-            write_config({'stores': config['stores']})
+            write_stores(config['stores'])
             return jsonify({"message": "Item deleted"})
     return jsonify({"error": "Store not found"}), 404
 
@@ -140,7 +140,7 @@ def secure_sell(store_id):
         inventory_item['sold'] = int(inventory_item.get('sold', 0)) + qty
         
         # 3. Ghi đè lại cấu hình
-        write_config({'stores': config['stores']}) # Chỉ ghi lại file stores.json
+        write_stores(config['stores'])
         
     # 4. Ghi lại luôn Lịch sử giao dịch (Log) vào Database
     product = next((p for p in config.get('products', []) if p['id'] == product_id), {})
@@ -189,7 +189,8 @@ def secure_distribute(store_id):
         }
         config.setdefault('stockRequests', []).append(new_req)
             
-        write_config({'products': config['products'], 'stockRequests': config['stockRequests']})
+        write_products(config['products'])
+        write_stock_requests(config['stockRequests'])
         
     txs = read_transactions(store_id)
     txs.append({
@@ -240,7 +241,8 @@ def secure_return(store_id):
         inventory_item['quantity'] = int(inventory_item['quantity']) - qty
         product['warehouseStock'] = int(product.get('warehouseStock', 0)) + qty
             
-        write_config({'stores': config['stores'], 'products': config['products']})
+        write_stores(config['stores'])
+        write_products(config['products'])
         
     txs = read_transactions(store_id)
     txs.append({
@@ -298,7 +300,7 @@ def secure_transfer(store_id):
         else:
             to_store.setdefault('inventory', []).append({'productId': product_id, 'quantity': qty, 'sold': 0})
             
-        write_config({'stores': config['stores']})
+        write_stores(config['stores'])
         
     now = datetime.now(timezone.utc).isoformat()
     
@@ -388,6 +390,8 @@ def secure_request_action():
             })
             write_transactions(req['storeId'], txs)
             
-        write_config({'stores': config.get('stores'), 'products': config.get('products'), 'stockRequests': config.get('stockRequests')})
+        if config.get('stores'): write_stores(config['stores'])
+        if config.get('products'): write_products(config['products'])
+        if config.get('stockRequests'): write_stock_requests(config['stockRequests'])
         
     return jsonify({"message": "Xử lý yêu cầu thành công!", "request": req})

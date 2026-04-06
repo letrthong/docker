@@ -3,7 +3,7 @@ import base64
 import hmac
 import hashlib
 from flask import Blueprint, jsonify, request
-from pos_utils import read_config, write_config
+from pos_utils import read_config, write_categories, write_shift_slots, write_employees, write_stock_requests
 from pos_api_auth import SECRET_KEY
 
 pos_config_bp = Blueprint('pos_config_bp', __name__)
@@ -51,7 +51,7 @@ def handle_categories():
         new_cat = request.get_json()
         if not isinstance(new_cat, dict): return jsonify({"error": "Dữ liệu không hợp lệ"}), 400
         current_categories.append(new_cat)
-        write_config({'categories': current_categories})
+        write_categories(current_categories)
         return jsonify({"message": "Đã thêm danh mục thành công", "category": new_cat}), 201
 
     if request.method == 'PUT':
@@ -65,7 +65,7 @@ def handle_categories():
         if not current_ids.issubset(incoming_ids):
             return jsonify({"error": "Từ chối cập nhật: Hệ thống không cho phép xóa danh mục, chỉ có thể chỉnh sửa hoặc ẩn!"}), 400
 
-        write_config({'categories': categories})
+        write_categories(categories)
         return jsonify({"message": "Đã lưu danh mục thành công"})
 
 @pos_config_bp.route('/pos/api/v1/shift-slots', methods=['GET', 'POST', 'PUT'])
@@ -83,7 +83,7 @@ def handle_shift_slots():
         new_slot = request.get_json()
         if not isinstance(new_slot, dict): return jsonify({"error": "Dữ liệu không hợp lệ"}), 400
         current_slots.append(new_slot)
-        write_config({'shiftSlots': current_slots})
+        write_shift_slots(current_slots)
         return jsonify({"message": "Đã thêm ca trực thành công", "shiftSlot": new_slot}), 201
 
     if request.method == 'PUT':
@@ -94,17 +94,17 @@ def handle_shift_slots():
         if len(slots) == 0:
             return jsonify({"error": "Từ chối cập nhật: Không được phép lưu danh sách ca trực rỗng!"}), 400
 
-        write_config({'shiftSlots': slots})
+        write_shift_slots(slots)
         return jsonify({"message": "Đã lưu ca làm việc thành công"})
 
 @pos_config_bp.route('/pos/api/v1/employees/bulk', methods=['PUT'])
 def update_all_employees():
     employees = request.get_json()
-    write_config({'allEmployees': employees})
+    write_employees(employees)
     return jsonify({"message": "Đã lưu danh sách nhân sự"})
 
 @pos_config_bp.route('/pos/api/v1/requests/bulk', methods=['PUT'])
 def update_all_requests():
     requests_data = request.get_json()
-    write_config({'stockRequests': requests_data})
+    write_stock_requests(requests_data)
     return jsonify({"message": "Đã lưu yêu cầu kho"})
