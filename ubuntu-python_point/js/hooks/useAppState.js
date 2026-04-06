@@ -205,16 +205,17 @@ export function useAppState() {
             });
             const data = await res.json();
             
-            if (!res.ok) {
+            // Chỉ lưu cache và cập nhật State khi Backend trả về đúng mã 200 OK
+            if (res.status === 200) {
+                setCache('chain_token', data.token); // Lưu lại JWT token vào LocalStorage
+                setUser(data.user);
+                if (data.user.role === 'admin') {
+                    setActiveTab('dashboard');
+                }
+                return null;
+            } else {
                 return data.error || 'Sai tài khoản hoặc mật khẩu!';
             }
-            
-            setCache('chain_token', data.token); // Lưu lại JWT token vào LocalStorage
-            setUser(data.user);
-            if (data.user.role === 'admin') {
-                setActiveTab('dashboard');
-            }
-            return null;
         } catch (error) {
             console.error("Lỗi đăng nhập:", error);
             return 'Lỗi kết nối máy chủ!';
@@ -575,9 +576,13 @@ export function useAppState() {
             message: `Thêm "${productData.name}" vào danh mục?`,
                 onConfirm: async () => {
                     try {
+                        const token = getCache('chain_token', '');
                         const res = await fetch('/pos/api/v1/products', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
                             body: JSON.stringify({
                                 ...productData,
                                 costPrice: Number(productData.costPrice || 0),
@@ -585,11 +590,19 @@ export function useAppState() {
                                 basePrice: Number(productData.basePrice)
                             })
                         });
+                        
+                        if (res.status >= 500) {
+                            showToast(`Lỗi hệ thống (${res.status}): Không thể tạo sản phẩm do Backend gặp sự cố!`, 'error');
+                            return;
+                        }
                         if (res.ok) {
                             const result = await res.json();
                             setGlobalProducts([...globalProducts, result.product]);
                             setShowModal(null);
                             showToast("Đã tạo sản phẩm thành công.");
+                        } else {
+                            const result = await res.json();
+                            showToast(result.error || "Lỗi từ hệ thống khi tạo sản phẩm!", 'error');
                         }
                     } catch (error) { showToast("Lỗi kết nối máy chủ", "error"); }
             }
@@ -623,6 +636,12 @@ export function useAppState() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ quantity: qty })
             });
+            
+            if (res.status >= 500) {
+                showToast(`Lỗi hệ thống (${res.status}): Nhập kho thất bại do Backend gặp sự cố!`, 'error');
+                return;
+            }
+            
             const result = await res.json();
             if (!res.ok) {
                 showToast(result.error || "Giao dịch thất bại từ Server!", 'error');
@@ -660,6 +679,12 @@ export function useAppState() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ productId, quantity: qty })
             });
+            
+            if (res.status >= 500) {
+                showToast(`Lỗi hệ thống (${res.status}): Không thể điều phối do Backend gặp sự cố!`, 'error');
+                return;
+            }
+            
             const result = await res.json();
             if (!res.ok) {
                 showToast(result.error || "Giao dịch thất bại từ Server!", 'error');
@@ -764,6 +789,12 @@ export function useAppState() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ productId, quantity: qty })
             });
+            
+            if (res.status >= 500) {
+                showToast(`Lỗi hệ thống (${res.status}): Bán hàng thất bại do Backend gặp sự cố!`, 'error');
+                return;
+            }
+            
             const result = await res.json();
             
             if (!res.ok) {
