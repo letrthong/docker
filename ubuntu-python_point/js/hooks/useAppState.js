@@ -82,9 +82,13 @@ export function useAppState() {
     // Đồng bộ độc lập: Cập nhật lại danh sách Nhân sự
     useEffect(() => {
         if (!isLoaded || allEmployees.length === 0) return;
+        const token = getCache('chain_token', '');
         fetch('/pos/api/v1/employees/bulk', {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
             body: JSON.stringify(allEmployees)
         }).catch(err => console.error("Lỗi đồng bộ NV:", err));
     }, [allEmployees, isLoaded]);
@@ -92,12 +96,46 @@ export function useAppState() {
     // Đồng bộ độc lập: Cập nhật lại Yêu cầu kho
     useEffect(() => {
         if (!isLoaded || stockRequests.length === 0) return;
+        const token = getCache('chain_token', '');
         fetch('/pos/api/v1/requests/bulk', {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
             body: JSON.stringify(stockRequests)
         }).catch(err => console.error("Lỗi đồng bộ Yêu cầu:", err));
     }, [stockRequests, isLoaded]);
+
+    // Đồng bộ độc lập: Cập nhật lại Danh mục
+    useEffect(() => {
+        // Chặn gửi mảng rỗng hoặc tài khoản không phải admin
+        if (!isLoaded || categories.length === 0 || user?.role !== 'admin') return;
+        const token = getCache('chain_token', '');
+        fetch('/pos/api/v1/categories', {
+            method: 'PUT',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(categories)
+        }).catch(err => console.error("Lỗi đồng bộ Danh mục:", err));
+    }, [categories, isLoaded, user]);
+
+    // Đồng bộ độc lập: Cập nhật lại Ca trực
+    useEffect(() => {
+        // Chặn gửi mảng rỗng hoặc tài khoản không phải admin
+        if (!isLoaded || shiftSlots.length === 0 || user?.role !== 'admin') return;
+        const token = getCache('chain_token', '');
+        fetch('/pos/api/v1/shift-slots', {
+            method: 'PUT',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(shiftSlots)
+        }).catch(err => console.error("Lỗi đồng bộ Ca trực:", err));
+    }, [shiftSlots, isLoaded, user]);
 
     useEffect(() => {
         setCache('chain_user', user);
@@ -833,7 +871,17 @@ export function useAppState() {
         }
     };
 
-    const getProductInfo = (pid) => globalProducts.find(p => p.id === pid) || { name: 'N/A', sku: 'N/A', category: 'N/A', unit: 'cái' };
+    const getCategoryInfo = (categoryId) => {
+        const cat = categories.find(c => c.id === categoryId);
+        // Nếu tìm thấy, trả về Icon + Tên. Nếu không, trả lại ID gốc (phòng trường hợp ID cũ chưa cập nhật)
+        return cat ? `${cat.icon} ${cat.name}` : (categoryId || 'N/A');
+    };
+
+    const getProductInfo = (pid) => {
+        const p = globalProducts.find(p => p.id === pid);
+        if (!p) return { name: 'N/A', sku: 'N/A', category: 'N/A', unit: 'cái' };
+        return { ...p, categoryName: getCategoryInfo(p.category) };
+    };
 
     return {
         // State
@@ -849,6 +897,6 @@ export function useAppState() {
         handleLogin, handleLogout, handleSaveEmployee, handleDeleteEmployee, handleAddExistingEmployee, handleUpdateEmployeeStatus, handleResetPassword, handleChangePassword, 
         handleSaveGlobalProduct, handleDeleteGlobalProduct, handleImportToWarehouse, handleDistribute, handleAddStockRequest, handleProcessStockRequest, handleReceiveStockRequest, handleReturnStock, handleTransferStock,
         handleAddStore, handleEditStore, handleDeleteStore, handleSellProduct,
-        handleUpdateCategories, handleAddCategory, handleUpdateShiftSlots, getProductInfo, showToast,
+        handleUpdateCategories, handleAddCategory, handleUpdateShiftSlots, getProductInfo, getCategoryInfo, showToast,
     };
 }

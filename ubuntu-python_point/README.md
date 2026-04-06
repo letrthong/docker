@@ -18,4 +18,4 @@ echo "  Deployment preparation finished!"
 
 docker exec -it telua_python_point bash
 
-docker cp telua_python_point:/app/dist/index.html ./index.html
+docker cp -fv telua_python_point:/app/dist/index.html ./dist/index.html
