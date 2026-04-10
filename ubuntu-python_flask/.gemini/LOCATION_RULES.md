@@ -1,6 +1,6 @@
 ### Kiểm tra vị trí khách sạn đăng ký với khu vực
 
-Khi người dùng đăng ký khách sạn mới, backend cần kiểm tra vị trí (lat, lng) của khách sạn so với tọa độ trung tâm của khu vực (lấy từ hotel_schema.json theo locationName hoặc filePathId).
+Khi người dùng đăng ký khách sạn mới, backend cần kiểm tra vị trí (lat, lng) của khách sạn so với tọa độ trung tâm của khu vực (lấy từ hotel_schema.json thông qua locationId).
 
 - **Quy tắc:** Nếu khoảng cách giữa khách sạn và trung tâm khu vực > 2km thì từ chối đăng ký hoặc cảnh báo cho admin/người đăng ký.
 - **Cách tính:** Sử dụng công thức Haversine để tính khoảng cách giữa 2 điểm lat/lng trên trái đất.

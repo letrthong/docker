@@ -111,7 +111,7 @@ def submit_hotel_request():
     # --- START VALIDATION: Kiểm tra khoảng cách vị trí đăng ký so với trung tâm khu vực ---
     hotel_lat = req_data.get(HotelField.LAT)
     hotel_lng = req_data.get(HotelField.LNG)
-    location_name = req_data.get(HotelField.LOCATION)
+    location_id = req_data.get(HotelField.LOCATION_ID)
 
     # Đảm bảo có đủ thông tin vị trí
     valid, error = validate_hotel_request(req_data)
@@ -121,14 +121,15 @@ def submit_hotel_request():
     # Lấy tọa độ trung tâm của khu vực từ schema
     with schema_lock:
         schemas = read_schema()
-    area_center = next((s for s in schemas if s.get(HotelField.LOCATION) == location_name), None)
+    area_center = next((s for s in schemas if s.get("id") == location_id), None)
 
     # Kiểm tra xem khu vực có tồn tại và có tọa độ không
     if not area_center or HotelField.LAT not in area_center or HotelField.LNG not in area_center:
-        return jsonify({HotelField.ERROR: f"Không tìm thấy thông tin vị trí cho khu vực: {location_name}"}), 400
+        return jsonify({HotelField.ERROR: f"Không tìm thấy thông tin vị trí cho khu vực (ID: {location_id})"}), 400
 
     area_lat = area_center[HotelField.LAT]
     area_lng = area_center[HotelField.LNG]
+    location_name = area_center.get(HotelField.LOCATION, "Không rõ")
 
     # Tính khoảng cách bằng công thức Haversine
     distance = haversine(hotel_lat, hotel_lng, area_lat, area_lng)
@@ -168,13 +169,16 @@ def approve_hotel_request(request_id):
         if not hotel_to_approve:
             return jsonify({HotelField.ERROR: "Không tìm thấy yêu cầu"}), 404
 
-        location_name = hotel_to_approve.get(HotelField.LOCATION)
-        if not location_name:
-            return jsonify({HotelField.ERROR: "Yêu cầu thiếu thông tin Tỉnh/Thành phố"}), 400
+        location_id = hotel_to_approve.get(HotelField.LOCATION_ID)
+        if not location_id:
+            return jsonify({HotelField.ERROR: f"Yêu cầu thiếu thông tin {HotelField.LOCATION_ID}"}), 400
 
-        target_file = get_hotel_file_path(location_name, read_schema())
+        schemas = read_schema()
+        target_schema = next((s for s in schemas if s.get("id") == location_id), None)
+        target_file = get_hotel_file_path(target_schema.get(HotelField.LOCATION), schemas) if target_schema else None
+
         if not target_file:
-            return jsonify({HotelField.ERROR: f"Không tìm thấy cấu hình cho Tỉnh/Thành phố: {location_name}"}), 400
+            return jsonify({HotelField.ERROR: f"Không tìm thấy cấu hình cho khu vực ID: {location_id}"}), 400
 
         # Cập nhật trạng thái và ngày tháng trước khi lưu
         hotel_to_approve = update_status(hotel_to_approve, HotelStatus.APPROVED)

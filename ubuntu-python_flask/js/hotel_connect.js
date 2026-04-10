@@ -50,9 +50,9 @@ const App = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [pendingRequests, setPendingRequests] = useState([]);
     const [searchTerm, setSearchTerm] = useState("");
-    const [filterCity, setFilterCity] = useState(() => {
+    const [filterLocationId, setFilterLocationId] = useState(() => {
         const urlParams = new URLSearchParams(window.location.search);
-        return urlParams.get('city') || localStorage.getItem('luquan_last_selected_city') || "";
+        return urlParams.get('locationId') || localStorage.getItem('luquan_last_selected_locationId') || "";
     });
     const [selectedHotel, setSelectedHotel] = useState(null);
     const [showRequestForm, setShowRequestForm] = useState(false);
@@ -118,16 +118,22 @@ const App = () => {
         }
     }, [isAdmin]);
 
+    // Hàm tiện ích (helper) để lấy tên Thành phố từ locationId
+    const getLocationNameById = (locationId) => {
+        const province = provinces.find(p => p.id === locationId);
+        return province ? province.locationName : "Không rõ";
+    };
+
     // Tải dữ liệu khách sạn khi người dùng thay đổi bộ lọc thành phố
     useEffect(() => {
         // Lưu lựa chọn mới vào Local Storage để ghi nhớ cho lần sau
-        localStorage.setItem('luquan_last_selected_city', filterCity);
+        localStorage.setItem('luquan_last_selected_locationId', filterLocationId);
 
         // Không chạy nếu chưa có danh sách tỉnh
-        if (provinces.length === 0 && filterCity) return; // Chờ cho danh sách tỉnh được tải xong
+        if (provinces.length === 0 && filterLocationId) return; // Chờ cho danh sách tỉnh được tải xong
 
         // Nếu không chọn thành phố nào, danh sách khách sạn sẽ rỗng
-        if (!filterCity) {
+        if (!filterLocationId) {
             setHotels([]);
             setSelectedHotel(null);
             return;
@@ -136,9 +142,9 @@ const App = () => {
         setIsLoading(true);
         setHotels([]);
 
-        const filePathsToFetch = filterCity === "all"
+        const filePathsToFetch = filterLocationId === "all"
             ? provinces.map(p => p.filePathId)
-            : [provinces.find(p => p.locationName === filterCity)?.filePathId].filter(Boolean);
+            : [provinces.find(p => p.id === filterLocationId)?.filePathId].filter(Boolean);
 
         HotelAPI.fetchHotelsByFilePaths(filePathsToFetch)
             .then(hotelsData => {
@@ -165,12 +171,12 @@ const App = () => {
                 }
             })
             .catch(error => {
-                console.error(`Lỗi khi tải dữ liệu cho ${filterCity}:`, error);
+                console.error(`Lỗi khi tải dữ liệu cho ${filterLocationId}:`, error);
             })
             .finally(() => {
                 setIsLoading(false);
             });
-    }, [filterCity, provinces]);
+    }, [filterLocationId, provinces]);
 
     useEffect(() => {
         // Chạy lại sau mỗi lần render để đảm bảo mọi icon mới đều được hiển thị
@@ -207,15 +213,15 @@ const App = () => {
         if (selectedHotel) {
             localStorage.setItem('luquan_last_selected_hotel_id', selectedHotel.id);
             url.searchParams.set('hotel', selectedHotel.id);
-            if (filterCity) url.searchParams.set('city', filterCity);
+            if (filterLocationId) url.searchParams.set('locationId', filterLocationId);
         } else {
             // Nếu người dùng đóng cửa sổ chi tiết, ta cũng xóa thông tin đã lưu
             localStorage.removeItem('luquan_last_selected_hotel_id');
             url.searchParams.delete('hotel');
-            url.searchParams.delete('city');
+            url.searchParams.delete('locationId');
         }
         window.history.replaceState({}, '', url);
-    }, [selectedHotel, filterCity]);
+    }, [selectedHotel, filterLocationId]);
 
     const filteredHotels = useMemo(() => {
         let list;
@@ -248,7 +254,7 @@ const App = () => {
             }
         }
         return searchResults;
-    }, [hotels, pendingRequests, pendingReviewHotels, searchTerm, filterCity, isAdmin, adminTab, selectedHotel]);
+    }, [hotels, pendingRequests, pendingReviewHotels, searchTerm, filterLocationId, isAdmin, adminTab, selectedHotel]);
 
     // Tự động ẩn Toast thông báo sau 3 giây
     useEffect(() => {
@@ -289,7 +295,7 @@ const App = () => {
             .then(response => {
                 setPendingRequests(prev => prev.filter(h => h.id !== hotel.id));
                 // Nếu admin đang xem thành phố vừa được duyệt, thêm khách sạn vào danh sách để cập nhật UI
-                if (response.data.locationName === filterCity) {
+            if (response.data.locationId === filterLocationId) {
                     setHotels(prev => [...prev, response.data]);
                 }
                 setToastMessage(`Đã duyệt thành công "${hotel.name}"!`);
@@ -317,7 +323,7 @@ const App = () => {
             .then((response) => {
                 setPendingReviewHotels(prev => prev.filter(h => h.id !== hotel.id));
                 // Thêm khách sạn lại vào danh sách đã duyệt nếu đang xem khu vực đó
-                if (response.data.locationName === filterCity) {
+            if (response.data.locationId === filterLocationId) {
                     setHotels(prev => {
                         if (prev.some(h => h.id === response.data.id)) {
                             return prev.map(h => h.id === response.data.id ? response.data : h);
@@ -337,7 +343,7 @@ const App = () => {
         HotelAPI.setHotelStatus(hotel.id, 'inactive')
             .then((response) => {
                 setPendingReviewHotels(prev => prev.filter(h => h.id !== hotel.id));
-                if (response.data && response.data.locationName === filterCity) {
+            if (response.data && response.data.locationId === filterLocationId) {
                     setHotels(prev => prev.map(h => h.id === response.data.id ? response.data : h));
                 }
                 setToastMessage(`Đã tạm ẩn "${hotel.name}".`);
@@ -541,14 +547,14 @@ const App = () => {
                                 <Icon name="map" size={14} />
                             </div>
                             <select 
-                                value={filterCity} 
-                                onChange={(e) => setFilterCity(e.target.value)}
+                            value={filterLocationId} 
+                            onChange={(e) => setFilterLocationId(e.target.value)}
                                 className="w-full pl-10 pr-8 py-2.5 bg-white rounded-xl border-2 border-stone-100 focus:border-orange-700 outline-none transition-all font-bold text-xs text-stone-600 appearance-none cursor-pointer"
                             >
                                 <option value="">-- Chọn khu vực --</option>
                                 <option value="all">Tất cả khu vực</option>
                                 {provinces.map(p => (
-                                    <option key={p.id} value={p.locationName}>{p.locationName}</option>
+                                <option key={p.id} value={p.id}>{p.locationName}</option>
                                 ))}
                             </select>
                             <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none">
@@ -570,7 +576,7 @@ const App = () => {
 
                     <div className="flex-1 overflow-y-auto bg-stone-50 scrollbar-hide pb-24">
                         {isAdmin && adminTab === 'reports' ? (
-                        <ReportManager reports={reports} setFilterCity={setFilterCity} onToast={setToastMessage} onReportDeleted={refreshReports} onProcessReport={onProcessReport} />
+                    <ReportManager reports={reports} setFilterCity={setFilterLocationId} onToast={setToastMessage} onReportDeleted={refreshReports} onProcessReport={onProcessReport} />
                         ) : (
                             <div className="p-3 space-y-3">
                                 {isLoading ? (
@@ -578,7 +584,7 @@ const App = () => {
                                         <Icon name="loader" size={32} className="mx-auto mb-2 text-stone-400 animate-spin" />
                                         <p className="font-black uppercase text-[9px] tracking-widest italic">Đang tải dữ liệu...</p>
                                     </div>
-                                ) : !filterCity ? (
+                            ) : !filterLocationId ? (
                                     <div className="text-center py-20 opacity-40">
                                         <Icon name="map" size={32} className="mx-auto mb-2 text-stone-400" />
                                         <p className="font-black uppercase text-[9px] tracking-widest italic">Vui lòng chọn một khu vực để xem khách sạn</p>
@@ -601,7 +607,7 @@ const App = () => {
                                                 <div>
                                                     <h3 className="font-black text-stone-900 leading-tight truncate text-xs uppercase">{hotel.name}</h3>
                                                     <p className="text-[9px] text-stone-500 flex items-center gap-1 mt-0.5 font-bold truncate">
-                                                        <Icon name="map-pin" size={10} className="text-orange-700" /> {decodeBase64(hotel.address)}
+                                                    <Icon name="map-pin" size={10} className="text-orange-700" /> {decodeBase64(hotel.address)} • {getLocationNameById(hotel.locationId)}
                                                     </p>
                                                 </div>
                                                 <div className="flex items-center justify-between mt-1">
@@ -665,7 +671,7 @@ const App = () => {
                     ${viewMode === 'map' ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
                 `}>
                     <div className="w-full h-full relative z-0">
-                        <MainLeafletMap hotels={filteredHotels} selectedHotel={selectedHotel} onSelectHotel={setSelectedHotel} filterCity={filterCity} viewMode={viewMode} />
+                    <MainLeafletMap hotels={filteredHotels} selectedHotel={selectedHotel} onSelectHotel={setSelectedHotel} filterCity={filterLocationId} viewMode={viewMode} />
                     </div>
                 </div>
 

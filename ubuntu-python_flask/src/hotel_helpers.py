@@ -60,9 +60,9 @@ def write_reports(data):
 def validate_hotel_request(req_data):
     lat = req_data.get(HotelField.LAT)
     lng = req_data.get(HotelField.LNG)
-    location = req_data.get(HotelField.LOCATION)
-    if not all([isinstance(lat, (int, float)), isinstance(lng, (int, float)), location]):
-        return False, f"Thiếu thông tin {HotelField.LAT}, {HotelField.LNG} hoặc Tỉnh/Thành phố"
+    location_id = req_data.get(HotelField.LOCATION_ID)
+    if not all([isinstance(lat, (int, float)), isinstance(lng, (int, float)), location_id]):
+        return False, f"Thiếu thông tin {HotelField.LAT}, {HotelField.LNG} hoặc {HotelField.LOCATION_ID}"
     return True, None
 
 def update_status(hotel, status: HotelStatus):

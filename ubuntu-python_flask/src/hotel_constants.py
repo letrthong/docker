@@ -31,6 +31,7 @@ class HotelField:
     LAT = "lat"
     LNG = "lng"
     LOCATION = "locationName"
+    LOCATION_ID = "locationId"
     FILE_PATH_ID = "filePathId"
     CREATED_AT = "createdAt"
     UPDATED_AT = "updatedAt"

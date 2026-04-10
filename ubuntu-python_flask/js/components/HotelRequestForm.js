@@ -18,6 +18,7 @@ const HotelRequestForm = ({ provinces, onClose, onSubmitSuccess, onToast }) => {
     // Quản lý vị trí bản đồ độc lập, không ảnh hưởng đến vị trí ở ngoài App chính
     const [pickerPos, setPickerPos] = useState({ lat: 11.9404, lng: 108.4583 });
     const [areaCenter, setAreaCenter] = useState(null);
+    const [locationId, setLocationId] = useState("");
     const [locationName, setLocationName] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [apiError, setApiError] = useState(null);
@@ -25,11 +26,12 @@ const HotelRequestForm = ({ provinces, onClose, onSubmitSuccess, onToast }) => {
     const [imageBase64, setImageBase64] = useState("");
 
     const handleLocationChange = async (e) => {
-        const locName = e.target.value;
-        setLocationName(locName);
-        if (locName) {
-            const province = provinces.find(p => p.locationName === locName);
+        const locId = e.target.value;
+        setLocationId(locId);
+        if (locId) {
+            const province = provinces.find(p => p.id === locId);
             if (province) {
+                setLocationName(province.locationName);
                 // Nếu dữ liệu tỉnh đã có sẵn tọa độ (từ Schema)
                 if (province.lat !== undefined && province.lng !== undefined && province.lat !== "" && province.lng !== "") {
                     const lat = parseFloat(province.lat);
@@ -188,7 +190,7 @@ const HotelRequestForm = ({ provinces, onClose, onSubmitSuccess, onToast }) => {
             address: base64Address,
             phone: base64Phone,
             website: base64Website,
-            locationName: formData.get('locationName'),
+            locationId: formData.get('locationId'),
             status: 'pending',
             rating: 5.0,
             createdAt: today,
@@ -239,10 +241,10 @@ const HotelRequestForm = ({ provinces, onClose, onSubmitSuccess, onToast }) => {
                     <div className="grid grid-cols-2 gap-3">
                         <div className="col-span-2">
                             <label className="text-[10px] font-black text-stone-400 uppercase mb-1 block tracking-widest">Tỉnh/Thành phố</label>
-                            <select required name="locationName" onChange={handleLocationChange} className="w-full px-4 py-3 rounded-xl bg-stone-100 border-2 border-transparent focus:border-orange-700 outline-none font-bold text-sm appearance-none cursor-pointer">
+                            <select required name="locationId" onChange={handleLocationChange} className="w-full px-4 py-3 rounded-xl bg-stone-100 border-2 border-transparent focus:border-orange-700 outline-none font-bold text-sm appearance-none cursor-pointer">
                                 <option value="">-- Chọn Tỉnh/Thành --</option>
                                 {provinces.map(p => (
-                                    <option key={p.id} value={p.locationName}>{p.locationName}</option>
+                                    <option key={p.id} value={p.id}>{p.locationName}</option>
                                 ))}
                             </select>
                         </div>
