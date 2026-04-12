@@ -21,7 +21,8 @@ function SchemaManager({ api, onToast }) {
     const [formData, setFormData] = useState({
         locationName: '',
         lat: '',
-        lng: ''
+        lng: '',
+        radius: 2
     });
     const [pickerPos, setPickerPos] = useState({ lat: 14.0583, lng: 108.2772 }); // Mặc định ở trung tâm Việt Nam
 
@@ -67,7 +68,7 @@ function SchemaManager({ api, onToast }) {
     };
 
     const resetForm = () => {
-        setFormData({ locationName: '', lat: '', lng: '' });
+        setFormData({ locationName: '', lat: '', lng: '', radius: 2 });
         setPickerPos({ lat: 14.0583, lng: 108.2772 });
         setEditingSchema(null);
     };
@@ -77,7 +78,8 @@ function SchemaManager({ api, onToast }) {
         setFormData({
             locationName: schema.locationName,
             lat: schema.lat,
-            lng: schema.lng
+            lng: schema.lng,
+            radius: schema.radius || 2
         });
         setPickerPos({ lat: parseFloat(schema.lat) || 14.0583, lng: parseFloat(schema.lng) || 108.2772 });
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -108,11 +110,17 @@ function SchemaManager({ api, onToast }) {
             locationName: formData.locationName,
             lat: parseFloat(formData.lat),
             lng: parseFloat(formData.lng),
+            radius: parseFloat(formData.radius || 2)
         };
 
         try {
             if (editingSchema) {
                 // Cập nhật
+                const currentRadius = parseFloat(editingSchema.radius || 2);
+                if (payload.radius < currentRadius) {
+                    onToast('error', 'Không thể giảm bán kính nhỏ hơn mức hiện tại.');
+                    return;
+                }
                 await api.updateSchema(editingSchema.id, payload);
                 onToast('success', 'Cập nhật khu vực thành công!');
             } else {
@@ -145,7 +153,7 @@ function SchemaManager({ api, onToast }) {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
                         <label htmlFor="locationName" className="block text-sm font-medium text-gray-700">Tên khu vực</label>
                         <input type="text" id="locationName" name="locationName" value={formData.locationName} onChange={handleInputChange} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Ví dụ: Đà Lạt" />
@@ -157,6 +165,16 @@ function SchemaManager({ api, onToast }) {
                     <div>
                         <label htmlFor="lng" className="block text-sm font-medium text-gray-700">Kinh độ (Longitude)</label>
                         <input type="number" step="any" id="lng" name="lng" value={formData.lng} onChange={handleInputChange} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Ví dụ: 108.4583" />
+                    </div>
+                    <div>
+                        <label htmlFor="radius" className="block text-sm font-medium text-gray-700">Bán kính giới hạn</label>
+                        <select id="radius" name="radius" value={formData.radius} onChange={handleInputChange} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                            <option value="2" disabled={editingSchema && parseFloat(editingSchema.radius || 2) > 2}>2 km</option>
+                            <option value="5" disabled={editingSchema && parseFloat(editingSchema.radius || 2) > 5}>5 km</option>
+                            <option value="10" disabled={editingSchema && parseFloat(editingSchema.radius || 2) > 10}>10 km</option>
+                            <option value="20" disabled={editingSchema && parseFloat(editingSchema.radius || 2) > 20}>20 km</option>
+                            <option value="50" disabled={editingSchema && parseFloat(editingSchema.radius || 2) > 50}>50 km</option>
+                        </select>
                     </div>
                 </div>
                 <div className="mt-4 flex items-center justify-end gap-2">
@@ -179,21 +197,25 @@ function SchemaManager({ api, onToast }) {
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
+                                    <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-16">STT</th>
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên khu vực</th>
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vĩ độ</th>
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kinh độ</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bán kính</th>
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">File Path ID</th>
                                     <th scope="col" className="relative px-6 py-3"><span className="sr-only">Hành động</span></th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {schemas.length === 0 ? (
-                                    <tr><td colSpan="5" className="px-6 py-4 text-center text-gray-500">Chưa có khu vực nào.</td></tr>
-                                ) : schemas.map(schema => (
+                                    <tr><td colSpan="7" className="px-6 py-4 text-center text-gray-500">Chưa có khu vực nào.</td></tr>
+                                ) : schemas.map((schema, index) => (
                                     <tr key={schema.id}>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center font-bold">{index + 1}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{schema.locationName}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{schema.lat}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{schema.lng}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{schema.radius || 2} km</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{schema.filePathId}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium flex gap-2 justify-end">
                                             <button onClick={() => handleEdit(schema)} className="text-indigo-600 hover:text-indigo-900">Sửa</button>

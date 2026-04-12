@@ -74,6 +74,11 @@ def update_schema(item_id):
         data = read_schema()
         for item in data:
             if item.get("id") == item_id:
+                current_radius = float(item.get("radius", 2))
+                new_radius = float(req_data.get("radius", 2))
+                if new_radius < current_radius:
+                    return jsonify({HotelField.ERROR: "Không thể giảm bán kính nhỏ hơn mức hiện tại"}), 400
+                
                 try:
                     updated = update_schema_item(item, req_data)
                 except Exception as e:

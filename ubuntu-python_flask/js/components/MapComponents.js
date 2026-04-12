@@ -237,7 +237,7 @@ const haversine = (lat1, lng1, lat2, lng2) => {
 };
 
 // Custom Component cho Bản đồ chọn vị trí (Form)
-const LocationPickerMap = ({ position, onPositionChange, areaCenter, locationName }) => {
+const LocationPickerMap = ({ position, onPositionChange, areaCenter, locationName, areaRadius = 2 }) => {
     const mapRef = useRef(null);
     const mapInstance = useRef(null);
     const markerInstance = useRef(null);
@@ -319,14 +319,14 @@ const LocationPickerMap = ({ position, onPositionChange, areaCenter, locationNam
         // Calculate initial distance to set correct initial color
         let isOutside = false;
         if (position && position.lat != null && position.lng != null) {
-            isOutside = haversine(position.lat, position.lng, areaCenter.lat, areaCenter.lng) > 2;
+            isOutside = haversine(position.lat, position.lng, areaCenter.lat, areaCenter.lng) > areaRadius;
         }
         const colorHex = isOutside ? '#ef4444' : '#16a34a'; // red-500 or moss-600
         const colorClass = isOutside ? 'bg-red-500' : 'bg-moss';
 
-        // Draw a new 2km radius circle
+        // Draw a new radius circle
         circleRef.current = L.circle([areaCenter.lat, areaCenter.lng], {
-            radius: 2000, // 2km
+            radius: areaRadius * 1000,
             color: colorHex,
             fillColor: colorHex,
             fillOpacity: 0.1,
@@ -356,7 +356,7 @@ const LocationPickerMap = ({ position, onPositionChange, areaCenter, locationNam
 
         // Fly to the new area center to give context to the user
         mapInstance.current.flyTo([areaCenter.lat, areaCenter.lng], 13, { duration: 1 });
-    }, [areaCenter, locationName]);
+    }, [areaCenter, locationName, areaRadius]);
 
     // Check distance and show warning when position changes
     useEffect(() => {
@@ -366,10 +366,10 @@ const LocationPickerMap = ({ position, onPositionChange, areaCenter, locationNam
         }
 
         const distance = haversine(position.lat, position.lng, areaCenter.lat, areaCenter.lng);
-        const isOutside = distance > 2;
+        const isOutside = distance > areaRadius;
 
         if (isOutside) {
-            const warningMessage = `Vị trí đã chọn cách trung tâm ${locationName} khoảng ${distance.toFixed(2)} km. Vui lòng chọn trong khu vực vòng tròn cho phép.`;
+            const warningMessage = `Vị trí đã chọn cách trung tâm ${locationName} khoảng ${distance.toFixed(2)} km. Vui lòng chọn trong khu vực vòng tròn (${areaRadius} km) cho phép.`;
             setWarning(warningMessage);
         } else {
             setWarning(null);
@@ -399,7 +399,7 @@ const LocationPickerMap = ({ position, onPositionChange, areaCenter, locationNam
             });
             centerMarkerRef.current.setIcon(centerIcon);
         }
-    }, [position, areaCenter, locationName]);
+    }, [position, areaCenter, locationName, areaRadius]);
 
     const handleSearch = async () => {
         if (!searchQuery.trim()) return;

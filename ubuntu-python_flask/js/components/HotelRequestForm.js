@@ -1,23 +1,10 @@
 const { useState } = React;
 
-// Helper function to tính toán khoảng cách
-const calculateDistance = (lat1, lng1, lat2, lng2) => {
-    if (lat1 == null || lng1 == null || lat2 == null || lng2 == null) return 0;
-    const R = 6371; // Bán kính trái đất (km)
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLng = (lng2 - lng1) * Math.PI / 180;
-    const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-        Math.sin(dLng / 2) * Math.sin(dLng / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-};
-
 const HotelRequestForm = ({ provinces, onClose, onSubmitSuccess, onToast }) => {
     // Quản lý vị trí bản đồ độc lập, không ảnh hưởng đến vị trí ở ngoài App chính
     const [pickerPos, setPickerPos] = useState({ lat: 11.9404, lng: 108.4583 });
     const [areaCenter, setAreaCenter] = useState(null);
+    const [areaRadius, setAreaRadius] = useState(2);
     const [locationId, setLocationId] = useState("");
     const [locationName, setLocationName] = useState("");
     const [selectedType, setSelectedType] = useState("");
@@ -33,6 +20,7 @@ const HotelRequestForm = ({ provinces, onClose, onSubmitSuccess, onToast }) => {
             const province = provinces.find(p => p.id === locId);
             if (province) {
                 setLocationName(province.locationName);
+                setAreaRadius(province.radius ? parseFloat(province.radius) : 2);
                 // Nếu dữ liệu tỉnh đã có sẵn tọa độ (từ Schema)
                 if (province.lat !== undefined && province.lng !== undefined && province.lat !== "" && province.lng !== "") {
                     const lat = parseFloat(province.lat);
@@ -60,54 +48,14 @@ const HotelRequestForm = ({ provinces, onClose, onSubmitSuccess, onToast }) => {
         }
     };
 
-    const handleImageUpload = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        if (!file.type.startsWith('image/')) {
-            setApiError("Vui lòng chọn một tệp hình ảnh hợp lệ.");
-            return;
+    const handleImageUpload = async (e) => {
+        try {
+            const base64 = await processImageUpload(e.target.files[0]);
+            setImageBase64(base64);
+            setApiError(null);
+        } catch (err) {
+            setApiError(err);
         }
-
-        setApiError(null); // Xoá cảnh báo lỗi cũ nếu có
-
-        const img = new Image();
-        const objectUrl = URL.createObjectURL(file);
-        
-        img.onload = () => {
-            URL.revokeObjectURL(objectUrl); // Giải phóng bộ nhớ ngay sau khi nạp xong
-            const canvas = document.createElement('canvas');
-            let width = img.width;
-            let height = img.height;
-            const MAX_SIZE = 800; // Giới hạn kích thước tối đa để giảm dung lượng
-
-            if (width > height && width > MAX_SIZE) {
-                height = Math.round((height * MAX_SIZE) / width);
-                width = MAX_SIZE;
-            } else if (height > MAX_SIZE) {
-                width = Math.round((width * MAX_SIZE) / height);
-                height = MAX_SIZE;
-            }
-
-            canvas.width = width;
-            canvas.height = height;
-
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-
-            // Convert ảnh sang định dạng WebP với chất lượng 80% (0.8)
-            const dataUrl = canvas.toDataURL('image/webp', 0.8);
-            setImageBase64(dataUrl);
-        };
-        
-        img.onerror = () => {
-            URL.revokeObjectURL(objectUrl);
-            setApiError("Không thể xử lý hình ảnh này. Vui lòng thử ảnh khác.");
-        };
-
-        img.src = objectUrl;
-        
-        // Reset input để cho phép chọn lại chính file đó nếu người dùng tải lên lại
         e.target.value = '';
     };
 
@@ -179,10 +127,10 @@ const HotelRequestForm = ({ provinces, onClose, onSubmitSuccess, onToast }) => {
 
         const today = new Date().toISOString().split('T')[0];
 
-        const base64Description = btoa(unescape(encodeURIComponent(description)));
-        const base64Phone = btoa(unescape(encodeURIComponent(phone)));
-        const base64Address = btoa(unescape(encodeURIComponent(formData.get('address').trim())));
-        const base64Website = processedWebsite ? btoa(unescape(encodeURIComponent(processedWebsite))) : "";
+        const base64Description = encodeBase64(description);
+        const base64Phone = encodeBase64(phone);
+        const base64Address = encodeBase64(formData.get('address').trim());
+        const base64Website = encodeBase64(processedWebsite);
 
         const newRequest = {
             id: crypto.randomUUID(),
@@ -221,7 +169,7 @@ const HotelRequestForm = ({ provinces, onClose, onSubmitSuccess, onToast }) => {
     // Kiểm tra khoảng cách để vô hiệu hóa nút Gửi yêu cầu
     let isOutside = false;
     if (areaCenter && pickerPos) {
-        isOutside = calculateDistance(pickerPos.lat, pickerPos.lng, areaCenter.lat, areaCenter.lng) > 2;
+        isOutside = haversine(pickerPos.lat, pickerPos.lng, areaCenter.lat, areaCenter.lng) > areaRadius;
     }
 
     return (
@@ -297,6 +245,7 @@ const HotelRequestForm = ({ provinces, onClose, onSubmitSuccess, onToast }) => {
                                 onPositionChange={setPickerPos} 
                                 areaCenter={areaCenter}
                                 locationName={locationName}
+                                areaRadius={areaRadius}
                             />
                         </div>
                     </div>

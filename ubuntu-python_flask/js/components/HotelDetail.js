@@ -47,42 +47,11 @@ const HotelDetail = ({ hotel, onClose, onShare, formatDate, handleImageError, on
         setShowReportForm(false);
     }, []);
 
-    // Giải mã Base64 sang chuỗi UTF-8, sử dụng fallback cho dữ liệu bản cũ
-    const decodedDescription = useMemo(() => {
-        if (!hotel.description) return "";
-        try {
-            return decodeURIComponent(escape(atob(hotel.description)));
-        } catch (e) {
-            return hotel.description;
-        }
-    }, [hotel.description]);
-
-    const decodedPhone = useMemo(() => {
-        if (!hotel.phone) return "";
-        try {
-            return decodeURIComponent(escape(atob(hotel.phone)));
-        } catch (e) {
-            return hotel.phone;
-        }
-    }, [hotel.phone]);
-
-    const decodedAddress = useMemo(() => {
-        if (!hotel.address) return "";
-        try {
-            return decodeURIComponent(escape(atob(hotel.address)));
-        } catch (e) {
-            return hotel.address;
-        }
-    }, [hotel.address]);
-
-    const decodedWebsite = useMemo(() => {
-        if (!hotel.website) return "";
-        try {
-            return decodeURIComponent(escape(atob(hotel.website)));
-        } catch (e) {
-            return hotel.website;
-        }
-    }, [hotel.website]);
+    // Sử dụng hàm tiện ích decodeBase64 từ phạm vi toàn cục
+    const decodedDescription = useMemo(() => decodeBase64(hotel.description), [hotel.description]);
+    const decodedPhone = useMemo(() => decodeBase64(hotel.phone), [hotel.phone]);
+    const decodedAddress = useMemo(() => decodeBase64(hotel.address), [hotel.address]);
+    const decodedWebsite = useMemo(() => decodeBase64(hotel.website), [hotel.website]);
 
     return (
         <div className={`

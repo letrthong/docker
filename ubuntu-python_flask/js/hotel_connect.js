@@ -37,6 +37,54 @@ const decodeBase64 = (str) => {
     }
 };
 
+// Hàm tiện ích mã hóa Base64
+const encodeBase64 = (str) => {
+    if (!str) return "";
+    return btoa(unescape(encodeURIComponent(str)));
+};
+
+// Hàm tiện ích xử lý ảnh upload (resize và chuyển sang WebP base64)
+const processImageUpload = (file) => {
+    return new Promise((resolve, reject) => {
+        if (!file) return reject("Vui lòng chọn tệp ảnh.");
+        if (!file.type.startsWith('image/')) return reject("Vui lòng chọn một tệp hình ảnh hợp lệ.");
+
+        const img = new Image();
+        const objectUrl = URL.createObjectURL(file);
+        
+        img.onload = () => {
+            URL.revokeObjectURL(objectUrl);
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            const MAX_SIZE = 800;
+
+            if (width > height && width > MAX_SIZE) {
+                height = Math.round((height * MAX_SIZE) / width);
+                width = MAX_SIZE;
+            } else if (height > MAX_SIZE) {
+                width = Math.round((width * MAX_SIZE) / height);
+                height = MAX_SIZE;
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            resolve(canvas.toDataURL('image/webp', 0.8));
+        };
+        
+        img.onerror = () => {
+            URL.revokeObjectURL(objectUrl);
+            reject("Không thể xử lý hình ảnh này. Vui lòng thử ảnh khác.");
+        };
+
+        img.src = objectUrl;
+    });
+};
+
 // Hàm tiện ích kiểm tra số điện thoại hợp lệ của Việt Nam
 const isValidPhoneNumber = (phone) => {
     if (!phone) return false;
@@ -755,6 +803,7 @@ const MainApp = () => {
                 {editingHotel && (
                     <HotelEditForm
                         hotel={editingHotel}
+                        provinces={provinces}
                         onClose={() => setEditingHotel(null)}
                         onSaveSuccess={handleEditSuccess}
                         onToast={setToastMessage}

@@ -1,98 +1,47 @@
 const { useState, useMemo } = React;
 
-const HotelEditForm = ({ hotel, onClose, onSaveSuccess, onToast }) => {
+const HotelEditForm = ({ hotel, provinces, onClose, onSaveSuccess, onToast }) => {
     // Quản lý vị trí bản đồ độc lập, khởi tạo với tọa độ hiện tại của khách sạn
     const [pickerPos, setPickerPos] = useState({ lat: hotel.lat || 11.9404, lng: hotel.lng || 108.4583 });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [apiError, setApiError] = useState(null);
     const [selectedType, setSelectedType] = useState(hotel.type || "");
 
-    const decodedWebsite = useMemo(() => {
-        if (!hotel.website) return "";
-        try {
-            return decodeURIComponent(escape(atob(hotel.website)));
-        } catch (e) {
-            return hotel.website;
-        }
-    }, [hotel.website]);
-
-    const decodedAddress = useMemo(() => {
-        if (!hotel.address) return "";
-        try {
-            return decodeURIComponent(escape(atob(hotel.address)));
-        } catch (e) {
-            return hotel.address;
-        }
-    }, [hotel.address]);
+    const decodedWebsite = useMemo(() => decodeBase64(hotel.website), [hotel.website]);
+    const decodedAddress = useMemo(() => decodeBase64(hotel.address), [hotel.address]);
 
     const [websiteUrl, setWebsiteUrl] = useState(decodedWebsite || "");
     const [imageBase64, setImageBase64] = useState(hotel.image || "");
 
-    // Giải mã Base64 sang chuỗi UTF-8 để tải vào giá trị mặc định của form
-    const decodedDescription = useMemo(() => {
-        if (!hotel.description) return "";
-        try {
-            return decodeURIComponent(escape(atob(hotel.description)));
-        } catch (e) {
-            return hotel.description; // Tương thích ngược với các file JSON cũ chưa encode Base64
-        }
-    }, [hotel.description]);
-
-    const decodedPhone = useMemo(() => {
-        if (!hotel.phone) return "";
-        try {
-            return decodeURIComponent(escape(atob(hotel.phone)));
-        } catch (e) {
-            return hotel.phone;
-        }
-    }, [hotel.phone]);
-
-    const handleImageUpload = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        if (!file.type.startsWith('image/')) {
-            setApiError("Vui lòng chọn một tệp hình ảnh hợp lệ.");
-            return;
-        }
-
-        setApiError(null);
-
-        const img = new Image();
-        const objectUrl = URL.createObjectURL(file);
-        
-        img.onload = () => {
-            URL.revokeObjectURL(objectUrl);
-            const canvas = document.createElement('canvas');
-            let width = img.width;
-            let height = img.height;
-            const MAX_SIZE = 800;
-
-            if (width > height && width > MAX_SIZE) {
-                height = Math.round((height * MAX_SIZE) / width);
-                width = MAX_SIZE;
-            } else if (height > MAX_SIZE) {
-                width = Math.round((width * MAX_SIZE) / height);
-                height = MAX_SIZE;
+    const { areaCenter, locationName, areaRadius } = useMemo(() => {
+        let center = null;
+        let name = "";
+        let radius = 2;
+        if (hotel && hotel.locationId && provinces) {
+            const province = provinces.find(p => p.id === hotel.locationId);
+            if (province) {
+                name = province.locationName;
+                if (province.radius) radius = parseFloat(province.radius);
+                if (province.lat !== undefined && province.lng !== undefined && province.lat !== "" && province.lng !== "") {
+                    center = { lat: parseFloat(province.lat), lng: parseFloat(province.lng) };
+                }
             }
+        }
+        return { areaCenter: center, locationName: name, areaRadius: radius };
+    }, [hotel, provinces]);
 
-            canvas.width = width;
-            canvas.height = height;
+    // Giải mã Base64 sang chuỗi UTF-8 để tải vào giá trị mặc định của form
+    const decodedDescription = useMemo(() => decodeBase64(hotel.description), [hotel.description]);
+    const decodedPhone = useMemo(() => decodeBase64(hotel.phone), [hotel.phone]);
 
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-
-            const dataUrl = canvas.toDataURL('image/webp', 0.8);
-            setImageBase64(dataUrl);
-        };
-        
-        img.onerror = () => {
-            URL.revokeObjectURL(objectUrl);
-            setApiError("Không thể xử lý hình ảnh này. Vui lòng thử ảnh khác.");
-        };
-
-        img.src = objectUrl;
-        
+    const handleImageUpload = async (e) => {
+        try {
+            const base64 = await processImageUpload(e.target.files[0]);
+            setImageBase64(base64);
+            setApiError(null);
+        } catch (err) {
+            setApiError(err);
+        }
         e.target.value = '';
     };
 
@@ -162,10 +111,10 @@ const HotelEditForm = ({ hotel, onClose, onSaveSuccess, onToast }) => {
         }
         // --- END VALIDATION ---
         
-        const base64Description = btoa(unescape(encodeURIComponent(description)));
-        const base64Phone = btoa(unescape(encodeURIComponent(phone)));
-        const base64Address = btoa(unescape(encodeURIComponent(formData.get('address').trim())));
-        const base64Website = processedWebsite ? btoa(unescape(encodeURIComponent(processedWebsite))) : "";
+        const base64Description = encodeBase64(description);
+        const base64Phone = encodeBase64(phone);
+        const base64Address = encodeBase64(formData.get('address').trim());
+        const base64Website = encodeBase64(processedWebsite);
 
         const updatedData = {
             name: name,
@@ -197,6 +146,12 @@ const HotelEditForm = ({ hotel, onClose, onSaveSuccess, onToast }) => {
                 setIsSubmitting(false);
             });
     };
+
+    // Kiểm tra khoảng cách để vô hiệu hóa nút Gửi yêu cầu
+    let isOutside = false;
+    if (areaCenter && pickerPos) {
+        isOutside = haversine(pickerPos.lat, pickerPos.lng, areaCenter.lat, areaCenter.lng) > areaRadius;
+    }
 
     return (
         <div className="fixed inset-0 bg-stone-900/80 backdrop-blur-md z-[100] flex items-center justify-center sm:p-6">
@@ -253,7 +208,13 @@ const HotelEditForm = ({ hotel, onClose, onSaveSuccess, onToast }) => {
                     <div>
                         <label className="text-[10px] font-black text-stone-400 uppercase mb-2 block tracking-widest">Vị trí (Kéo Marker hoặc Chạm)</label>
                         <div className="w-full h-64 sm:h-80 bg-stone-100 rounded-2xl border-2 border-stone-200 relative overflow-hidden shadow-inner z-0">
-                            <LocationPickerMap position={pickerPos} onPositionChange={setPickerPos} />
+                            <LocationPickerMap 
+                                position={pickerPos} 
+                                onPositionChange={setPickerPos} 
+                                areaCenter={areaCenter}
+                                locationName={locationName}
+                                areaRadius={areaRadius}
+                            />
                         </div>
                     </div>
 
@@ -336,10 +297,10 @@ const HotelEditForm = ({ hotel, onClose, onSaveSuccess, onToast }) => {
                     )}
                     <button 
                         type="submit" 
-                        disabled={isSubmitting}
-                        className={`w-full py-4 rounded-2xl font-black shadow-xl uppercase tracking-widest text-[11px] transition-all ${isSubmitting ? 'bg-stone-300 text-stone-500 cursor-not-allowed' : 'bg-blue-700 text-white active:scale-95'}`}
+                        disabled={isOutside || isSubmitting}
+                        className={`w-full py-4 rounded-2xl font-black shadow-xl uppercase tracking-widest text-[11px] transition-all ${(isOutside || isSubmitting) ? 'bg-stone-300 text-stone-500 cursor-not-allowed' : 'bg-blue-700 text-white active:scale-95'}`}
                     >
-                        {isSubmitting ? 'Đang lưu...' : 'Lưu Thay Đổi'}
+                        {isSubmitting ? 'Đang lưu...' : (isOutside ? 'Vị trí ngoài vùng cho phép' : 'Lưu Thay Đổi')}
                     </button>
                 </form>
             </div>
