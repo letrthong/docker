@@ -22,6 +22,7 @@ class HotelField:
     ERROR = "error"
     SUCCESS = "success"
     DATA = "data"
+    NAME = "name"
     HOTEL_NAME = "hotelName"
     HOTEL_ID = "hotelId"
     REASON = "reason"

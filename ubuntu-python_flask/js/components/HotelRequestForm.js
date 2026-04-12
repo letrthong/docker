@@ -20,6 +20,7 @@ const HotelRequestForm = ({ provinces, onClose, onSubmitSuccess, onToast }) => {
     const [areaCenter, setAreaCenter] = useState(null);
     const [locationId, setLocationId] = useState("");
     const [locationName, setLocationName] = useState("");
+    const [selectedType, setSelectedType] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [apiError, setApiError] = useState(null);
     const [websiteUrl, setWebsiteUrl] = useState("");
@@ -143,7 +144,7 @@ const HotelRequestForm = ({ provinces, onClose, onSubmitSuccess, onToast }) => {
         // --- END VALIDATION ---
 
         // --- START VALIDATION: Kiểm tra số điện thoại hợp lệ của Việt Nam ---
-        if (!isValidPhoneNumber(phone)) {
+        if ((type !== 'entertainment' || phone) && !isValidPhoneNumber(phone)) {
             setApiError("Số điện thoại không hợp lệ. Vui lòng kiểm tra lại (gồm 10-11 số).");
             setIsSubmitting(false);
             return;
@@ -254,9 +255,20 @@ const HotelRequestForm = ({ provinces, onClose, onSubmitSuccess, onToast }) => {
                         </div>
                         <div className="col-span-1">
                             <label className="text-[10px] font-black text-stone-400 uppercase mb-1 block tracking-widest">Loại hình</label>
-                            <select required name="type" className="w-full px-4 py-3 rounded-xl bg-stone-100 border-2 border-transparent focus:border-orange-700 outline-none font-bold text-sm appearance-none cursor-pointer">
+                            <select
+                                required
+                                name="type"
+                                value={selectedType}
+                                onChange={(e) => {
+                                    setSelectedType(e.target.value);
+                                    setApiError(null);
+                                }}
+                                className="w-full px-4 py-3 rounded-xl bg-stone-100 border-2 border-transparent focus:border-orange-700 outline-none font-bold text-sm appearance-none cursor-pointer"
+                            >
                                 <option value="">-- Chọn --</option>
                                 <option value="hotel">Khách sạn</option>
+                                <option value="restaurant">Nhà hàng - Quán ăn</option>
+                                <option value="entertainment">Điểm tham quan</option>
                                 <option value="homestay">Homestay</option>
                                 <option value="resort">Resort</option>
                                 <option value="motel">Nhà nghỉ</option>
@@ -265,8 +277,15 @@ const HotelRequestForm = ({ provinces, onClose, onSubmitSuccess, onToast }) => {
                             </select>
                         </div>
                         <div className="col-span-1">
-                            <label className="text-[10px] font-black text-stone-400 uppercase mb-1 block tracking-widest">Số điện thoại</label>
-                            <input required name="phone" className="w-full px-4 py-3 rounded-xl bg-stone-100 border-2 border-transparent focus:border-orange-700 outline-none font-bold text-sm" placeholder="09xxxxxx" />
+                            <label className="text-[10px] font-black text-stone-400 uppercase mb-1 block tracking-widest">
+                                Số điện thoại {selectedType === 'entertainment' && <span className="normal-case tracking-normal lowercase opacity-70">(Tùy chọn)</span>}
+                            </label>
+                            <input
+                                name="phone"
+                                required={selectedType !== 'entertainment'}
+                                className="w-full px-4 py-3 rounded-xl bg-stone-100 border-2 border-transparent focus:border-orange-700 outline-none font-bold text-sm"
+                                placeholder="09xxxxxx"
+                            />
                         </div>
                     </div>
 

@@ -60,6 +60,7 @@ def add_schema():
     with schema_lock:
         data = read_schema()
         data.append(new_item)
+        data.sort(key=lambda x: str(x.get(HotelField.LOCATION, '')).lower())
         write_schema(data)
     return jsonify({HotelField.MESSAGE: "Thêm mới thành công", HotelField.DATA: new_item}), 201
 
@@ -191,12 +192,18 @@ def approve_hotel_request(request_id):
             
             city_hotels.append(hotel_to_approve)
             
+            # 1. Sắp xếp danh sách lữ quán đã duyệt trong khu vực theo tên (A-Z)
+            city_hotels.sort(key=lambda x: str(x.get(HotelField.NAME, '')).lower())
+            
             with open(target_file, 'w', encoding='utf-8') as f:
                 json.dump(city_hotels, f, ensure_ascii=False, indent=4)
         except Exception as e:
             return jsonify({HotelField.ERROR: f"Lỗi khi ghi file khách sạn: {str(e)}"}), 500
 
         # Nếu ghi file thành công, cập nhật lại danh sách chờ duyệt
+        
+        # 2. Sắp xếp các yêu cầu còn lại trong hàng đợi theo ID khu vực (để gom nhóm theo tỉnh)
+        other_requests.sort(key=lambda x: str(x.get(HotelField.LOCATION_ID, '')))
         write_requests(other_requests)
 
     return jsonify({HotelField.SUCCESS: True, HotelField.MESSAGE: "Phê duyệt khách sạn thành công", HotelField.DATA: hotel_to_approve})

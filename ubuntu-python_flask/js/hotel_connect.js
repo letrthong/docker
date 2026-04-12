@@ -54,6 +54,9 @@ const App = () => {
         const urlParams = new URLSearchParams(window.location.search);
         return urlParams.get('locationId') || localStorage.getItem('luquan_last_selected_locationId') || "";
     });
+    const [filterType, setFilterType] = useState(() => {
+        return localStorage.getItem('luquan_last_selected_type') || 'all';
+    });
     const [selectedHotel, setSelectedHotel] = useState(null);
     const [showRequestForm, setShowRequestForm] = useState(false);
     const [showSchemaManager, setShowSchemaManager] = useState(false);
@@ -235,15 +238,22 @@ const App = () => {
             list = (hotels || []).filter(h => h.status === 'approved' || h.status === 'reported');
         }
 
-        const normalizedSearchTerm = removeVietnameseTones(searchTerm); // Không cần toLowerCase() nữa vì hàm trên đã tự xử lý
-        
-        const searchResults = list.filter(hotel => {
-            const matchSearch = removeVietnameseTones(hotel.name || "").includes(normalizedSearchTerm) ||
-                                removeVietnameseTones(decodeBase64(hotel.address) || "").includes(normalizedSearchTerm);
-                                
-            // Việc lọc theo thành phố đã được xử lý ở bước tải dữ liệu
-            return matchSearch;
-        });
+        let searchResults = list;
+
+        if (filterType && filterType !== 'all') {
+            // Ưu tiên lọc loại hình trước (so sánh === rất nhanh)
+            // Hỗ trợ fallback: nếu dữ liệu cũ chưa có type, coi như thuộc nhóm 'other'
+            searchResults = searchResults.filter(hotel => (hotel.type || 'other') === filterType);
+        }
+
+        const normalizedSearchTerm = removeVietnameseTones(searchTerm);
+        // Chỉ chạy logic biến đổi chuỗi phức tạp khi người dùng thực sự nhập từ khóa tìm kiếm
+        if (normalizedSearchTerm) {
+            searchResults = searchResults.filter(hotel => {
+                return removeVietnameseTones(hotel.name || "").includes(normalizedSearchTerm) ||
+                       removeVietnameseTones(decodeBase64(hotel.address) || "").includes(normalizedSearchTerm);
+            });
+        }
 
         // Đưa khách sạn đang được chọn lên đầu danh sách
         if (selectedHotel) {
@@ -254,7 +264,7 @@ const App = () => {
             }
         }
         return searchResults;
-    }, [hotels, pendingRequests, pendingReviewHotels, searchTerm, filterLocationId, isAdmin, adminTab, selectedHotel]);
+    }, [hotels, pendingRequests, pendingReviewHotels, searchTerm, filterLocationId, filterType, isAdmin, adminTab, selectedHotel]);
 
     // Tự động ẩn Toast thông báo sau 3 giây
     useEffect(() => {
@@ -556,6 +566,34 @@ const App = () => {
                                 {provinces.map(p => (
                                 <option key={p.id} value={p.id}>{p.locationName}</option>
                                 ))}
+                            </select>
+                            <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none">
+                                <Icon name="chevron-down" size={14} />
+                            </div>
+                        </div>
+
+                        <div className="relative w-full">
+                            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-orange-700">
+                                <Icon name="layers" size={14} />
+                            </div>
+                            <select
+                                value={filterType}
+                                onChange={(e) => {
+                                    const value = e.target.value;
+                                    setFilterType(value);
+                                    localStorage.setItem('luquan_last_selected_type', value);
+                                }}
+                                className="w-full pl-10 pr-8 py-2.5 bg-white rounded-xl border-2 border-stone-100 focus:border-orange-700 outline-none transition-all font-bold text-xs text-stone-600 appearance-none cursor-pointer"
+                            >
+                                <option value="all">Tất cả loại hình</option>
+                                <option value="hotel">Khách sạn</option>
+                                <option value="restaurant">Nhà hàng - Quán ăn </option>
+                                <option value="entertainment"> Điểm tham quan</option>    
+                                <option value="homestay">Homestay</option>
+                                <option value="resort">Resort</option>
+                                <option value="motel">Nhà nghỉ</option>
+                                <option value="villa">Biệt thự</option>
+                                <option value="other">Khác</option>
                             </select>
                             <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none">
                                 <Icon name="chevron-down" size={14} />

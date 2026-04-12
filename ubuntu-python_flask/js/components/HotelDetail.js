@@ -5,6 +5,8 @@ const getTypeLabel = (type) => {
         'hotel': 'Khách sạn',
         'homestay': 'Homestay',
         'resort': 'Resort',
+        'restaurant': 'Nhà hàng',
+        'entertainment': 'Điểm tham quan',
         'motel': 'Nhà nghỉ',
         'villa': 'Biệt thự',
         'other': 'Khác'
@@ -154,10 +156,12 @@ const HotelDetail = ({ hotel, onClose, onShare, formatDate, handleImageError, on
                         >
                             <Icon name="navigation" size={16} /> Tìm đường đi
                         </a>
-                        <button disabled className="w-full flex flex-col items-center justify-center gap-1 bg-orange-700 text-white py-4 sm:py-5 rounded-2xl font-black opacity-50 cursor-not-allowed transition-all">
-                                <div className="flex items-center gap-2 text-sm uppercase"><Icon name="phone" size={18} /> Gọi Hotline</div>
-                                <span className="text-[9px] opacity-70 tracking-widest font-bold">{decodedPhone}</span>
-                        </button>
+                        {decodedPhone && (
+                            <button disabled className="w-full flex flex-col items-center justify-center gap-1 bg-orange-700 text-white py-4 sm:py-5 rounded-2xl font-black opacity-50 cursor-not-allowed transition-all">
+                                    <div className="flex items-center gap-2 text-sm uppercase"><Icon name="phone" size={18} /> Gọi Hotline</div>
+                                    <span className="text-[9px] opacity-70 tracking-widest font-bold">{decodedPhone}</span>
+                            </button>
+                        )}
                         <button 
                             onClick={() => setShowReportForm(true)} // Đây là hàm setter của useState, React đảm bảo nó ổn định
                             className="w-full flex items-center justify-center gap-2 bg-red-50 text-red-700 py-3 rounded-2xl font-black active:scale-95 transition-all uppercase text-[10px] tracking-widest hover:bg-red-100 hover:text-red-900 border border-red-200"

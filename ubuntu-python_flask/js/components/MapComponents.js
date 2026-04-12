@@ -1,5 +1,51 @@
 const { useEffect, useRef, useState } = React;
 
+const createHotelIcon = (hotel, isSelected) => {
+    let bgColor = 'bg-orange-700'; // Màu mặc định cho Khách sạn, Nhà nghỉ, v.v.
+    let svgPath = '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle>'; // Icon map-pin
+
+    if (hotel.type === 'restaurant') {
+        bgColor = 'bg-red-600'; // Màu đỏ cho Nhà hàng
+        svgPath = '<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>'; // Icon utensils
+    } else if (hotel.type === 'entertainment') {
+        bgColor = 'bg-purple-600'; // Màu tím cho Điểm tham quan
+        svgPath = '<path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/>'; // Icon ticket
+    } else if (hotel.type === 'resort') {
+        bgColor = 'bg-emerald-600'; // Màu xanh ngọc cho Resort
+        svgPath = '<path d="M22 12a10.06 10.06 1 0 0-20 0Z"/><path d="M12 12v8a2 2 0 0 0 4 0"/><path d="M12 2v1"/>'; // Icon umbrella
+    } else if (hotel.type === 'villa') {
+        bgColor = 'bg-blue-600'; // Màu xanh dương cho Biệt thự (Villa)
+        svgPath = '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>'; // Icon home
+    } else if (hotel.type === 'homestay') {
+        bgColor = 'bg-pink-600'; // Màu hồng cho Homestay
+        svgPath = '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>'; // Icon heart
+    }
+
+    if (isSelected) {
+        bgColor = 'bg-moss'; // Khi được click chọn, tất cả marker đều đổi màu thành xanh moss
+    }
+
+    return L.divIcon({
+        className: "", // Để trống để xóa viền và nền trắng mặc định của Leaflet
+        html: `<div class="relative w-full h-full flex justify-center">
+            <div class="flex items-center justify-center w-8 h-8 rounded-full shadow-lg transition-all duration-300 ${
+                isSelected 
+                ? `${bgColor} text-white scale-125 z-50 border-4 border-white animate-bounce` 
+                : `${bgColor} text-white border-2 border-white`
+            }">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">${svgPath}</svg>
+            </div>
+            <div class="absolute top-9 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-white/90 backdrop-blur-md rounded shadow-sm border text-[9px] font-black uppercase tracking-tight text-center min-w-max max-w-[120px] truncate transition-all duration-300 ${
+                isSelected ? 'text-moss border-moss scale-110 z-50 ring-2 ring-moss/20' : 'text-stone-700 border-stone-200'
+            }">
+                ${hotel.name}
+            </div>
+        </div>`,
+        iconSize: [32, 32],
+        iconAnchor: [16, 32]
+    });
+};
+
 // Custom Component cho Bản đồ chính
 const MainLeafletMap = ({ hotels, selectedHotel, onSelectHotel, filterCity, viewMode }) => {
     const mapRef = useRef(null);
@@ -86,25 +132,7 @@ const MainLeafletMap = ({ hotels, selectedHotel, onSelectHotel, filterCity, view
         hotels.forEach(hotel => {
             const isSelected = selectedHotel?.id === hotel.id;
             
-            const customIcon = L.divIcon({
-                className: "", // Để trống để xóa viền và nền trắng mặc định của Leaflet
-                html: `<div class="relative w-full h-full flex justify-center">
-                    <div class="flex items-center justify-center w-8 h-8 rounded-full shadow-lg transition-all duration-300 ${
-                        isSelected 
-                        ? 'bg-moss text-white scale-125 z-50 border-4 border-white animate-bounce' 
-                        : 'bg-orange-700 text-white border-2 border-white'
-                    }">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                    </div>
-                    <div class="absolute top-9 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-white/90 backdrop-blur-md rounded shadow-sm border text-[9px] font-black uppercase tracking-tight text-center min-w-max max-w-[120px] truncate transition-all duration-300 ${
-                        isSelected ? 'text-moss border-moss scale-110 z-50 ring-2 ring-moss/20' : 'text-stone-700 border-stone-200'
-                    }">
-                        ${hotel.name}
-                    </div>
-                </div>`,
-                iconSize: [32, 32],
-                iconAnchor: [16, 32]
-            });
+            const customIcon = createHotelIcon(hotel, isSelected);
 
             const marker = L.marker([hotel.lat, hotel.lng], { icon: customIcon });
             marker.on('click', (e) => {
@@ -118,32 +146,12 @@ const MainLeafletMap = ({ hotels, selectedHotel, onSelectHotel, filterCity, view
 
     // Tách riêng hiệu ứng cập nhật icon khi chọn hotel để tránh re-render toàn bộ layer
     useEffect(() => {
-        const createIcon = (hotel, isSelected) => L.divIcon({
-            className: "", // Để trống để xóa viền và nền trắng mặc định của Leaflet
-            html: `<div class="relative w-full h-full flex justify-center">
-                <div class="flex items-center justify-center w-8 h-8 rounded-full shadow-lg transition-all duration-300 ${
-                    isSelected 
-                    ? 'bg-moss text-white scale-125 z-50 border-4 border-white animate-bounce' 
-                    : 'bg-orange-700 text-white border-2 border-white'
-                }">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                </div>
-                <div class="absolute top-9 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-white/90 backdrop-blur-md rounded shadow-sm border text-[9px] font-black uppercase tracking-tight text-center min-w-max max-w-[120px] truncate transition-all duration-300 ${
-                    isSelected ? 'text-moss border-moss scale-110 z-50 ring-2 ring-moss/20' : 'text-stone-700 border-stone-200'
-                }">
-                    ${hotel.name}
-                </div>
-            </div>`,
-            iconSize: [32, 32],
-            iconAnchor: [16, 32]
-        });
-
         // 1. Khôi phục style cho marker đã chọn trước đó
         const prevHotel = previousSelectedHotelRef.current;
         if (prevHotel) {
             const prevMarker = markersRef.current[prevHotel.id];
             if (prevMarker) {
-                prevMarker.setIcon(createIcon(prevHotel, false));
+                prevMarker.setIcon(createHotelIcon(prevHotel, false));
                 prevMarker.setZIndexOffset(0);
             }
         }
@@ -152,7 +160,7 @@ const MainLeafletMap = ({ hotels, selectedHotel, onSelectHotel, filterCity, view
         if (selectedHotel) {
             const newMarker = markersRef.current[selectedHotel.id];
             if (newMarker) {
-                newMarker.setIcon(createIcon(selectedHotel, true));
+                newMarker.setIcon(createHotelIcon(selectedHotel, true));
                 if (!newMarker.__parent) { newMarker.setZIndexOffset(1000); }
             }
         }
