@@ -44,7 +44,8 @@ const isValidPhoneNumber = (phone) => {
     return /^[0-9]{10,11}$/.test(cleanPhone);
 };
 
-const App = () => {
+const MainApp = () => {
+    const { t, lang, changeLang } = window.useTranslation();
     const [hotels, setHotels] = useState([]);
     const [provinces, setProvinces] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -533,7 +534,7 @@ const App = () => {
                             </div>
                             <input 
                                 type="text"
-                                placeholder="Tìm tên, địa chỉ, thành phố..."
+                                placeholder={t('search_placeholder')}
                                 className="w-full pl-10 pr-20 py-3 bg-white rounded-xl border-2 border-stone-100 focus:border-orange-700 outline-none transition-all font-bold text-sm"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -561,8 +562,8 @@ const App = () => {
                             onChange={(e) => setFilterLocationId(e.target.value)}
                                 className="w-full pl-10 pr-8 py-2.5 bg-white rounded-xl border-2 border-stone-100 focus:border-orange-700 outline-none transition-all font-bold text-xs text-stone-600 appearance-none cursor-pointer"
                             >
-                                <option value="">-- Chọn khu vực --</option>
-                                <option value="all">Tất cả khu vực</option>
+                                <option value="">{t('select_region')}</option>
+                                <option value="all">{t('all_regions')}</option>
                                 {provinces.map(p => (
                                 <option key={p.id} value={p.id}>{p.locationName}</option>
                                 ))}
@@ -585,7 +586,7 @@ const App = () => {
                                 }}
                                 className="w-full pl-10 pr-8 py-2.5 bg-white rounded-xl border-2 border-stone-100 focus:border-orange-700 outline-none transition-all font-bold text-xs text-stone-600 appearance-none cursor-pointer"
                             >
-                                <option value="all">Tất cả loại hình</option>
+                                <option value="all">{t('all_types')}</option>
                                 <option value="hotel">Khách sạn</option>
                                 <option value="restaurant">Nhà hàng - Quán ăn </option>
                                 <option value="entertainment"> Điểm tham quan</option>    
@@ -1028,6 +1029,12 @@ const App = () => {
         </div>
     );
 };
+
+const App = () => (
+    <window.LanguageProvider>
+        <MainApp />
+    </window.LanguageProvider>
+);
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(<App />);

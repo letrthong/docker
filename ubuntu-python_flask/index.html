@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
@@ -129,6 +129,7 @@
                     "./js/components/AdminTabs.js",
                     "./js/components/Footer.js",
                     "./js/components/HotelDetail.js",
+                    "./js/i18n.js",
                     "./js/hotel_connect.js" // File chính nên ở cuối
                 ];
 
@@ -139,7 +140,7 @@
                 // Tự động loại bỏ các khai báo trùng lặp (vd: const { useState } = React;) từ các file con
                 const cleanedBabelCodes = babelCodes.map(code => code.replace(/const\s+\{[^}]+\}\s*=\s*React\s*;/g, ''));
                 // Gom chung 1 khai báo React Hooks duy nhất lên đầu file gộp
-                const masterReactDecl = "const { useState, useEffect, useRef, useMemo, useCallback } = React;\n";
+                const masterReactDecl = "const { useState, useEffect, useRef, useMemo, useCallback, createContext, useContext } = React;\n";
                 const combinedBabelCode = masterReactDecl + cleanedBabelCodes.join('\n');
 
                 const waitForBabel = () => new Promise(resolve => {
