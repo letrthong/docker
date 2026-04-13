@@ -5,9 +5,9 @@
         "locationName": "Đà Lạt",
         "lat": 11.940242,
         "lng": 108.437576,
-        "radius": 2,
+        "radius": 5,
         "createdAt": "2026-03-31",
-        "updatedAt": "2026-04-12"
+        "updatedAt": "2026-04-13"
     },
     {
         "id": "20b903ca-2d56-4781-8609-1673c39594b9",

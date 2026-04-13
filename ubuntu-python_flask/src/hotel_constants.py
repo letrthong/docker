@@ -39,6 +39,8 @@ class HotelField:
     REPORT_ID = "reportId"
     STATUS = "status"
     REPORTED_AT = "reportedAt"
+    RADIUS = "radius"
+
 
 
 # --- Hotel status enum ---

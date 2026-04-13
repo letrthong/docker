@@ -635,14 +635,9 @@ const MainApp = () => {
                                 className="w-full pl-10 pr-8 py-2.5 bg-white rounded-xl border-2 border-stone-100 focus:border-orange-700 outline-none transition-all font-bold text-xs text-stone-600 appearance-none cursor-pointer"
                             >
                                 <option value="all">{t('all_types')}</option>
-                                <option value="hotel">Khách sạn</option>
-                                <option value="restaurant">Nhà hàng - Quán ăn </option>
-                                <option value="entertainment"> Điểm tham quan</option>    
-                                <option value="homestay">Homestay</option>
-                                <option value="resort">Resort</option>
-                                <option value="motel">Nhà nghỉ</option>
-                                <option value="villa">Biệt thự</option>
-                                <option value="other">Khác</option>
+                                {HOTEL_TYPES.map(t => (
+                                    <option key={t.id} value={t.id}>{t.label}</option>
+                                ))}
                             </select>
                             <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none">
                                 <Icon name="chevron-down" size={14} />
@@ -692,6 +687,12 @@ const MainApp = () => {
                                             <img src={hotel.image} onError={handleImageError} className="w-16 h-16 rounded-xl object-cover shrink-0 border border-stone-100 shadow-sm" />
                                             <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
                                                 <div>
+                                                {hotel.type && (
+                                                    <span className="inline-flex items-center gap-1 w-max px-1.5 py-0.5 bg-stone-100 text-stone-600 text-[8px] font-black uppercase tracking-widest rounded border border-stone-200 mb-1">
+                                                        <Icon name={getIconForHotelType(hotel.type)} size={10} />
+                                                        {getTypeLabel(hotel.type)}
+                                                    </span>
+                                                )}
                                                     <h3 className="font-black text-stone-900 leading-tight truncate text-xs uppercase">{hotel.name}</h3>
                                                     <p className="text-[9px] text-stone-500 flex items-center gap-1 mt-0.5 font-bold truncate">
                                                     <Icon name="map-pin" size={10} className="text-orange-700" /> {decodeBase64(hotel.address)} • {getLocationNameById(hotel.locationId)}

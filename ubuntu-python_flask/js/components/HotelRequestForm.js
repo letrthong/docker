@@ -177,7 +177,7 @@ const HotelRequestForm = ({ provinces, onClose, onSubmitSuccess, onToast }) => {
             <div className="bg-white w-full h-full sm:h-auto sm:max-h-[95dvh] sm:max-w-xl sm:rounded-[40px] shadow-2xl overflow-hidden flex flex-col border border-stone-100">
                 <div className="p-6 bg-orange-700 text-white flex justify-between items-center shrink-0">
                     <h3 className="text-lg font-black flex items-center gap-2 uppercase tracking-widest">
-                        <Icon name="plus-circle" size={20} /> Đăng ký khách sạn
+                        <Icon name="plus-circle" size={20} /> Đăng ký Một Địa Điểm
                     </h3>
                     <button type="button" onClick={onClose} className="p-2 bg-white/10 rounded-xl hover:bg-white/20 transition-colors"><Icon name="x" size={20} /></button>
                 </div>
@@ -198,7 +198,7 @@ const HotelRequestForm = ({ provinces, onClose, onSubmitSuccess, onToast }) => {
                             </select>
                         </div>
                         <div className="col-span-2">
-                            <label className="text-[10px] font-black text-stone-400 mb-1 block tracking-widest"><span className="uppercase">Tên</span> Lữ Quán</label>
+                            <label className="text-[10px] font-black text-stone-400 mb-1 block tracking-widest"><span className="uppercase">Tên</span> Địa Điểm</label>
                             <input required name="name" className="w-full px-4 py-3 rounded-xl bg-stone-100 border-2 border-transparent focus:border-orange-700 outline-none font-bold text-sm" />
                         </div>
                         <div className="col-span-1">
@@ -214,14 +214,9 @@ const HotelRequestForm = ({ provinces, onClose, onSubmitSuccess, onToast }) => {
                                 className="w-full px-4 py-3 rounded-xl bg-stone-100 border-2 border-transparent focus:border-orange-700 outline-none font-bold text-sm appearance-none cursor-pointer"
                             >
                                 <option value="">-- Chọn --</option>
-                                <option value="hotel">Khách sạn</option>
-                                <option value="restaurant">Nhà hàng - Quán ăn</option>
-                                <option value="entertainment">Điểm tham quan</option>
-                                <option value="homestay">Homestay</option>
-                                <option value="resort">Resort</option>
-                                <option value="motel">Nhà nghỉ</option>
-                                <option value="villa">Biệt thự</option>
-                                <option value="other">Khác</option>
+                                {HOTEL_TYPES.map(t => (
+                                    <option key={t.id} value={t.id}>{t.label}</option>
+                                ))}
                             </select>
                         </div>
                         <div className="col-span-1">

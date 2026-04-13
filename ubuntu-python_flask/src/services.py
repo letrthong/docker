@@ -136,13 +136,14 @@ def submit_hotel_request():
     area_lat = area_center[HotelField.LAT]
     area_lng = area_center[HotelField.LNG]
     location_name = area_center.get(HotelField.LOCATION, "Không rõ")
+    area_radius = float(area_center.get("radius", 2))
 
     # Tính khoảng cách bằng công thức Haversine
     distance = haversine(hotel_lat, hotel_lng, area_lat, area_lng)
 
-    # Áp dụng quy tắc: khoảng cách không quá 2km
-    if distance > 2:
-        error_message = f"Vị trí khách sạn phải cách trung tâm {location_name} không quá 2km. Khoảng cách hiện tại là {distance:.2f}km."
+    # Áp dụng quy tắc: khoảng cách không quá bán kính đã cấu hình (mặc định 10km)
+    if distance > area_radius:
+        error_message = f"Vị trí khách sạn phải cách trung tâm {location_name} không quá {area_radius}km. Khoảng cách hiện tại là {distance:.2f}km."
         return jsonify({HotelField.ERROR: error_message}), 400
     # --- END VALIDATION ---
 

@@ -1,17 +1,8 @@
 const { useState, useCallback, useMemo } = React; 
 
 const getTypeLabel = (type) => {
-    const types = {
-        'hotel': 'Khách sạn',
-        'homestay': 'Homestay',
-        'resort': 'Resort',
-        'restaurant': 'Nhà hàng',
-        'entertainment': 'Điểm tham quan',
-        'motel': 'Nhà nghỉ',
-        'villa': 'Biệt thự',
-        'other': 'Khác'
-    };
-    return types[type] || type;
+    const found = HOTEL_TYPES.find(t => t.id === type);
+    return found ? found.label : type;
 };
 
 const StatusBadge = ({ status }) => {
@@ -74,7 +65,8 @@ const HotelDetail = ({ hotel, onClose, onShare, formatDate, handleImageError, on
                     <div className="flex justify-between items-start gap-4 mb-2">
                         <div>
                             {hotel.type && (
-                                <span className="inline-block px-2 py-1 bg-stone-100 text-stone-600 text-[8px] font-black uppercase tracking-widest rounded-md mb-1.5 border border-stone-200">
+                                <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-stone-100 text-stone-600 text-[8px] font-black uppercase tracking-widest rounded-md mb-1.5 border border-stone-200">
+                                    <Icon name={getIconForHotelType(hotel.type)} size={12} />
                                     {getTypeLabel(hotel.type)}
                                 </span>
                             )}

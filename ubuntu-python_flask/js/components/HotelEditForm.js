@@ -182,14 +182,9 @@ const HotelEditForm = ({ hotel, provinces, onClose, onSaveSuccess, onToast }) =>
                                 className="w-full px-4 py-3 rounded-xl bg-stone-100 border-2 border-transparent focus:border-blue-700 outline-none font-bold text-sm appearance-none cursor-pointer"
                             >
                                 <option value="">-- Chọn --</option>
-                                <option value="hotel">Khách sạn</option>
-                                <option value="restaurant">Nhà hàng - Quán ăn</option>
-                                <option value="entertainment">Điểm tham quan</option>
-                                <option value="homestay">Homestay</option>
-                                <option value="resort">Resort</option>
-                                <option value="motel">Nhà nghỉ</option>
-                                <option value="villa">Biệt thự</option>
-                                <option value="other">Khác</option>
+                                {HOTEL_TYPES.map(t => (
+                                    <option key={t.id} value={t.id}>{t.label}</option>
+                                ))}
                             </select>
                         </div>
                         <div className="col-span-1">

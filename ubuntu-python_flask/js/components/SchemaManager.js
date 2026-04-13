@@ -10,12 +10,14 @@
  * @param {function} props.onToast - Hàm để hiển thị thông báo (toast).
  */
 function SchemaManager({ api, onToast }) {
-    const { useState, useEffect, useCallback } = React;
+    const { useState, useEffect, useCallback, useMemo } = React;
 
     const [schemas, setSchemas] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const [editingSchema, setEditingSchema] = useState(null); // null: thêm mới, object: chỉnh sửa
+    const [searchTerm, setSearchTerm] = useState('');
+    const [sortConfig, setSortConfig] = useState({ key: 'locationName', direction: 'asc' });
 
     // State cho form
     const [formData, setFormData] = useState({
@@ -138,6 +140,43 @@ function SchemaManager({ api, onToast }) {
         }
     };
 
+    const handleSort = (key) => {
+        setSortConfig(prev => {
+            if (prev.key === key) {
+                return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+            }
+            return { key, direction: key === 'updatedAt' ? 'desc' : 'asc' }; // Ngày cập nhật ưu tiên mới nhất
+        });
+    };
+
+    const filteredSchemas = useMemo(() => {
+        let result = [...schemas];
+
+        if (searchTerm.trim()) {
+            const normalizedSearch = searchTerm.toLowerCase();
+            const removeTones = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
+            result = result.filter(schema => 
+                schema.locationName && removeTones(schema.locationName.toLowerCase()).includes(removeTones(normalizedSearch))
+            );
+        }
+
+        result.sort((a, b) => {
+            if (sortConfig.key === 'updatedAt') {
+                const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+                const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+                const compareResult = dateA - dateB;
+                return sortConfig.direction === 'asc' ? compareResult : -compareResult;
+            } else {
+                const nameA = a.locationName || '';
+                const nameB = b.locationName || '';
+                const compareResult = nameA.localeCompare(nameB, 'vi'); // Hỗ trợ so sánh có dấu tiếng Việt
+                return sortConfig.direction === 'asc' ? compareResult : -compareResult;
+            }
+        });
+
+        return result;
+    }, [schemas, searchTerm, sortConfig]);
+
     return (
         <div className="p-4 bg-gray-50 rounded-lg shadow-md">
             <h2 className="text-2xl font-bold mb-4 text-gray-800">Quản lý Khu vực (Tỉnh/Thành phố)</h2>
@@ -189,7 +228,16 @@ function SchemaManager({ api, onToast }) {
 
             {/* Danh sách khu vực */}
             <div className="mt-6">
-                <h3 className="text-xl font-semibold mb-3">Danh sách khu vực hiện có</h3>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                    <h3 className="text-xl font-semibold">Danh sách khu vực hiện có</h3>
+                    <input 
+                        type="text" 
+                        placeholder="Tìm kiếm khu vực..." 
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full sm:w-64 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    />
+                </div>
                 {isLoading && <p>Đang tải...</p>}
                 {error && <p className="text-red-500">{error}</p>}
                 {!isLoading && !error && (
@@ -198,29 +246,49 @@ function SchemaManager({ api, onToast }) {
                             <thead className="bg-gray-50">
                                 <tr>
                                     <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-16">STT</th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên khu vực</th>
+                                    <th 
+                                        scope="col" 
+                                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-200 select-none group transition-colors"
+                                        onClick={() => handleSort('locationName')}
+                                        title="Nhấn để sắp xếp"
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            Tên khu vực {sortConfig.key === 'locationName' && <span className="text-gray-400 group-hover:text-gray-700">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>}
+                                        </div>
+                                    </th>
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vĩ độ</th>
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kinh độ</th>
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bán kính</th>
+                                    <th 
+                                        scope="col" 
+                                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-200 select-none group transition-colors"
+                                        onClick={() => handleSort('updatedAt')}
+                                        title="Nhấn để sắp xếp"
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            Ngày cập nhật {sortConfig.key === 'updatedAt' && <span className="text-gray-400 group-hover:text-gray-700">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>}
+                                        </div>
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hành động</th>
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">File Path ID</th>
-                                    <th scope="col" className="relative px-6 py-3"><span className="sr-only">Hành động</span></th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                                {schemas.length === 0 ? (
-                                    <tr><td colSpan="7" className="px-6 py-4 text-center text-gray-500">Chưa có khu vực nào.</td></tr>
-                                ) : schemas.map((schema, index) => (
+                                {filteredSchemas.length === 0 ? (
+                                    <tr><td colSpan="8" className="px-6 py-4 text-center text-gray-500">{searchTerm ? 'Không tìm thấy khu vực nào phù hợp.' : 'Chưa có khu vực nào.'}</td></tr>
+                                ) : filteredSchemas.map((schema, index) => (
                                     <tr key={schema.id}>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center font-bold">{index + 1}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{schema.locationName}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{schema.lat}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{schema.lng}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{schema.radius || 2} km</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{schema.filePathId}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium flex gap-2 justify-end">
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{schema.updatedAt ? schema.updatedAt.split('-').reverse().join('/') : 'Chưa rõ'}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex gap-2">
                                             <button onClick={() => handleEdit(schema)} className="text-indigo-600 hover:text-indigo-900">Sửa</button>
                                             <button onClick={() => handleDelete(schema.id)} className="text-red-600 hover:text-red-900">Xóa</button>
                                         </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{schema.filePathId}</td>
                                     </tr>
                                 ))}
                             </tbody>
