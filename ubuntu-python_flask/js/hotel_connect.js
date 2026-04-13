@@ -92,6 +92,287 @@ const isValidPhoneNumber = (phone) => {
     return /^[0-9]{10,11}$/.test(cleanPhone);
 };
 
+// Custom Component: Multi-Select cho Khu vực
+const RegionMultiSelect = ({ provinces, selectedIds, onChange, t }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+    const dropdownRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsOpen(false);
+                setSearchQuery(""); // Reset tìm kiếm khi đóng dropdown
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const toggleSelection = (id) => {
+        let newSelection = [...selectedIds];
+        if (id === 'all') {
+            newSelection = newSelection.includes('all') ? [] : ['all'];
+        } else {
+            newSelection = newSelection.filter(v => v !== 'all');
+            if (newSelection.includes(id)) {
+                newSelection = newSelection.filter(v => v !== id);
+            } else {
+                newSelection.push(id);
+            }
+        }
+        onChange(newSelection);
+    };
+
+    const getDisplayText = () => {
+        if (selectedIds.length === 0) return t('select_region');
+        if (selectedIds.includes('all')) return t('all_regions');
+        if (selectedIds.length === 1) {
+            const p = provinces.find(p => p.id === selectedIds[0]);
+            return p ? p.locationName : t('select_region');
+        }
+        return `Đã chọn ${selectedIds.length} khu vực`;
+    };
+
+    // Lọc danh sách tỉnh/thành dựa trên từ khóa tìm kiếm (hỗ trợ không dấu)
+    const filteredProvinces = useMemo(() => {
+        if (!searchQuery) return provinces;
+        const normalizedSearch = removeVietnameseTones(searchQuery);
+        return provinces.filter(p => 
+            removeVietnameseTones(p.locationName).includes(normalizedSearch)
+        );
+    }, [provinces, searchQuery]);
+
+    return (
+        <div className="relative w-full" ref={dropdownRef}>
+            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-orange-700 pointer-events-none">
+                <Icon name="map" size={14} />
+            </div>
+            <div 
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full pl-10 pr-16 py-2.5 bg-white rounded-xl border-2 border-stone-100 hover:border-stone-200 outline-none transition-all font-bold text-xs text-stone-600 cursor-pointer flex items-center justify-between select-none"
+            >
+                <span className="truncate">{getDisplayText()}</span>
+            </div>
+            <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center">
+                {selectedIds.length > 0 && (
+                    <button 
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); onChange([]); }}
+                        className="p-1.5 text-stone-300 hover:text-red-500 hover:bg-red-50 rounded-md transition-all active:scale-95"
+                        title="Bỏ chọn tất cả"
+                    >
+                        <Icon name="x" size={14} />
+                    </button>
+                )}
+                <div onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }} className="p-1.5 text-stone-400 cursor-pointer hover:text-stone-600 transition-transform duration-200" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }} title={isOpen ? "Đóng" : "Mở"}>
+                    <Icon name="chevron-down" size={16} />
+                </div>
+            </div>
+            
+            {isOpen && (
+                <div className="absolute z-50 w-full mt-1 bg-white border border-stone-200 rounded-xl shadow-xl max-h-[60vh] flex flex-col animate-in fade-in slide-in-from-top-2 duration-200 overflow-hidden">
+                    <div className="px-3 py-2 border-b border-stone-100 bg-stone-50 flex justify-between items-center shrink-0">
+                        <span className="text-[10px] font-black text-stone-500 uppercase tracking-widest">
+                            {selectedIds.length > 0 ? `${selectedIds.length} đã chọn` : 'Khu vực'}
+                        </span>
+                        {selectedIds.length > 0 && (
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); onChange([]); }}
+                                className="text-[10px] text-red-600 font-bold hover:text-red-800 bg-red-50 hover:bg-red-100 px-2 py-1 rounded-md transition-colors flex items-center gap-1 uppercase tracking-widest active:scale-95"
+                            >
+                                <Icon name="trash-2" size={12} /> Bỏ chọn
+                            </button>
+                        )}
+                    </div>
+                    
+                    {/* Ô tìm kiếm nhanh */}
+                    <div className="p-2 border-b border-stone-100 bg-white sticky top-0 z-10">
+                        <div className="relative">
+                            <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none">
+                                <Icon name="search" size={12} />
+                            </div>
+                            <input 
+                                type="text"
+                                placeholder="Tìm khu vực..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onClick={(e) => e.stopPropagation()} // Ngăn việc click vào input làm đóng dropdown
+                                className="w-full pl-7 pr-7 py-1.5 bg-stone-50 border border-stone-200 rounded-lg text-xs font-bold text-stone-700 focus:outline-none focus:border-orange-500 focus:bg-white transition-colors"
+                            />
+                            {searchQuery && (
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); setSearchQuery(""); }}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 p-1"
+                                >
+                                    <Icon name="x" size={10} />
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="overflow-y-auto py-1">
+                    {/* Ẩn nút "Tất cả khu vực" nếu đang tìm kiếm cụ thể */}
+                    {!searchQuery && (
+                        <div 
+                            className="px-4 py-2.5 hover:bg-stone-50 cursor-pointer flex items-center gap-3 text-xs font-bold text-stone-700 transition-colors"
+                            onClick={() => toggleSelection('all')}
+                        >
+                            <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${selectedIds.includes('all') ? 'bg-orange-700 border-orange-700 text-white' : 'border-stone-300 bg-white'}`}>
+                                {selectedIds.includes('all') && <Icon name="check" size={12} />}
+                            </div>
+                            {t('all_regions')}
+                        </div>
+                    )}
+                    {filteredProvinces.length > 0 ? (
+                        filteredProvinces.map(p => (
+                            <div 
+                                key={p.id}
+                                className="px-4 py-2.5 hover:bg-stone-50 cursor-pointer flex items-center gap-3 text-xs font-bold text-stone-700 transition-colors"
+                                onClick={() => toggleSelection(p.id)}
+                            >
+                                <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${selectedIds.includes(p.id) ? 'bg-orange-700 border-orange-700 text-white' : 'border-stone-300 bg-white'}`}>
+                                    {selectedIds.includes(p.id) && <Icon name="check" size={12} />}
+                                </div>
+                                {p.locationName}
+                            </div>
+                        ))
+                    ) : (
+                        <div className="px-4 py-4 text-center text-xs text-stone-500 font-medium italic">
+                            Không tìm thấy khu vực nào
+                        </div>
+                    )}
+                    </div>
+
+                    <div className="p-2 border-t border-stone-100 bg-white shrink-0 relative z-10 shadow-[0_-8px_15px_-3px_rgba(0,0,0,0.05)]">
+                        <button onClick={(e) => { e.stopPropagation(); setIsOpen(false); }} className="w-full py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-lg text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm hover:shadow-md">
+                            Đóng <Icon name="x" size={14} />
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+// Custom Component: Multi-Select cho Loại hình
+const TypeMultiSelect = ({ types, selectedIds, onChange, t }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const toggleSelection = (id) => {
+        let newSelection = [...selectedIds];
+        if (id === 'all') {
+            newSelection = newSelection.includes('all') ? [] : ['all'];
+        } else {
+            newSelection = newSelection.filter(v => v !== 'all');
+            if (newSelection.includes(id)) {
+                newSelection = newSelection.filter(v => v !== id);
+            } else {
+                newSelection.push(id);
+            }
+        }
+        onChange(newSelection);
+    };
+
+    const getDisplayText = () => {
+        if (selectedIds.length === 0) return "Chọn loại hình";
+        if (selectedIds.includes('all')) return t('all_types') || "Tất cả loại hình";
+        if (selectedIds.length === 1) {
+            const type = types.find(t => t.id === selectedIds[0]);
+            return type ? type.label : "Chọn loại hình";
+        }
+        return `Đã chọn ${selectedIds.length} loại hình`;
+    };
+
+    return (
+        <div className="relative w-full" ref={dropdownRef}>
+            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-orange-700 pointer-events-none">
+                <Icon name="layers" size={14} />
+            </div>
+            <div 
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full pl-10 pr-16 py-2.5 bg-white rounded-xl border-2 border-stone-100 hover:border-stone-200 outline-none transition-all font-bold text-xs text-stone-600 cursor-pointer flex items-center justify-between select-none"
+            >
+                <span className="truncate">{getDisplayText()}</span>
+            </div>
+            <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center">
+                {selectedIds.length > 0 && (
+                    <button 
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); onChange([]); }}
+                        className="p-1.5 text-stone-300 hover:text-red-500 hover:bg-red-50 rounded-md transition-all active:scale-95"
+                        title="Bỏ chọn tất cả"
+                    >
+                        <Icon name="x" size={14} />
+                    </button>
+                )}
+                <div onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }} className="p-1.5 text-stone-400 cursor-pointer hover:text-stone-600 transition-transform duration-200" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }} title={isOpen ? "Đóng" : "Mở"}>
+                    <Icon name="chevron-down" size={16} />
+                </div>
+            </div>
+            
+            {isOpen && (
+                <div className="absolute z-50 w-full mt-1 bg-white border border-stone-200 rounded-xl shadow-xl max-h-[60vh] flex flex-col animate-in fade-in slide-in-from-top-2 duration-200 overflow-hidden">
+                    <div className="px-3 py-2 border-b border-stone-100 bg-stone-50 flex justify-between items-center shrink-0">
+                        <span className="text-[10px] font-black text-stone-500 uppercase tracking-widest">
+                            {selectedIds.length > 0 ? `${selectedIds.length} đã chọn` : 'Loại hình'}
+                        </span>
+                        {selectedIds.length > 0 && (
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); onChange([]); }}
+                                className="text-[10px] text-red-600 font-bold hover:text-red-800 bg-red-50 hover:bg-red-100 px-2 py-1 rounded-md transition-colors flex items-center gap-1 uppercase tracking-widest active:scale-95"
+                            >
+                                <Icon name="trash-2" size={12} /> Bỏ chọn
+                            </button>
+                        )}
+                    </div>
+                    <div className="overflow-y-auto py-1">
+                        <div 
+                            className="px-4 py-2.5 hover:bg-stone-50 cursor-pointer flex items-center gap-3 text-xs font-bold text-stone-700 transition-colors"
+                            onClick={() => toggleSelection('all')}
+                        >
+                            <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${selectedIds.includes('all') ? 'bg-orange-700 border-orange-700 text-white' : 'border-stone-300 bg-white'}`}>
+                                {selectedIds.includes('all') && <Icon name="check" size={12} />}
+                            </div>
+                            {t('all_types') || "Tất cả loại hình"}
+                        </div>
+                        {types.map(type => (
+                            <div 
+                                key={type.id}
+                                className="px-4 py-2.5 hover:bg-stone-50 cursor-pointer flex items-center gap-3 text-xs font-bold text-stone-700 transition-colors"
+                                onClick={() => toggleSelection(type.id)}
+                            >
+                                <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${selectedIds.includes(type.id) ? 'bg-orange-700 border-orange-700 text-white' : 'border-stone-300 bg-white'}`}>
+                                    {selectedIds.includes(type.id) && <Icon name="check" size={12} />}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Icon name={getIconForHotelType(type.id)} size={12} className="text-stone-400" />
+                                    <span>{type.label}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    
+                    <div className="p-2 border-t border-stone-100 bg-white shrink-0 relative z-10 shadow-[0_-8px_15px_-3px_rgba(0,0,0,0.05)]">
+                        <button onClick={(e) => { e.stopPropagation(); setIsOpen(false); }} className="w-full py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-lg text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm hover:shadow-md">
+                            Đóng <Icon name="x" size={14} />
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 const MainApp = () => {
     const { t, lang, changeLang } = window.useTranslation();
     const [hotels, setHotels] = useState([]);
@@ -99,12 +380,29 @@ const MainApp = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [pendingRequests, setPendingRequests] = useState([]);
     const [searchTerm, setSearchTerm] = useState("");
-    const [filterLocationId, setFilterLocationId] = useState(() => {
+    const [filterLocationIds, setFilterLocationIds] = useState(() => {
         const urlParams = new URLSearchParams(window.location.search);
-        return urlParams.get('locationId') || localStorage.getItem('luquan_last_selected_locationId') || "";
+        let urlLocs = urlParams.get('locationIds');
+        if (!urlLocs && urlParams.get('locationId')) {
+            urlLocs = urlParams.get('locationId'); // Tương thích URL cũ
+        }
+        if (urlLocs) return urlLocs.split(',');
+        const savedLocs = localStorage.getItem('luquan_last_selected_locationIds');
+        if (savedLocs) { try { return JSON.parse(savedLocs); } catch (e) { return []; } }
+        const oldSavedLoc = localStorage.getItem('luquan_last_selected_locationId');
+        if (oldSavedLoc) return [oldSavedLoc]; // Tương thích Cache cũ
+        return [];
     });
-    const [filterType, setFilterType] = useState(() => {
-        return localStorage.getItem('luquan_last_selected_type') || 'all';
+    const [filterTypeIds, setFilterTypeIds] = useState(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlTypes = urlParams.get('typeIds');
+        if (urlTypes) return urlTypes.split(',');
+
+        const savedTypes = localStorage.getItem('luquan_last_selected_typeIds');
+        if (savedTypes) { try { return JSON.parse(savedTypes); } catch (e) { return ['all']; } }
+        const oldType = localStorage.getItem('luquan_last_selected_type');
+        if (oldType) return [oldType]; // Tương thích Cache cũ
+        return ['all'];
     });
     const [selectedHotel, setSelectedHotel] = useState(null);
     const [showRequestForm, setShowRequestForm] = useState(false);
@@ -179,13 +477,13 @@ const MainApp = () => {
     // Tải dữ liệu khách sạn khi người dùng thay đổi bộ lọc thành phố
     useEffect(() => {
         // Lưu lựa chọn mới vào Local Storage để ghi nhớ cho lần sau
-        localStorage.setItem('luquan_last_selected_locationId', filterLocationId);
+        localStorage.setItem('luquan_last_selected_locationIds', JSON.stringify(filterLocationIds));
 
         // Không chạy nếu chưa có danh sách tỉnh
-        if (provinces.length === 0 && filterLocationId) return; // Chờ cho danh sách tỉnh được tải xong
+        if (provinces.length === 0 && filterLocationIds.length > 0) return; // Chờ cho danh sách tỉnh được tải xong
 
         // Nếu không chọn thành phố nào, danh sách khách sạn sẽ rỗng
-        if (!filterLocationId) {
+        if (filterLocationIds.length === 0) {
             setHotels([]);
             setSelectedHotel(null);
             return;
@@ -194,9 +492,9 @@ const MainApp = () => {
         setIsLoading(true);
         setHotels([]);
 
-        const filePathsToFetch = filterLocationId === "all"
+        const filePathsToFetch = filterLocationIds.includes("all")
             ? provinces.map(p => p.filePathId)
-            : [provinces.find(p => p.id === filterLocationId)?.filePathId].filter(Boolean);
+            : provinces.filter(p => filterLocationIds.includes(p.id)).map(p => p.filePathId).filter(Boolean);
 
         HotelAPI.fetchHotelsByFilePaths(filePathsToFetch)
             .then(hotelsData => {
@@ -223,12 +521,17 @@ const MainApp = () => {
                 }
             })
             .catch(error => {
-                console.error(`Lỗi khi tải dữ liệu cho ${filterLocationId}:`, error);
+                console.error(`Lỗi khi tải dữ liệu cho ${filterLocationIds.join(',')}:`, error);
             })
             .finally(() => {
                 setIsLoading(false);
             });
-    }, [filterLocationId, provinces]);
+    }, [filterLocationIds, provinces]);
+
+    // Lưu filterTypeIds vào Local Storage
+    useEffect(() => {
+        localStorage.setItem('luquan_last_selected_typeIds', JSON.stringify(filterTypeIds));
+    }, [filterTypeIds]);
 
     useEffect(() => {
         // Chạy lại sau mỗi lần render để đảm bảo mọi icon mới đều được hiển thị
@@ -252,28 +555,44 @@ const MainApp = () => {
         }
     }, [selectedHotel, viewMode]);
 
-    // Lưu lại khách sạn đang được chọn vào Local Storage
-    const isInitialMountHotel = useRef(true);
+    // Đồng bộ trạng thái URL cho các bộ lọc và khách sạn được chọn
+    const isInitialMountUrl = useRef(true);
     useEffect(() => {
         // Bỏ qua lần render đầu tiên để tránh việc vô tình xóa mất dữ liệu đã lưu
-        if (isInitialMountHotel.current) {
-            isInitialMountHotel.current = false;
+        if (isInitialMountUrl.current) {
+            isInitialMountUrl.current = false;
             return;
         }
         
         const url = new URL(window.location);
+        
+        // 1. Đồng bộ selectedHotel
         if (selectedHotel) {
             localStorage.setItem('luquan_last_selected_hotel_id', selectedHotel.id);
             url.searchParams.set('hotel', selectedHotel.id);
-            if (filterLocationId) url.searchParams.set('locationId', filterLocationId);
         } else {
             // Nếu người dùng đóng cửa sổ chi tiết, ta cũng xóa thông tin đã lưu
             localStorage.removeItem('luquan_last_selected_hotel_id');
             url.searchParams.delete('hotel');
-            url.searchParams.delete('locationId');
         }
+
+        // 2. Đồng bộ filterLocationIds
+        if (filterLocationIds.length > 0) {
+            url.searchParams.set('locationIds', filterLocationIds.join(','));
+        } else {
+            url.searchParams.delete('locationIds');
+        }
+        url.searchParams.delete('locationId'); // Dọn dẹp param cũ
+
+        // 3. Đồng bộ filterTypeIds
+        if (filterTypeIds.length > 0 && !filterTypeIds.includes('all')) {
+            url.searchParams.set('typeIds', filterTypeIds.join(','));
+        } else {
+            url.searchParams.delete('typeIds');
+        }
+
         window.history.replaceState({}, '', url);
-    }, [selectedHotel, filterLocationId]);
+    }, [selectedHotel, filterLocationIds, filterTypeIds]);
 
     const filteredHotels = useMemo(() => {
         let list;
@@ -289,10 +608,11 @@ const MainApp = () => {
 
         let searchResults = list;
 
-        if (filterType && filterType !== 'all') {
-            // Ưu tiên lọc loại hình trước (so sánh === rất nhanh)
-            // Hỗ trợ fallback: nếu dữ liệu cũ chưa có type, coi như thuộc nhóm 'other'
-            searchResults = searchResults.filter(hotel => (hotel.type || 'other') === filterType);
+        if (filterTypeIds.length === 0) {
+            searchResults = [];
+        } else if (!filterTypeIds.includes('all')) {
+            // Ưu tiên lọc loại hình trước
+            searchResults = searchResults.filter(hotel => filterTypeIds.includes(hotel.type || 'other'));
         }
 
         const normalizedSearchTerm = removeVietnameseTones(searchTerm);
@@ -313,7 +633,7 @@ const MainApp = () => {
             }
         }
         return searchResults;
-    }, [hotels, pendingRequests, pendingReviewHotels, searchTerm, filterLocationId, filterType, isAdmin, adminTab, selectedHotel]);
+    }, [hotels, pendingRequests, pendingReviewHotels, searchTerm, filterLocationIds, filterTypeIds, isAdmin, adminTab, selectedHotel]);
 
     // Tự động ẩn Toast thông báo sau 3 giây
     useEffect(() => {
@@ -354,7 +674,7 @@ const MainApp = () => {
             .then(response => {
                 setPendingRequests(prev => prev.filter(h => h.id !== hotel.id));
                 // Nếu admin đang xem thành phố vừa được duyệt, thêm khách sạn vào danh sách để cập nhật UI
-            if (response.data.locationId === filterLocationId) {
+            if (filterLocationIds.includes("all") || filterLocationIds.includes(response.data.locationId)) {
                     setHotels(prev => [...prev, response.data]);
                 }
                 setToastMessage(`Đã duyệt thành công "${hotel.name}"!`);
@@ -382,7 +702,7 @@ const MainApp = () => {
             .then((response) => {
                 setPendingReviewHotels(prev => prev.filter(h => h.id !== hotel.id));
                 // Thêm khách sạn lại vào danh sách đã duyệt nếu đang xem khu vực đó
-            if (response.data.locationId === filterLocationId) {
+            if (filterLocationIds.includes("all") || filterLocationIds.includes(response.data.locationId)) {
                     setHotels(prev => {
                         if (prev.some(h => h.id === response.data.id)) {
                             return prev.map(h => h.id === response.data.id ? response.data : h);
@@ -402,7 +722,7 @@ const MainApp = () => {
         HotelAPI.setHotelStatus(hotel.id, 'inactive')
             .then((response) => {
                 setPendingReviewHotels(prev => prev.filter(h => h.id !== hotel.id));
-            if (response.data && response.data.locationId === filterLocationId) {
+            if (response.data && (filterLocationIds.includes("all") || filterLocationIds.includes(response.data.locationId))) {
                     setHotels(prev => prev.map(h => h.id === response.data.id ? response.data : h));
                 }
                 setToastMessage(`Đã tạm ẩn "${hotel.name}".`);
@@ -576,6 +896,22 @@ const MainApp = () => {
                     ${viewMode === 'list' ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
                 `}>
                     <div className="p-4 border-b bg-stone-50/50 space-y-2">
+                        
+                        {/* Dropdown Lọc Tỉnh/Thành */}
+                        <RegionMultiSelect 
+                            provinces={provinces} 
+                            selectedIds={filterLocationIds} 
+                            onChange={setFilterLocationIds} 
+                            t={t} 
+                        />
+
+                        <TypeMultiSelect
+                            types={HOTEL_TYPES}
+                            selectedIds={filterTypeIds}
+                            onChange={setFilterTypeIds}
+                            t={t}
+                        />
+
                         <div className="relative">
                             <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400">
                                 <Icon name="search" size={16} />
@@ -599,50 +935,6 @@ const MainApp = () => {
                                 {filteredHotels.length}
                             </div>
                         </div>
-                        
-                        {/* Dropdown Lọc Tỉnh/Thành */}
-                        <div className="relative w-full">
-                            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-orange-700">
-                                <Icon name="map" size={14} />
-                            </div>
-                            <select 
-                            value={filterLocationId} 
-                            onChange={(e) => setFilterLocationId(e.target.value)}
-                                className="w-full pl-10 pr-8 py-2.5 bg-white rounded-xl border-2 border-stone-100 focus:border-orange-700 outline-none transition-all font-bold text-xs text-stone-600 appearance-none cursor-pointer"
-                            >
-                                <option value="">{t('select_region')}</option>
-                                <option value="all">{t('all_regions')}</option>
-                                {provinces.map(p => (
-                                <option key={p.id} value={p.id}>{p.locationName}</option>
-                                ))}
-                            </select>
-                            <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none">
-                                <Icon name="chevron-down" size={14} />
-                            </div>
-                        </div>
-
-                        <div className="relative w-full">
-                            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-orange-700">
-                                <Icon name="layers" size={14} />
-                            </div>
-                            <select
-                                value={filterType}
-                                onChange={(e) => {
-                                    const value = e.target.value;
-                                    setFilterType(value);
-                                    localStorage.setItem('luquan_last_selected_type', value);
-                                }}
-                                className="w-full pl-10 pr-8 py-2.5 bg-white rounded-xl border-2 border-stone-100 focus:border-orange-700 outline-none transition-all font-bold text-xs text-stone-600 appearance-none cursor-pointer"
-                            >
-                                <option value="all">{t('all_types')}</option>
-                                {HOTEL_TYPES.map(t => (
-                                    <option key={t.id} value={t.id}>{t.label}</option>
-                                ))}
-                            </select>
-                            <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none">
-                                <Icon name="chevron-down" size={14} />
-                            </div>
-                        </div>
 
                         {isAdmin && (
                             <AdminTabs
@@ -658,7 +950,7 @@ const MainApp = () => {
 
                     <div className="flex-1 overflow-y-auto bg-stone-50 scrollbar-hide pb-24">
                         {isAdmin && adminTab === 'reports' ? (
-                    <ReportManager reports={reports} setFilterCity={setFilterLocationId} onToast={setToastMessage} onReportDeleted={refreshReports} onProcessReport={onProcessReport} />
+                    <ReportManager reports={reports} setFilterCity={(id) => setFilterLocationIds([id])} onToast={setToastMessage} onReportDeleted={refreshReports} onProcessReport={onProcessReport} />
                         ) : (
                             <div className="p-3 space-y-3">
                                 {isLoading ? (
@@ -666,10 +958,15 @@ const MainApp = () => {
                                         <Icon name="loader" size={32} className="mx-auto mb-2 text-stone-400 animate-spin" />
                                         <p className="font-black uppercase text-[9px] tracking-widest italic">Đang tải dữ liệu...</p>
                                     </div>
-                            ) : !filterLocationId ? (
+                            ) : filterLocationIds.length === 0 ? (
                                     <div className="text-center py-20 opacity-40">
                                         <Icon name="map" size={32} className="mx-auto mb-2 text-stone-400" />
                                         <p className="font-black uppercase text-[9px] tracking-widest italic">Vui lòng chọn một khu vực để xem khách sạn</p>
+                                    </div>
+                            ) : filterTypeIds.length === 0 ? (
+                                    <div className="text-center py-20 opacity-40">
+                                        <Icon name="layers" size={32} className="mx-auto mb-2 text-stone-400" />
+                                        <p className="font-black uppercase text-[9px] tracking-widest italic">Vui lòng chọn loại hình cần xem</p>
                                     </div>
                                 ) : filteredHotels.length > 0 ? (
                                     filteredHotels.map(hotel => (
@@ -759,23 +1056,29 @@ const MainApp = () => {
                     ${viewMode === 'map' ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
                 `}>
                     <div className="w-full h-full relative z-0">
-                    <MainLeafletMap hotels={filteredHotels} selectedHotel={selectedHotel} onSelectHotel={setSelectedHotel} filterCity={filterLocationId} viewMode={viewMode} />
+                    <MainLeafletMap hotels={filteredHotels} selectedHotel={selectedHotel} onSelectHotel={setSelectedHotel} filterCity={filterLocationIds.includes("all") || filterLocationIds.length === 0 ? null : filterLocationIds} viewMode={viewMode} />
                     </div>
                 </div>
 
                 {/* View Switcher: Mobile Only - Đưa ra ngoài Map để không bao giờ bị che khuất */}
-                <div className="md:hidden absolute bottom-24 left-1/2 -translate-x-1/2 z-40 flex items-center bg-moss text-white p-1 rounded-2xl shadow-2xl border border-white/20">
+                <div className="md:hidden absolute bottom-0 left-0 right-0 z-40 flex bg-white border-t border-stone-200 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] pb-safe">
                     <button 
                         onClick={() => setViewMode('list')}
-                        className={`px-4 py-2.5 rounded-xl flex items-center gap-2 text-[10px] font-black uppercase transition-all ${viewMode === 'list' ? 'bg-white text-moss' : 'text-white/60'}`}
+                        className={`flex-1 py-3 flex flex-col items-center justify-center gap-1 transition-all active:scale-95 ${viewMode === 'list' ? 'text-moss' : 'text-stone-400 hover:text-stone-600'}`}
                     >
-                        <Icon name="list" size={14} /> Danh Sách
+                        <div className={`transition-transform duration-300 ${viewMode === 'list' ? '-translate-y-1 scale-110' : 'translate-y-0 scale-100'}`}>
+                            <Icon name="list" size={20} />
+                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-widest">Danh Sách</span>
                     </button>
                     <button 
                         onClick={() => setViewMode('map')}
-                        className={`px-4 py-2.5 rounded-xl flex items-center gap-2 text-[10px] font-black uppercase transition-all ${viewMode === 'map' ? 'bg-white text-moss' : 'text-white/60'}`}
+                        className={`flex-1 py-3 flex flex-col items-center justify-center gap-1 transition-all active:scale-95 ${viewMode === 'map' ? 'text-moss' : 'text-stone-400 hover:text-stone-600'}`}
                     >
-                        <Icon name="navigation" size={14} /> Bản Đồ
+                        <div className={`transition-transform duration-300 ${viewMode === 'map' ? '-translate-y-1 scale-110' : 'translate-y-0 scale-100'}`}>
+                            <Icon name="map" size={20} />
+                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-widest">Bản Đồ</span>
                     </button>
                 </div>
 
