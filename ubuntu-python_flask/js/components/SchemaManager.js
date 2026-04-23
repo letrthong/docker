@@ -24,9 +24,10 @@ function SchemaManager({ api, onToast }) {
         locationName: '',
         lat: '',
         lng: '',
-        radius: 2
+        radius: 2   
     });
     const [pickerPos, setPickerPos] = useState({ lat: 14.0583, lng: 108.2772 }); // Mặc định ở trung tâm Việt Nam
+    const [isLocating, setIsLocating] = useState(false);
 
     const fetchSchemas = useCallback(async () => {
         try {
@@ -69,8 +70,32 @@ function SchemaManager({ api, onToast }) {
         setPickerPos(pos);
     };
 
+    const handleGetCurrentLocation = () => {
+        if (!navigator.geolocation) {
+            onToast('Trình duyệt của bạn không hỗ trợ GPS.');
+            return;
+        }
+
+        setIsLocating(true);
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                handlePickerChange({ lat: position.coords.latitude, lng: position.coords.longitude });
+                setIsLocating(false);
+                onToast('Đã cập nhật vị trí hiện tại của bạn!');
+            },
+            (error) => {
+                setIsLocating(false);
+                console.error("Lỗi lấy GPS:", error);
+                let errMsg = "Không thể lấy vị trí. Vui lòng bật định vị GPS.";
+                if (error.code === 1) errMsg = "Bạn đã từ chối quyền truy cập vị trí.";
+                onToast(errMsg);
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    };
+
     const resetForm = () => {
-        setFormData({ locationName: '', lat: '', lng: '', radius: 2 });
+        setFormData({ locationName: '', lat: '', lng: '', radius: 10 });
         setPickerPos({ lat: 14.0583, lng: 108.2772 });
         setEditingSchema(null);
     };
@@ -81,7 +106,7 @@ function SchemaManager({ api, onToast }) {
             locationName: schema.locationName,
             lat: schema.lat,
             lng: schema.lng,
-            radius: schema.radius || 2
+            radius: schema.radius || 10
         });
         setPickerPos({ lat: parseFloat(schema.lat) || 14.0583, lng: parseFloat(schema.lng) || 108.2772 });
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -112,13 +137,13 @@ function SchemaManager({ api, onToast }) {
             locationName: formData.locationName,
             lat: parseFloat(formData.lat),
             lng: parseFloat(formData.lng),
-            radius: parseFloat(formData.radius || 2)
+            radius: parseFloat(formData.radius || 10)
         };
 
         try {
             if (editingSchema) {
                 // Cập nhật
-                const currentRadius = parseFloat(editingSchema.radius || 2);
+                const currentRadius = parseFloat(editingSchema.radius || 10);
                 if (payload.radius < currentRadius) {
                     onToast('error', 'Không thể giảm bán kính nhỏ hơn mức hiện tại.');
                     return;
@@ -186,7 +211,22 @@ function SchemaManager({ api, onToast }) {
                 <h3 className="text-xl font-semibold mb-3">{editingSchema ? 'Chỉnh sửa khu vực' : 'Thêm khu vực mới'}</h3>
                 
                 <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Vị trí trung tâm khu vực (Kéo Marker hoặc Chạm trên bản đồ)</label>
+                    <div className="flex justify-between items-center mb-2">
+                        <label className="block text-sm font-medium text-gray-700">Vị trí trung tâm khu vực (Kéo Marker hoặc Chạm trên bản đồ)</label>
+                        <button 
+                            type="button" 
+                            onClick={handleGetCurrentLocation}
+                            disabled={isLocating}
+                            className="flex items-center gap-1 text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded-lg transition-colors active:scale-95 disabled:opacity-50"
+                        >
+                            {isLocating ? (
+                                <Icon name="loader" size={14} className="animate-spin" />
+                            ) : (
+                                <Icon name="crosshair" size={14} />
+                            )}
+                            {isLocating ? 'Đang định vị...' : 'Vị trí của tôi'}
+                        </button>
+                    </div>
                     <div className="w-full h-80 sm:h-96 bg-stone-100 rounded-lg border-2 border-stone-200 relative overflow-hidden shadow-inner z-0">
                         <LocationPickerMap key={editingSchema ? editingSchema.id : 'new'} position={pickerPos} onPositionChange={handlePickerChange} />
                     </div>
@@ -208,11 +248,11 @@ function SchemaManager({ api, onToast }) {
                     <div>
                         <label htmlFor="radius" className="block text-sm font-medium text-gray-700">Bán kính giới hạn</label>
                         <select id="radius" name="radius" value={formData.radius} onChange={handleInputChange} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                            <option value="2" disabled={editingSchema && parseFloat(editingSchema.radius || 2) > 2}>2 km</option>
-                            <option value="5" disabled={editingSchema && parseFloat(editingSchema.radius || 2) > 5}>5 km</option>
-                            <option value="10" disabled={editingSchema && parseFloat(editingSchema.radius || 2) > 10}>10 km</option>
-                            <option value="20" disabled={editingSchema && parseFloat(editingSchema.radius || 2) > 20}>20 km</option>
-                            <option value="50" disabled={editingSchema && parseFloat(editingSchema.radius || 2) > 50}>50 km</option>
+                            <option value="2" disabled={editingSchema && parseFloat(editingSchema.radius || 10) > 2}>2 km</option>
+                            <option value="5" disabled={editingSchema && parseFloat(editingSchema.radius || 10) > 5}>5 km</option>
+                            <option value="10" disabled={editingSchema && parseFloat(editingSchema.radius || 10) > 10}>10 km</option>
+                            <option value="20" disabled={editingSchema && parseFloat(editingSchema.radius || 10) > 20}>20 km</option>
+                            <option value="50" disabled={editingSchema && parseFloat(editingSchema.radius || 10) > 50}>50 km</option>
                         </select>
                     </div>
                 </div>
@@ -282,7 +322,7 @@ function SchemaManager({ api, onToast }) {
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{schema.locationName}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{schema.lat}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{schema.lng}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{schema.radius || 2} km</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{schema.radius || 10} km</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{schema.updatedAt ? schema.updatedAt.split('-').reverse().join('/') : 'Chưa rõ'}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex gap-2">
                                             <button onClick={() => handleEdit(schema)} className="text-indigo-600 hover:text-indigo-900">Sửa</button>

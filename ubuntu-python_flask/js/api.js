@@ -39,7 +39,7 @@ const HotelAPI = {
             return [];
         }
         const fetchPromises = filePaths.map(path =>
-            fetch(`${HotelAPI.baseUrl}/api/hotelconnect/v1/config/${path}`)
+            fetch(`${HotelAPI.baseUrl}/api/hotelconnect/v1/config/${path}?t=${new Date().getTime()}`, { cache: 'no-store' })
                 .then(res => {
                     if (!res.ok) {
                         // Phân loại lỗi: Nếu 404 thì chỉ là cảnh báo nhẹ (do khu vực mới chưa có file)
@@ -234,7 +234,7 @@ const HotelAPI = {
         if (!HotelAPI.baseUrl) await HotelAPI.init();
         try {
             // Chuyển sang gọi API từ backend
-            const response = await fetch(`${HotelAPI.baseUrl}/api/hotelconnect/v1/schema`);
+            const response = await fetch(`${HotelAPI.baseUrl}/api/hotelconnect/v1/schema?t=${new Date().getTime()}`, { cache: 'no-store' });
             if (!response.ok) throw new Error("Không thể tải dữ liệu cấu hình các tỉnh");
             const schemas = await response.json();
             // Trả về toàn bộ object để component có thể lấy cả locationName và filePathId

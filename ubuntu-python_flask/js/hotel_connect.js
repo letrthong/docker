@@ -89,7 +89,7 @@ const processImageUpload = (file) => {
 const isValidPhoneNumber = (phone) => {
     if (!phone) return false;
     const cleanPhone = phone.replace(/\s+/g, '');
-    return /^[0-9]{10,11}$/.test(cleanPhone);
+    return /^[0-9]{8,11}$/.test(cleanPhone);
 };
 
 // Custom Component: Multi-Select cho Khu vực
@@ -215,7 +215,7 @@ const RegionMultiSelect = ({ provinces, selectedIds, onChange, t }) => {
                     {!searchQuery && (
                         <div 
                             className="px-4 py-2.5 hover:bg-stone-50 cursor-pointer flex items-center gap-3 text-xs font-bold text-stone-700 transition-colors"
-                            onClick={() => toggleSelection('all')}
+                            onClick={(e) => { e.stopPropagation(); toggleSelection('all'); }}
                         >
                             <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${selectedIds.includes('all') ? 'bg-orange-700 border-orange-700 text-white' : 'border-stone-300 bg-white'}`}>
                                 {selectedIds.includes('all') && <Icon name="check" size={12} />}
@@ -228,7 +228,7 @@ const RegionMultiSelect = ({ provinces, selectedIds, onChange, t }) => {
                             <div 
                                 key={p.id}
                                 className="px-4 py-2.5 hover:bg-stone-50 cursor-pointer flex items-center gap-3 text-xs font-bold text-stone-700 transition-colors"
-                                onClick={() => toggleSelection(p.id)}
+                                onClick={(e) => { e.stopPropagation(); toggleSelection(p.id); }}
                             >
                                 <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${selectedIds.includes(p.id) ? 'bg-orange-700 border-orange-700 text-white' : 'border-stone-300 bg-white'}`}>
                                     {selectedIds.includes(p.id) && <Icon name="check" size={12} />}
@@ -338,7 +338,7 @@ const TypeMultiSelect = ({ types, selectedIds, onChange, t }) => {
                     <div className="overflow-y-auto py-1">
                         <div 
                             className="px-4 py-2.5 hover:bg-stone-50 cursor-pointer flex items-center gap-3 text-xs font-bold text-stone-700 transition-colors"
-                            onClick={() => toggleSelection('all')}
+                            onClick={(e) => { e.stopPropagation(); toggleSelection('all'); }}
                         >
                             <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${selectedIds.includes('all') ? 'bg-orange-700 border-orange-700 text-white' : 'border-stone-300 bg-white'}`}>
                                 {selectedIds.includes('all') && <Icon name="check" size={12} />}
@@ -349,7 +349,7 @@ const TypeMultiSelect = ({ types, selectedIds, onChange, t }) => {
                             <div 
                                 key={type.id}
                                 className="px-4 py-2.5 hover:bg-stone-50 cursor-pointer flex items-center gap-3 text-xs font-bold text-stone-700 transition-colors"
-                                onClick={() => toggleSelection(type.id)}
+                                onClick={(e) => { e.stopPropagation(); toggleSelection(type.id); }}
                             >
                                 <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${selectedIds.includes(type.id) ? 'bg-orange-700 border-orange-700 text-white' : 'border-stone-300 bg-white'}`}>
                                     {selectedIds.includes(type.id) && <Icon name="check" size={12} />}
@@ -492,40 +492,45 @@ const MainApp = () => {
         setIsLoading(true);
         setHotels([]);
 
-        const filePathsToFetch = filterLocationIds.includes("all")
-            ? provinces.map(p => p.filePathId)
-            : provinces.filter(p => filterLocationIds.includes(p.id)).map(p => p.filePathId).filter(Boolean);
+        const loadHotels = async () => {
+            let accumulatedHotels = [];
 
-        HotelAPI.fetchHotelsByFilePaths(filePathsToFetch)
-            .then(hotelsData => {
-                setHotels(hotelsData);
+            const filePathsToFetch = filterLocationIds.includes("all")
+                ? provinces.map(p => p.filePathId).filter(Boolean)
+                : provinces.filter(p => filterLocationIds.includes(p.id)).map(p => p.filePathId).filter(Boolean);
 
-                // Lấy ID từ URL nếu có (ưu tiên), nếu không thì lấy từ localStorage
-                const urlParams = new URLSearchParams(window.location.search);
-                const savedHotelId = urlParams.get('hotel') || localStorage.getItem('luquan_last_selected_hotel_id');
-
-                if (savedHotelId) {
-                    const hotelToSelect = hotelsData.find(h => h.id === savedHotelId);
-                    const isPubliclyVisible = hotelToSelect && (hotelToSelect.status === 'approved' || hotelToSelect.status === 'reported');
-                    if (hotelToSelect && isPubliclyVisible) {
-                        setSelectedHotel(hotelToSelect);
-                    } else {
-                        // Nếu không tìm thấy (VD: người dùng đã đổi sang tỉnh khác hoặc hotel đã bị xóa), 
-                        // thì xóa ID đã lưu và đảm bảo không có hotel nào được chọn.
-                        setSelectedHotel(null);
-                        localStorage.removeItem('luquan_last_selected_hotel_id');
-                    }
-                } else {
-                    // Nếu không có ID hotel nào được lưu, đảm bảo không có hotel nào được chọn.
-                    setSelectedHotel(null);
+            // Load từng file một để hiện dần
+            for (const filePath of filePathsToFetch) {
+                try {
+                    const hotelsData = await HotelAPI.fetchHotelsByFilePaths([filePath]);
+                    accumulatedHotels = [...accumulatedHotels, ...hotelsData];
+                    setHotels([...accumulatedHotels]);
+                } catch (error) {
+                    console.error(`Lỗi khi tải dữ liệu cho file ${filePath}:`, error);
                 }
-            })
-            .catch(error => {
-                console.error(`Lỗi khi tải dữ liệu cho ${filterLocationIds.join(',')}:`, error);
-            })
-            .finally(() => {
-                setIsLoading(false);
-            });
+            }
+
+            // Sau khi load xong, xử lý selectedHotel
+            const urlParams = new URLSearchParams(window.location.search);
+            const savedHotelId = urlParams.get('hotel') || localStorage.getItem('luquan_last_selected_hotel_id');
+
+            if (savedHotelId) {
+                const hotelToSelect = accumulatedHotels.find(h => h.id === savedHotelId);
+                const isPubliclyVisible = hotelToSelect && (hotelToSelect.status === 'approved' || hotelToSelect.status === 'reported');
+                if (hotelToSelect && isPubliclyVisible) {
+                    setSelectedHotel(hotelToSelect);
+                } else {
+                    setSelectedHotel(null);
+                    localStorage.removeItem('luquan_last_selected_hotel_id');
+                }
+            } else {
+                setSelectedHotel(null);
+            }
+
+            setIsLoading(false);
+        };
+
+        loadHotels();
     }, [filterLocationIds, provinces]);
 
     // Lưu filterTypeIds vào Local Storage
@@ -1060,6 +1065,20 @@ const MainApp = () => {
                     </div>
                 </div>
 
+                {/* Nearby View: Mobile Only */}
+                <div className={`
+                    absolute md:hidden z-20 w-full bg-white shadow-2xl transition-transform duration-300 h-full flex flex-col
+                    ${viewMode === 'nearby' ? 'translate-x-0' : 'translate-x-full'}
+                `}>
+                    <NearByComponents 
+                        hotels={filteredHotels} 
+                        onSelectHotel={setSelectedHotel} 
+                        setViewMode={setViewMode} 
+                        isActive={viewMode === 'nearby'}
+                        onToast={setToastMessage}
+                    />
+                </div>
+
                 {/* View Switcher: Mobile Only - Đưa ra ngoài Map để không bao giờ bị che khuất */}
                 <div className="md:hidden absolute bottom-0 left-0 right-0 z-40 flex bg-white border-t border-stone-200 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] pb-safe">
                     <button 
@@ -1079,6 +1098,15 @@ const MainApp = () => {
                             <Icon name="map" size={20} />
                         </div>
                         <span className="text-[10px] font-black uppercase tracking-widest">Bản Đồ</span>
+                    </button>
+                    <button 
+                        onClick={() => setViewMode('nearby')}
+                        className={`flex-1 py-3 flex flex-col items-center justify-center gap-1 transition-all active:scale-95 ${viewMode === 'nearby' ? 'text-moss' : 'text-stone-400 hover:text-stone-600'}`}
+                    >
+                        <div className={`transition-transform duration-300 ${viewMode === 'nearby' ? '-translate-y-1 scale-110' : 'translate-y-0 scale-100'}`}>
+                            <Icon name="navigation" size={20} />
+                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-widest">Gần Đây</span>
                     </button>
                 </div>
 

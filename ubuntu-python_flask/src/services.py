@@ -74,8 +74,8 @@ def update_schema(item_id):
         data = read_schema()
         for item in data:
             if item.get("id") == item_id:
-                current_radius = float(item.get("radius", 2))
-                new_radius = float(req_data.get("radius", 2))
+                current_radius = float(item.get("radius", 10))
+                new_radius = float(req_data.get("radius", 10))
                 if new_radius < current_radius:
                     return jsonify({HotelField.ERROR: "Không thể giảm bán kính nhỏ hơn mức hiện tại"}), 400
                 
@@ -101,12 +101,7 @@ def delete_schema(item_id):
 # --- API Quản lý Yêu cầu Đăng ký Khách sạn ---
 requests_lock = threading.Lock()
 
-## Business logic moved to hotel_helpers.py
-
-## Business logic moved to hotel_helpers.py
-
-## Business logic moved to hotel_helpers.py
-
+ 
 @app.route('/api/hotelconnect/v1/hotels/request', methods=['POST'])
 @cross_origin()
 def submit_hotel_request():
@@ -136,14 +131,14 @@ def submit_hotel_request():
     area_lat = area_center[HotelField.LAT]
     area_lng = area_center[HotelField.LNG]
     location_name = area_center.get(HotelField.LOCATION, "Không rõ")
-    area_radius = float(area_center.get("radius", 2))
+    area_radius = float(area_center.get("radius", 10))
 
     # Tính khoảng cách bằng công thức Haversine
     distance = haversine(hotel_lat, hotel_lng, area_lat, area_lng)
 
     # Áp dụng quy tắc: khoảng cách không quá bán kính đã cấu hình (mặc định 10km)
     if distance > area_radius:
-        error_message = f"Vị trí khách sạn phải cách trung tâm {location_name} không quá {area_radius}km. Khoảng cách hiện tại là {distance:.2f}km."
+        error_message = f"Vị trí khách sạn phải cách trung tâm {location_name} không quá {area_radius:g}km. Khoảng cách hiện tại là {distance:.2f}km."
         return jsonify({HotelField.ERROR: error_message}), 400
     # --- END VALIDATION ---
 

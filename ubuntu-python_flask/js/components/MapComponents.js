@@ -31,6 +31,15 @@ const createHotelIcon = (hotel, isSelected) => {
     } else if (hotel.type === 'car') {
         bgColor = 'bg-sky-600'; // Màu xanh da trời cho Taxi
         svgPath = '<path d="M22 17v-4.5C22 10.6 18.2 9 15.5 9h-7C5.8 9 2 10.6 2 12.5V17c0 .6.4 1 1 1h1c.6 0 1-.4 1-1v-2h14v2c0 .6.4 1 1 1h1c.6 0 1-.4 1-1Z"/><path d="M2 12.5 5.3 7c.2-.4.7-.6 1.2-.6h11c.5 0 1 .2 1.2.6l3.3 5.5"/><path d="M6 14h.01"/><path d="M18 14h.01"/><path d="M10 6.4V4c0-.6.4-1 1-1h2c.6 0 1 .4 1 1v2.4"/>'; // Icon car-taxi
+    } else if (hotel.type === 'transport') {
+        bgColor = 'bg-cyan-600'; // Màu xanh lơ cho phương tiện di chuyển
+        svgPath = '<path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3"/><circle cx="7" cy="18" r="2"/><circle cx="16" cy="18" r="2"/>'; // Icon bus
+    } else if (hotel.type === 'local_food') {
+        bgColor = 'bg-orange-500'; // Màu cam sáng cho Quán bán món địa phương
+        svgPath = '<path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" x2="6" y1="2" y2="4"/><line x1="10" x2="10" y1="2" y2="4"/><line x1="14" x2="14" y1="2" y2="4"/>'; // Icon coffee
+    } else if (hotel.type === 'religion') {
+        bgColor = 'bg-amber-500'; // Màu vàng gold cho Cơ sở tôn giáo
+        svgPath = '<line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/><line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/>'; // Icon landmark
     }
 
     if (isSelected) {
@@ -122,6 +131,8 @@ const MainLeafletMap = ({ hotels, selectedHotel, onSelectHotel, filterCity, view
         // Khởi tạo hoặc dọn dẹp cluster group
         if (!clusterGroupRef.current) {
             clusterGroupRef.current = L.markerClusterGroup({
+                maxClusterRadius: 50, // Giảm bán kính gom cụm (mặc định 80) để hiện nhiều vị trí riêng lẻ hơn
+                disableClusteringAtZoom: 15, // Mức zoom mà tại đó mọi cụm sẽ tự động bung ra thành các vị trí
                 iconCreateFunction: function(cluster) {
                     const count = cluster.getChildCount();
                     let size = ' w-10 h-10 text-base';
@@ -198,7 +209,7 @@ const MainLeafletMap = ({ hotels, selectedHotel, onSelectHotel, filterCity, view
                     // trước khi bắt đầu animation 'flyTo', tránh race condition có thể gây lỗi.
                     setTimeout(() => {
                         if (mapInstance.current) { // Đảm bảo map vẫn tồn tại
-                            mapInstance.current.flyTo([selectedHotel.lat, selectedHotel.lng], 18, { duration: 1.5 });
+                            mapInstance.current.flyTo([selectedHotel.lat, selectedHotel.lng], 12, { duration: 0.4 });
                         }
                     }, 100);
                 };

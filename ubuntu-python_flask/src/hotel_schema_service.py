@@ -24,7 +24,7 @@ def create_schema_item(req_data):
         HotelField.LOCATION: req_data[HotelField.LOCATION],
         HotelField.LAT: req_data[HotelField.LAT],
         HotelField.LNG: req_data[HotelField.LNG],
-        HotelField.RADIUS  : req_data.get(HotelField.RADIUS, 2),
+        HotelField.RADIUS  : req_data.get(HotelField.RADIUS, 10),
         HotelField.CREATED_AT: datetime.now().strftime("%Y-%m-%d"),
         HotelField.UPDATED_AT: datetime.now().strftime("%Y-%m-%d")
     }
@@ -40,8 +40,8 @@ def update_schema_item(item, req_data):
     item[HotelField.LOCATION] = req_data[HotelField.LOCATION]
     item[HotelField.LAT] = req_data[HotelField.LAT]
     item[HotelField.LNG] = req_data[HotelField.LNG]
-    if "radius" in req_data:
-        item["radius"] = req_data["radius"]
+    if HotelField.RADIUS in req_data:
+        item[HotelField.RADIUS] = req_data[HotelField.RADIUS]
     item[HotelField.UPDATED_AT] = datetime.now().strftime("%Y-%m-%d")
     return item
 

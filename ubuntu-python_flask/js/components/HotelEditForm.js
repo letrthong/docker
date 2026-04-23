@@ -1,4 +1,4 @@
-const { useState, useMemo } = React;
+const { useState, useMemo, useEffect, useRef } = React;
 
 const HotelEditForm = ({ hotel, provinces, onClose, onSaveSuccess, onToast }) => {
     // Quản lý vị trí bản đồ độc lập, khởi tạo với tọa độ hiện tại của khách sạn
@@ -12,13 +12,37 @@ const HotelEditForm = ({ hotel, provinces, onClose, onSaveSuccess, onToast }) =>
 
     const [websiteUrl, setWebsiteUrl] = useState(decodedWebsite || "");
     const [imageBase64, setImageBase64] = useState(hotel.image || "");
+    const [isLocating, setIsLocating] = useState(false);
+
+    const [locationId, setLocationId] = useState(hotel.locationId || "");
+    const [isProvinceOpen, setIsProvinceOpen] = useState(false);
+    const [provinceSearchQuery, setProvinceSearchQuery] = useState("");
+    const provinceDropdownRef = useRef(null);
+
+    const filteredProvinces = useMemo(() => {
+        if (!provinceSearchQuery) return provinces;
+        const normalizedSearch = provinceSearchQuery.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
+        return provinces.filter(p => 
+            p.locationName.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase().includes(normalizedSearch)
+        );
+    }, [provinces, provinceSearchQuery]);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (provinceDropdownRef.current && !provinceDropdownRef.current.contains(event.target)) {
+                setIsProvinceOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
     const { areaCenter, locationName, areaRadius } = useMemo(() => {
         let center = null;
         let name = "";
         let radius = 2;
-        if (hotel && hotel.locationId && provinces) {
-            const province = provinces.find(p => p.id === hotel.locationId);
+        if (locationId && provinces) {
+            const province = provinces.find(p => p.id === locationId);
             if (province) {
                 name = province.locationName;
                 if (province.radius) radius = parseFloat(province.radius);
@@ -28,11 +52,35 @@ const HotelEditForm = ({ hotel, provinces, onClose, onSaveSuccess, onToast }) =>
             }
         }
         return { areaCenter: center, locationName: name, areaRadius: radius };
-    }, [hotel, provinces]);
+    }, [locationId, provinces]);
 
     // Giải mã Base64 sang chuỗi UTF-8 để tải vào giá trị mặc định của form
     const decodedDescription = useMemo(() => decodeBase64(hotel.description), [hotel.description]);
     const decodedPhone = useMemo(() => decodeBase64(hotel.phone), [hotel.phone]);
+
+    const handleGetCurrentLocation = () => {
+        if (!navigator.geolocation) {
+            onToast("Trình duyệt của bạn không hỗ trợ GPS.");
+            return;
+        }
+
+        setIsLocating(true);
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                setPickerPos({ lat: position.coords.latitude, lng: position.coords.longitude });
+                setIsLocating(false);
+                onToast("Đã cập nhật vị trí hiện tại của bạn!");
+            },
+            (error) => {
+                setIsLocating(false);
+                console.error("Lỗi lấy GPS:", error);
+                let errMsg = "Không thể lấy vị trí. Vui lòng bật định vị GPS.";
+                if (error.code === 1) errMsg = "Bạn đã từ chối quyền truy cập vị trí.";
+                onToast(errMsg);
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    };
 
     const handleImageUpload = async (e) => {
         try {
@@ -59,6 +107,14 @@ const HotelEditForm = ({ hotel, provinces, onClose, onSaveSuccess, onToast }) =>
 
         const bannedWords = await HotelAPI.getBannedWords();
 
+        // --- START VALIDATION: Check location ---
+        if (!locationId) {
+            setApiError("Vui lòng chọn Tỉnh/Thành phố.");
+            setIsSubmitting(false);
+            return;
+        }
+        // --- END VALIDATION ---
+
         // --- START VALIDATION: Banned words in name and description ---
         const lowerName = name.toLowerCase();
         const lowerDescription = description.toLowerCase();
@@ -78,8 +134,8 @@ const HotelEditForm = ({ hotel, provinces, onClose, onSaveSuccess, onToast }) =>
         // --- END VALIDATION ---
 
         // --- START VALIDATION: Kiểm tra số điện thoại hợp lệ của Việt Nam ---
-        if ((type !== 'entertainment' || phone) && !isValidPhoneNumber(phone)) {
-            setApiError("Số điện thoại không hợp lệ. Vui lòng kiểm tra lại (gồm 10-11 số).");
+        if ((type !== 'entertainment' && type !== 'local_food' && type !== 'religion' || phone) && !isValidPhoneNumber(phone)) {
+            setApiError("Số điện thoại không hợp lệ. Vui lòng kiểm tra lại (gồm 8-11 số).");
             setIsSubmitting(false);
             return;
         }
@@ -124,6 +180,7 @@ const HotelEditForm = ({ hotel, provinces, onClose, onSaveSuccess, onToast }) =>
             website: base64Website,
             description: base64Description,
             image: imageBase64,
+            locationId: locationId,
             lat: pickerPos.lat, 
             lng: pickerPos.lng
         };
@@ -165,6 +222,63 @@ const HotelEditForm = ({ hotel, provinces, onClose, onSaveSuccess, onToast }) =>
                 
                 <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1 scrollbar-hide bg-white pb-safe">
                     <div className="grid grid-cols-2 gap-3">
+                        <div className="col-span-2" ref={provinceDropdownRef}>
+                            <label className="text-[10px] font-black text-stone-400 uppercase mb-1 block tracking-widest">Tỉnh/Thành phố</label>
+                            <div className="relative">
+                                <div 
+                                    onClick={() => setIsProvinceOpen(!isProvinceOpen)}
+                                    className="w-full px-4 py-3 rounded-xl bg-stone-100 border-2 border-transparent hover:border-stone-200 focus-within:border-blue-700 outline-none font-bold text-sm cursor-pointer flex items-center justify-between"
+                                    tabIndex="0"
+                                >
+                                    <span className={locationName ? "text-stone-900" : "text-stone-500"}>
+                                        {locationName || "-- Chọn Tỉnh/Thành --"}
+                                    </span>
+                                    <Icon name="chevron-down" size={16} className="text-stone-400" />
+                                </div>
+
+                                {isProvinceOpen && (
+                                    <div className="absolute z-50 w-full mt-1 bg-white border border-stone-200 rounded-xl shadow-xl max-h-[60vh] flex flex-col overflow-hidden">
+                                        <div className="p-2 border-b border-stone-100 bg-stone-50 sticky top-0 z-10">
+                                            <div className="relative">
+                                                <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none">
+                                                    <Icon name="search" size={12} />
+                                                </div>
+                                                <input 
+                                                    type="text"
+                                                    placeholder="Tìm tỉnh/thành..."
+                                                    value={provinceSearchQuery}
+                                                    onChange={(e) => setProvinceSearchQuery(e.target.value)}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    autoFocus
+                                                    className="w-full pl-7 pr-3 py-2 bg-white border border-stone-200 rounded-lg text-xs font-bold text-stone-700 focus:outline-none focus:border-blue-500 transition-colors"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="overflow-y-auto py-1">
+                                            {filteredProvinces.length > 0 ? (
+                                                filteredProvinces.map(p => (
+                                                    <div 
+                                                        key={p.id}
+                                                        className={`px-4 py-2.5 hover:bg-stone-50 cursor-pointer text-xs font-bold transition-colors ${locationId === p.id ? 'text-blue-700 bg-blue-50' : 'text-stone-700'}`}
+                                                        onClick={() => {
+                                                            setLocationId(p.id);
+                                                            setIsProvinceOpen(false);
+                                                            setProvinceSearchQuery("");
+                                                        }}
+                                                    >
+                                                        {p.locationName}
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <div className="px-4 py-4 text-center text-xs text-stone-500 font-medium italic">
+                                                    Không tìm thấy khu vực nào
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                         <div className="col-span-2">
                             <label className="text-[10px] font-black text-stone-400 mb-1 block tracking-widest"><span className="uppercase">Tên</span> Lữ Quán</label>
                             <input required name="name" defaultValue={hotel.name} className="w-full px-4 py-3 rounded-xl bg-stone-100 border-2 border-transparent focus:border-blue-700 outline-none font-bold text-sm" />
@@ -189,11 +303,11 @@ const HotelEditForm = ({ hotel, provinces, onClose, onSaveSuccess, onToast }) =>
                         </div>
                         <div className="col-span-1">
                             <label className="text-[10px] font-black text-stone-400 uppercase mb-1 block tracking-widest">
-                                Số điện thoại chính {selectedType === 'entertainment' && <span className="normal-case tracking-normal lowercase opacity-70">(Tùy chọn)</span>}
+                            Số điện thoại chính {['entertainment', 'local_food', 'religion'].includes(selectedType) && <span className="normal-case tracking-normal lowercase opacity-70">(Tùy chọn)</span>}
                             </label>
                             <input
                                 name="phone"
-                                required={selectedType !== 'entertainment'}
+                            required={!['entertainment', 'local_food', 'religion'].includes(selectedType)}
                                 defaultValue={decodedPhone}
                                 className="w-full px-4 py-3 rounded-xl bg-stone-100 border-2 border-transparent focus:border-blue-700 outline-none font-bold text-sm"
                             />
@@ -201,7 +315,22 @@ const HotelEditForm = ({ hotel, provinces, onClose, onSaveSuccess, onToast }) =>
                     </div>
 
                     <div>
-                        <label className="text-[10px] font-black text-stone-400 uppercase mb-2 block tracking-widest">Vị trí (Kéo Marker hoặc Chạm)</label>
+                        <div className="flex justify-between items-center mb-2">
+                            <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest">Vị trí (Kéo Marker hoặc Chạm)</label>
+                            <button 
+                                type="button" 
+                                onClick={handleGetCurrentLocation}
+                                disabled={isLocating}
+                                className="flex items-center gap-1 text-[10px] font-black text-blue-700 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded-lg transition-colors active:scale-95 disabled:opacity-50"
+                            >
+                                {isLocating ? (
+                                    <Icon name="loader" size={14} className="animate-spin" />
+                                ) : (
+                                    <Icon name="crosshair" size={14} />
+                                )}
+                                {isLocating ? 'Đang định vị...' : 'Vị trí của tôi'}
+                            </button>
+                        </div>
                         <div className="w-full h-64 sm:h-80 bg-stone-100 rounded-2xl border-2 border-stone-200 relative overflow-hidden shadow-inner z-0">
                             <LocationPickerMap 
                                 position={pickerPos} 
