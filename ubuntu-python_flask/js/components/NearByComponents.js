@@ -1,10 +1,11 @@
 const { useState, useEffect, useMemo, useRef } = React;
 
-const NearByComponents = ({ hotels, onSelectHotel, setViewMode, isActive, onToast }) => {
+const NearByComponents = ({ hotels, onSelectHotel, setViewMode, isActive, onToast, onLocationUpdate }) => {
     const [userLocation, setUserLocation] = useState(null);
     const [searchLocation, setSearchLocation] = useState(null);
     const [error, setError] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [retries, setRetries] = useState(0);
     const [radius, setRadius] = useState(() => {
         const savedRadius = localStorage.getItem('luquan_nearby_radius');
         return savedRadius ? Number(savedRadius) : 2;
@@ -35,22 +36,43 @@ const NearByComponents = ({ hotels, onSelectHotel, setViewMode, isActive, onToas
     useEffect(() => {
         if (!isActive) return;
 
+        // Reset state on each attempt
+        setIsLoading(true);
+        setError(null);
+
         let watchId;
         if ("geolocation" in navigator) {
             // watchPosition tối ưu pin hơn và phản hồi theo thời gian thực thay vì polling 30s
             watchId = navigator.geolocation.watchPosition(
                     (position) => {
-                        setUserLocation({
+                        const newLoc = {
                             lat: position.coords.latitude,
                             lng: position.coords.longitude
-                        });
+                        };
+                        setUserLocation(newLoc);
                         setIsLoading(false);
                         setError(null);
+                        if (onLocationUpdate) onLocationUpdate(newLoc);
                     },
                     (err) => {
                         console.error("Error getting location:", err);
-                        setError("Không thể lấy vị trí của bạn. Vui lòng bật định vị GPS.");
-                        if (onToast) onToast("Không thể lấy vị trí của bạn. Vui lòng bật định vị GPS.");
+                        let errorMessage;
+                        switch(err.code) {
+                            case err.PERMISSION_DENIED:
+                                errorMessage = "Bạn đã từ chối quyền truy cập vị trí. Vui lòng vào cài đặt trình duyệt để cấp quyền.";
+                                break;
+                            case err.POSITION_UNAVAILABLE:
+                                errorMessage = "Không thể xác định vị trí của bạn. Vui lòng thử lại sau.";
+                                break;
+                            case err.TIMEOUT:
+                                errorMessage = "Yêu cầu vị trí đã hết hạn. Vui lòng thử lại.";
+                                break;
+                            default:
+                                errorMessage = "Không thể lấy vị trí của bạn. Vui lòng bật định vị GPS và thử lại.";
+                                break;
+                        }
+                        setError(errorMessage);
+                        if (onToast) onToast(errorMessage);
                         setIsLoading(false);
                     },
                 { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
@@ -64,7 +86,7 @@ const NearByComponents = ({ hotels, onSelectHotel, setViewMode, isActive, onToas
         return () => {
             if (watchId) navigator.geolocation.clearWatch(watchId);
         };
-    }, [isActive]);
+    }, [isActive, retries]);
 
     const nearbyHotels = useMemo(() => {
         const center = searchLocation || userLocation;
@@ -151,14 +173,10 @@ const NearByComponents = ({ hotels, onSelectHotel, setViewMode, isActive, onToas
     // Tự động điều chỉnh zoom bản đồ vừa vặn với vùng bán kính mới
     useEffect(() => {
         if (circleRef.current && mapInstance.current) {
-            // Giới hạn mức zoom tối đa (maxZoom) khi chọn bán kính lớn để dễ quan sát tổng thể
-            let newMaxZoom = 18; // Mặc định của OpenStreetMap
-            if (radius >= 30) newMaxZoom = 12;
-            else if (radius >= 20) newMaxZoom = 13;
-            else if (radius >= 10) newMaxZoom = 14;
-            
-            mapInstance.current.setMaxZoom(newMaxZoom);
-            mapInstance.current.fitBounds(circleRef.current.getBounds(), { padding: [20, 20], animate: true, duration: 0.5 });
+            // Khôi phục lại mức zoom tối đa cho phép người dùng tự do zoom vào xem chi tiết đường phố
+            mapInstance.current.setMaxZoom(18);
+            // Căn chỉnh khung nhìn vừa với vòng tròn bán kính (maxZoom trong tùy chọn này chỉ áp dụng cho lần fitBounds tự động)
+            mapInstance.current.fitBounds(circleRef.current.getBounds(), { padding: [20, 20], maxZoom: 15, animate: true, duration: 0.5 });
         }
     }, [radius]);
 
@@ -194,9 +212,24 @@ const NearByComponents = ({ hotels, onSelectHotel, setViewMode, isActive, onToas
     if (error && !userLocation) {
         return (
             <div className="flex flex-col items-center justify-center h-full p-4 text-center text-red-500 bg-stone-50">
-                <Icon name="map-pin-off" size={32} className="mb-2" />
-                <p className="text-xs font-bold">{error}</p>
-                <button onClick={() => setViewMode('list')} className="mt-4 px-4 py-2 bg-stone-200 text-stone-700 rounded-lg text-xs font-bold active:scale-95 transition-all">Quay lại danh sách</button>
+                <Icon name="map-pin-off" size={32} className="mb-4" />
+                <p className="text-sm font-bold mb-4">{error}</p>
+                
+                <div className="text-left text-xs text-stone-600 bg-stone-100 p-4 rounded-2xl border border-stone-200 max-w-sm w-full space-y-2 shadow-sm">
+                    <p className="font-black text-stone-700">💡 LÀM THẾ NÀO ĐỂ BẬT GPS?</p>
+                    <ul className="list-decimal list-inside space-y-1.5 font-medium">
+                        <li><b>Trên điện thoại:</b> Kéo thanh thông báo xuống và nhấn vào biểu tượng "Vị trí" hoặc "GPS". Hoặc vào <strong>Cài đặt &gt; Vị trí</strong> và bật lên.</li>
+                        <li><b>Trên máy tính:</b> Vào <strong>Cài đặt hệ thống &gt; Quyền riêng tư &amp; Bảo mật &gt; Dịch vụ định vị</strong> và bật lên.</li>
+                        <li>Sau đó, trong <strong>cài đặt của trình duyệt</strong>, hãy chắc chắn bạn đã cho phép trang web này truy cập vị trí của bạn.</li>
+                    </ul>
+                </div>
+
+                <div className="flex gap-3 mt-6">
+                    <button onClick={() => setViewMode('list')} className="px-5 py-3 bg-stone-200 text-stone-700 rounded-xl text-xs font-black uppercase tracking-widest active:scale-95 transition-all">Quay lại</button>
+                    <button onClick={() => setRetries(r => r + 1)} className="px-5 py-3 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-blue-500/30">
+                        <Icon name="refresh-cw" size={14} /> Thử lại
+                    </button>
+                </div>
             </div>
         );
     }

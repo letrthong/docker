@@ -92,6 +92,20 @@ const isValidPhoneNumber = (phone) => {
     return /^[0-9]{8,11}$/.test(cleanPhone);
 };
 
+// Hàm tiện ích tính khoảng cách giữa 2 tọa độ (theo km) sử dụng công thức Haversine
+const calculateDistance = (lat1, lng1, lat2, lng2) => {
+    if (lat1 == null || lng1 == null || lat2 == null || lng2 == null) return Infinity;
+    const R = 6371; // Bán kính Trái Đất (km)
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+};
+
 // Custom Component: Multi-Select cho Khu vực
 const RegionMultiSelect = ({ provinces, selectedIds, onChange, t }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -482,6 +496,8 @@ const MainApp = () => {
         // Không chạy nếu chưa có danh sách tỉnh
         if (provinces.length === 0 && filterLocationIds.length > 0) return; // Chờ cho danh sách tỉnh được tải xong
 
+        let ignore = false; // Cờ kiểm soát: đánh dấu xem effect này còn hợp lệ không
+
         // Nếu không chọn thành phố nào, danh sách khách sạn sẽ rỗng
         if (filterLocationIds.length === 0) {
             setHotels([]);
@@ -501,14 +517,18 @@ const MainApp = () => {
 
             // Load từng file một để hiện dần
             for (const filePath of filePathsToFetch) {
+                if (ignore) break; // Nếu người dùng thao tác mới, dừng ngay vòng lặp tải file cũ
                 try {
                     const hotelsData = await HotelAPI.fetchHotelsByFilePaths([filePath]);
+                    if (ignore) break; // Dừng việc cập nhật state nếu effect đã bị hủy
                     accumulatedHotels = [...accumulatedHotels, ...hotelsData];
                     setHotels([...accumulatedHotels]);
                 } catch (error) {
                     console.error(`Lỗi khi tải dữ liệu cho file ${filePath}:`, error);
                 }
             }
+
+            if (ignore) return; // Bỏ qua toàn bộ phần xử lý phía sau (ẩn loading, chọn hotel...)
 
             // Sau khi load xong, xử lý selectedHotel
             const urlParams = new URLSearchParams(window.location.search);
@@ -531,6 +551,11 @@ const MainApp = () => {
         };
 
         loadHotels();
+
+        // Hàm dọn dẹp (Cleanup function): Chạy khi component unmount hoặc dependencies thay đổi
+        return () => {
+            ignore = true; // Hủy bỏ tác dụng của lần tải này nếu người dùng ấn đổi khu vực liên tục
+        };
     }, [filterLocationIds, provinces]);
 
     // Lưu filterTypeIds vào Local Storage
@@ -647,6 +672,41 @@ const MainApp = () => {
             return () => clearTimeout(timer);
         }
     }, [toastMessage]);
+
+    // Hàm xử lý khi NearByComponents lấy được định vị GPS của người dùng
+    const handleUserLocationUpdate = React.useCallback((loc) => {
+        if (!provinces || provinces.length === 0) return;
+        
+        let minDistance = Infinity;
+
+        // Tính khoảng cách từ GPS hiện tại đến tâm của TẤT CẢ các khu vực
+        const distances = provinces.map(schema => {
+            if (schema.lat == null || schema.lng == null) return { ...schema, dist: Infinity };
+            const dist = calculateDistance(loc.lat, loc.lng, schema.lat, schema.lng);
+            if (dist < minDistance) minDistance = dist;
+            return { ...schema, dist };
+        });
+
+        // Tìm tất cả khu vực lân cận trong bán kính 50km (để bao phủ vùng giáp ranh) 
+        // HOẶC lấy khu vực gần nhất nếu người dùng ở quá xa (tất cả đều > 50km).
+        const nearbySchemas = distances.filter(s => s.dist <= 50 || s.dist === minDistance);
+
+        if (nearbySchemas.length > 0) {
+            const nearbyIds = nearbySchemas.map(s => s.id);
+            const nearbyNames = nearbySchemas.map(s => s.locationName).join(', ');
+
+            setFilterLocationIds(prev => {
+                if (prev.includes('all')) return prev;
+                
+                // Nếu mảng bộ lọc đang có sẵn đã trùng khớp với các vùng giáp ranh này rồi thì bỏ qua
+                const isSame = prev.length === nearbyIds.length && prev.every(id => nearbyIds.includes(id));
+                if (isSame) return prev;
+                
+                setToastMessage(`Đang tải dữ liệu lân cận: ${nearbyNames}...`);
+                return nearbyIds; // Load GỘP tất cả các vùng lân cận
+            });
+        }
+    }, [provinces]);
 
     const getReasonText = (reason) => {
         const reasons = {
@@ -1076,6 +1136,7 @@ const MainApp = () => {
                         setViewMode={setViewMode} 
                         isActive={viewMode === 'nearby'}
                         onToast={setToastMessage}
+                        onLocationUpdate={handleUserLocationUpdate}
                     />
                 </div>
 

@@ -126,15 +126,15 @@ const HotelEditForm = ({ hotel, provinces, onClose, onSaveSuccess, onToast }) =>
         // --- END VALIDATION ---
 
         // --- START VALIDATION: Description Min Length ---
-        if (description.length < 20) {
-            setApiError("Mô tả đặc điểm phải có ít nhất 20 ký tự.");
+        if (description.length < 3) {
+            setApiError("Mô tả đặc điểm phải có ít nhất 3 ký tự.");
             setIsSubmitting(false);
             return;
         }
         // --- END VALIDATION ---
 
         // --- START VALIDATION: Kiểm tra số điện thoại hợp lệ của Việt Nam ---
-        if ((type !== 'entertainment' && type !== 'local_food' && type !== 'religion' || phone) && !isValidPhoneNumber(phone)) {
+        if ((!OPTIONAL_PHONE_TYPES.includes(type) || phone) && !isValidPhoneNumber(phone)) {
             setApiError("Số điện thoại không hợp lệ. Vui lòng kiểm tra lại (gồm 8-11 số).");
             setIsSubmitting(false);
             return;
@@ -303,11 +303,11 @@ const HotelEditForm = ({ hotel, provinces, onClose, onSaveSuccess, onToast }) =>
                         </div>
                         <div className="col-span-1">
                             <label className="text-[10px] font-black text-stone-400 uppercase mb-1 block tracking-widest">
-                            Số điện thoại chính {['entertainment', 'local_food', 'religion'].includes(selectedType) && <span className="normal-case tracking-normal lowercase opacity-70">(Tùy chọn)</span>}
+                            Số điện thoại chính {OPTIONAL_PHONE_TYPES.includes(selectedType) && <span className="normal-case tracking-normal lowercase opacity-70">(Tùy chọn)</span>}
                             </label>
                             <input
                                 name="phone"
-                            required={!['entertainment', 'local_food', 'religion'].includes(selectedType)}
+                            required={!OPTIONAL_PHONE_TYPES.includes(selectedType)}
                                 defaultValue={decodedPhone}
                                 className="w-full px-4 py-3 rounded-xl bg-stone-100 border-2 border-transparent focus:border-blue-700 outline-none font-bold text-sm"
                             />

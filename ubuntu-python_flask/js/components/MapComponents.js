@@ -5,13 +5,13 @@ const createHotelIcon = (hotel, isSelected) => {
     let svgPath = '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle>'; // Icon map-pin
 
     if (hotel.type === 'hotel') {
-        bgColor = 'bg-orange-700'; // Màu cam cho Khách sạn
+        bgColor = 'bg-teal-500'; // Màu xanh ngọc cho Khách sạn
         svgPath = '<rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/>'; // Icon building
     } else if (hotel.type === 'motel') {
-        bgColor = 'bg-rose-600'; // Màu hồng đậm cho Nhà nghỉ
+        bgColor = 'bg-blue-400'; // Màu xanh lam nhạt cho Nhà nghỉ
         svgPath = '<path d="M2 20v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v8"/><path d="M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"/><path d="M12 4v6"/><path d="M2 18h20"/>'; // Icon bed-double
     } else if (hotel.type === 'restaurant') {
-        bgColor = 'bg-red-600'; // Màu đỏ cho Nhà hàng
+        bgColor = 'bg-orange-600'; // Màu cam đậm cho Nhà hàng
         svgPath = '<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>'; // Icon utensils
     } else if (hotel.type === 'entertainment') {
         bgColor = 'bg-purple-600'; // Màu tím cho Điểm tham quan
@@ -31,6 +31,9 @@ const createHotelIcon = (hotel, isSelected) => {
     } else if (hotel.type === 'car') {
         bgColor = 'bg-sky-600'; // Màu xanh da trời cho Taxi
         svgPath = '<path d="M22 17v-4.5C22 10.6 18.2 9 15.5 9h-7C5.8 9 2 10.6 2 12.5V17c0 .6.4 1 1 1h1c.6 0 1-.4 1-1v-2h14v2c0 .6.4 1 1 1h1c.6 0 1-.4 1-1Z"/><path d="M2 12.5 5.3 7c.2-.4.7-.6 1.2-.6h11c.5 0 1 .2 1.2.6l3.3 5.5"/><path d="M6 14h.01"/><path d="M18 14h.01"/><path d="M10 6.4V4c0-.6.4-1 1-1h2c.6 0 1 .4 1 1v2.4"/>'; // Icon car-taxi
+    } else if (hotel.type === 'medical') {
+        bgColor = 'bg-red-500'; // Màu đỏ tươi cho Cơ sở y tế (chữ thập đỏ)
+        svgPath = '<path d="M11 2a2 2 0 0 0-2 2v5H4a2 2 0 0 0-2 2v2c0 1.1.9 2 2 2h5v5c0 1.1.9 2 2 2h2a2 2 0 0 0 2-2v-5h5a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-5V4a2 2 0 0 0-2-2h-2z"/>'; // Icon cross (chữ thập)
     } else if (hotel.type === 'transport') {
         bgColor = 'bg-cyan-600'; // Màu xanh lơ cho phương tiện di chuyển
         svgPath = '<path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3"/><circle cx="7" cy="18" r="2"/><circle cx="16" cy="18" r="2"/>'; // Icon bus
@@ -40,6 +43,12 @@ const createHotelIcon = (hotel, isSelected) => {
     } else if (hotel.type === 'religion') {
         bgColor = 'bg-amber-500'; // Màu vàng gold cho Cơ sở tôn giáo
         svgPath = '<line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/><line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/>'; // Icon landmark
+    } else if (hotel.type === 'gas_station') {
+        bgColor = 'bg-sky-500'; // Màu xanh da trời cho Trạm xăng
+        svgPath = '<line x1="3" x2="15" y1="22" y2="22"/><line x1="4" x2="14" y1="9" y2="9"/><path d="M14 22V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v18"/><path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V9.83a2 2 0 0 0-.59-1.42L18 5"/>'; // Icon fuel
+    } else if (hotel.type === 'ev_station') {
+        bgColor = 'bg-green-500'; // Màu xanh lá cây cho Trạm sạc xe điện
+        svgPath = '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>'; // Icon zap (sấm sét)
     }
 
     if (isSelected) {

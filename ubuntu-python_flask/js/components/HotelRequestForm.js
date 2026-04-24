@@ -139,15 +139,15 @@ const HotelRequestForm = ({ provinces, onClose, onSubmitSuccess, onToast }) => {
         // --- END VALIDATION ---
 
         // --- START VALIDATION: Description Min Length ---
-        if (description.length < 20) {
-            setApiError("Mô tả đặc điểm phải có ít nhất 20 ký tự.");
+        if (description.length < 3) {
+            setApiError("Mô tả đặc điểm phải có ít nhất 3 ký tự.");
             setIsSubmitting(false);
             return;
         }
         // --- END VALIDATION ---
 
         // --- START VALIDATION: Kiểm tra số điện thoại hợp lệ của Việt Nam ---
-        if ((type !== 'entertainment' && type !== 'local_food' && type !== 'religion' || phone) && !isValidPhoneNumber(phone)) {
+        if ((!OPTIONAL_PHONE_TYPES.includes(type) || phone) && !isValidPhoneNumber(phone)) {
             setApiError("Số điện thoại không hợp lệ. Vui lòng kiểm tra lại (gồm 8-11 số).");
             setIsSubmitting(false);
             return;
@@ -324,11 +324,11 @@ const HotelRequestForm = ({ provinces, onClose, onSubmitSuccess, onToast }) => {
                         </div>
                         <div className="col-span-1">
                             <label className="text-[10px] font-black text-stone-400 uppercase mb-1 block tracking-widest">
-                                Số điện thoại {['entertainment', 'local_food', 'religion'].includes(selectedType) && <span className="normal-case tracking-normal lowercase opacity-70">(Tùy chọn)</span>}
+                                Số điện thoại {OPTIONAL_PHONE_TYPES.includes(selectedType) && <span className="normal-case tracking-normal lowercase opacity-70">(Tùy chọn)</span>}
                             </label>
                             <input
                                 name="phone"
-                                required={!['entertainment', 'local_food', 'religion'].includes(selectedType)}
+                                required={!OPTIONAL_PHONE_TYPES.includes(selectedType)}
                                 className="w-full px-4 py-3 rounded-xl bg-stone-100 border-2 border-transparent focus:border-orange-700 outline-none font-bold text-sm"
                                 placeholder="09xxxxxx"
                             />
@@ -413,7 +413,7 @@ const HotelRequestForm = ({ provinces, onClose, onSubmitSuccess, onToast }) => {
                     </div>
                     <div>
                         <label className="text-[10px] font-black text-stone-400 uppercase mb-1 block tracking-widest">Mô tả đặc điểm</label>
-                        <textarea required minLength="20" name="description" rows="2" className="w-full px-4 py-3 rounded-xl bg-stone-100 border-2 border-transparent focus:border-orange-700 outline-none font-bold text-sm" placeholder="Mô tả ít nhất 20 ký tự về lữ quán..."></textarea>
+                        <textarea required minLength="3" name="description" rows="2" className="w-full px-4 py-3 rounded-xl bg-stone-100 border-2 border-transparent focus:border-orange-700 outline-none font-bold text-sm" placeholder="Mô tả ít nhất 20 ký tự về lữ quán..."></textarea>
                     </div>
                     <div>
                         <label className="text-[10px] font-black text-stone-400 uppercase mb-1 block tracking-widest">Ảnh đại diện</label>
