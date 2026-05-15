@@ -1,9 +1,6 @@
 module my_app 1.0;
 
-gen_require(`
-    type unconfined_t;
-    # Note: we removed unconfined_u because it's a user, not a type
-')
+ 
 require {
     type unconfined_t;
     type unconfined_u;
