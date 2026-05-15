@@ -59,3 +59,5 @@ python3 my_app.py
 python3 my_app_reader.py
 # Nếu policy chặn quyền đọc, sẽ báo lỗi. Có thể chỉnh my_app.te để kiểm tra các trường hợp khác nhau.
 ```
+
+###  docker rm -f selinux_python_demo
