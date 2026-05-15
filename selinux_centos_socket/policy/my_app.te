@@ -1,0 +1,14 @@
+module my_app 1.0;
+
+require {
+    type unconfined_t;
+    type unconfined_u;
+    class process transition;
+    class file { read execute open getattr };
+}
+
+# Allow running my_app as unconfined_t (for demo)
+allow unconfined_t self:process transition;
+
+# Allow my_app to read/execute its own files
+allow unconfined_t self:file { read execute open getattr };

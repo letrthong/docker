@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  python_app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: selinux_python_demo
+    stdin_open: true
+    tty: true
+    # Uncomment below to mount code for live editing
+    # volumes:
+    #   - ./:/app

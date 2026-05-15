@@ -1,0 +1,31 @@
+module my_app_socket 1.0;
+
+require {
+    # Define custom types for server, client, and port
+    type my_app_socket_t;
+    type my_app_client_t;
+    type my_app_port_t;
+    # The following classes are already defined by SELinux, do not redeclare:
+    # class tcp_socket;
+    # class file;
+}
+
+# Allow my_app_socket_t (the server) to bind, listen, accept, read, write, set/get options on TCP sockets
+allow my_app_socket_t self:tcp_socket { listen accept read write getopt setopt };
+# Allow my_app_socket_t to bind to my_app_port_t (e.g. port 5000)
+allow my_app_socket_t my_app_port_t:tcp_socket name_bind;
+
+# Allow my_app_client_t (my_app_client.py) to connect to my_app_port_t only
+allow my_app_client_t my_app_port_t:tcp_socket name_connect;
+
+# Allow my_app_socket_t to write log file
+allow my_app_socket_t self:file { read write open append getattr };
+
+# NOTE:
+# - Để SELinux kiểm soát port 5000, bạn phải gán label my_app_port_t cho port này bằng lệnh:
+#   semanage port -a -t my_app_port_t -p tcp 5000
+#   # Lưu ý: Chỉ chạy lệnh này trên hệ Fedora/CentOS/RHEL thật có SELinux, KHÔNG chạy trong Docker hoặc Android.
+#   # Lệnh này sẽ gán nhãn SELinux type my_app_port_t cho TCP port 5000 để policy kiểm soát đúng.
+# - Only my_app_client.py (if labeled with my_app_client_t) can connect to the server on the labeled port.
+# - Any other client (e.g. my_app_client2.py, if not labeled my_app_client_t) will be denied by SELinux.
+# - To enforce this, you must label the binaries/scripts and run them under the correct SELinux domain.
