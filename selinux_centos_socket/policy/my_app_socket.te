@@ -5,9 +5,8 @@ require {
     type my_app_socket_t;
     type my_app_client_t;
     type my_app_port_t;
-    # The following classes are already defined by SELinux, do not redeclare:
-    # class tcp_socket;
-    # class file;
+    class tcp_socket { listen accept read write getopt setopt name_bind name_connect };
+    class file { read write open append getattr };
 }
 
 # Allow my_app_socket_t (the server) to bind, listen, accept, read, write, set/get options on TCP sockets
