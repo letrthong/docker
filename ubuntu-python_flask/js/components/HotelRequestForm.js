@@ -244,7 +244,7 @@ const HotelRequestForm = ({ provinces, onClose, onSubmitSuccess, onToast }) => {
                         </div>
                     <div className="grid grid-cols-2 gap-3">
                         <div className="col-span-2" ref={provinceDropdownRef}>
-                            <label className="text-[10px] font-black text-stone-400 uppercase mb-1 block tracking-widest">Tỉnh/Thành phố</label>
+                            <label className="text-[10px] font-black text-stone-400 uppercase mb-1 block tracking-widest">Tỉnh/Thành phố <span className="text-red-500">*</span></label>
                             <div className="relative">
                                 <div 
                                     onClick={() => setIsProvinceOpen(!isProvinceOpen)}
@@ -301,11 +301,11 @@ const HotelRequestForm = ({ provinces, onClose, onSubmitSuccess, onToast }) => {
                             </div>
                         </div>
                         <div className="col-span-2">
-                            <label className="text-[10px] font-black text-stone-400 mb-1 block tracking-widest"><span className="uppercase">Tên</span> Địa Điểm</label>
+                            <label className="text-[10px] font-black text-stone-400 mb-1 block tracking-widest"><span className="uppercase">Tên</span> Địa Điểm <span className="text-red-500">*</span></label>
                             <input required name="name" className="w-full px-4 py-3 rounded-xl bg-stone-100 border-2 border-transparent focus:border-orange-700 outline-none font-bold text-sm" />
                         </div>
                         <div className="col-span-1">
-                            <label className="text-[10px] font-black text-stone-400 uppercase mb-1 block tracking-widest">Loại hình</label>
+                            <label className="text-[10px] font-black text-stone-400 uppercase mb-1 block tracking-widest">Loại hình <span className="text-red-500">*</span></label>
                             <select
                                 required
                                 name="type"
@@ -324,7 +324,7 @@ const HotelRequestForm = ({ provinces, onClose, onSubmitSuccess, onToast }) => {
                         </div>
                         <div className="col-span-1">
                             <label className="text-[10px] font-black text-stone-400 uppercase mb-1 block tracking-widest">
-                                Số điện thoại {OPTIONAL_PHONE_TYPES.includes(selectedType) && <span className="normal-case tracking-normal lowercase opacity-70">(Tùy chọn)</span>}
+                                Số điện thoại {!OPTIONAL_PHONE_TYPES.includes(selectedType) && <span className="text-red-500">*</span>} {OPTIONAL_PHONE_TYPES.includes(selectedType) && <span className="normal-case tracking-normal lowercase opacity-70">(Tùy chọn)</span>}
                             </label>
                             <input
                                 name="phone"
@@ -337,12 +337,12 @@ const HotelRequestForm = ({ provinces, onClose, onSubmitSuccess, onToast }) => {
 
                     <div>
                         <div className="flex justify-between items-center mb-2">
-                            <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest">Chọn vị trí (Kéo hoặc Chạm)</label>
+                            <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest">Chọn vị trí (Kéo hoặc Chạm) <span className="text-red-500">*</span></label>
                             <button 
                                 type="button" 
                                 onClick={handleGetCurrentLocation}
                                 disabled={isLocating}
-                                className="flex items-center gap-1 text-[10px] font-black text-orange-700 bg-orange-50 hover:bg-orange-100 px-2 py-1 rounded-lg transition-colors active:scale-95 disabled:opacity-50"
+                                className="flex items-center gap-1 text-[10px] font-black text-blue-700 bg-blue-50 hover:bg-blue-100 shadow-sm px-2 py-1 rounded-lg transition-colors active:scale-95 disabled:opacity-50"
                             >
                                 {isLocating ? (
                                     <Icon name="loader" size={14} className="animate-spin" />
@@ -352,7 +352,7 @@ const HotelRequestForm = ({ provinces, onClose, onSubmitSuccess, onToast }) => {
                                 {isLocating ? 'Đang định vị...' : 'Vị trí của tôi'}
                             </button>
                         </div>
-                        <div className="w-full h-64 sm:h-80 bg-stone-100 rounded-2xl border-2 border-stone-200 relative overflow-hidden shadow-inner z-0">
+                        <div className="w-full h-[450px] sm:h-[500px] relative z-0">
                             <LocationPickerMap 
                                 position={pickerPos} 
                                 onPositionChange={setPickerPos} 
@@ -407,13 +407,13 @@ const HotelRequestForm = ({ provinces, onClose, onSubmitSuccess, onToast }) => {
                             </div>
                         </div>
                         <div>
-                            <label className="text-[10px] font-black text-stone-400 uppercase mb-1 block tracking-widest">Địa chỉ chi tiết</label>
+                            <label className="text-[10px] font-black text-stone-400 uppercase mb-1 block tracking-widest">Địa chỉ chi tiết <span className="text-red-500">*</span></label>
                             <input required name="address" className="w-full px-4 py-3 rounded-xl bg-stone-100 border-2 border-transparent focus:border-orange-700 outline-none font-bold text-sm" placeholder="VD: 45 Đường Y, Đà Lạt..." />
                         </div>
                     </div>
                     <div>
-                        <label className="text-[10px] font-black text-stone-400 uppercase mb-1 block tracking-widest">Mô tả đặc điểm</label>
-                        <textarea required minLength="3" name="description" rows="2" className="w-full px-4 py-3 rounded-xl bg-stone-100 border-2 border-transparent focus:border-orange-700 outline-none font-bold text-sm" placeholder="Mô tả ít nhất 20 ký tự về lữ quán..."></textarea>
+                        <label className="text-[10px] font-black text-stone-400 uppercase mb-1 block tracking-widest">Mô tả đặc điểm <span className="text-red-500">*</span></label>
+                        <textarea required minLength="3" name="description" rows="2" className="w-full px-4 py-3 rounded-xl bg-stone-100 border-2 border-transparent focus:border-orange-700 outline-none font-bold text-sm" placeholder="Mô tả nên ít nhất 20 ký tự về lữ quán..."></textarea>
                     </div>
                     <div>
                         <label className="text-[10px] font-black text-stone-400 uppercase mb-1 block tracking-widest">Ảnh đại diện</label>

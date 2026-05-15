@@ -227,7 +227,7 @@ function SchemaManager({ api, onToast }) {
                             {isLocating ? 'Đang định vị...' : 'Vị trí của tôi'}
                         </button>
                     </div>
-                    <div className="w-full h-80 sm:h-96 bg-stone-100 rounded-lg border-2 border-stone-200 relative overflow-hidden shadow-inner z-0">
+                    <div className="w-full h-[450px] sm:h-[500px] relative z-0">
                         <LocationPickerMap key={editingSchema ? editingSchema.id : 'new'} position={pickerPos} onPositionChange={handlePickerChange} />
                     </div>
                 </div>

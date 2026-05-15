@@ -464,12 +464,12 @@ const LocationPickerMap = ({ position, onPositionChange, areaCenter, locationNam
     };
 
     return (
-        <div className="relative w-full h-full">
-            <div className="absolute top-2 left-12 right-2 z-[400] flex flex-col gap-2">
+        <div className="flex flex-col gap-3 w-full h-full">
+            <div className="z-[10] flex flex-col gap-2 shrink-0">
                 {/* Container cho các công cụ điều khiển bản đồ */}
-                <div className="bg-white rounded-lg shadow-md overflow-hidden pointer-events-auto border border-stone-200 p-2 space-y-2">
+                <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-3 space-y-3">
                     {/* Thanh tìm kiếm */}
-                    <div className="flex-1 flex overflow-hidden">
+                    <div className="flex-1 flex overflow-hidden shadow-sm">
                         <input 
                             type="text" 
                             placeholder="Tìm địa chỉ, địa danh..." 
@@ -481,45 +481,48 @@ const LocationPickerMap = ({ position, onPositionChange, areaCenter, locationNam
                                     handleSearch();
                                 }
                             }}
-                            className="flex-1 px-3 py-2 text-xs font-bold text-stone-700 focus:outline-none bg-stone-50 rounded-l-md border border-stone-200 focus:border-moss"
+                            className="flex-1 px-3 py-2.5 text-xs font-bold text-stone-700 focus:outline-none bg-stone-50 rounded-l-lg border border-stone-200 focus:border-blue-600"
                         />
-                        <button type="button" onClick={handleSearch} disabled={isSearching} className="px-3 py-2 bg-stone-100 text-stone-600 hover:bg-stone-200 border-y border-r border-stone-200 text-xs font-black disabled:opacity-50 rounded-r-md">
+                        <button type="button" onClick={handleSearch} disabled={isSearching} className="px-4 py-2.5 bg-stone-100 text-stone-600 hover:bg-stone-200 border-y border-r border-stone-200 text-xs font-black disabled:opacity-50 rounded-r-lg transition-colors">
                             {isSearching ? '...' : 'TÌM'}
                         </button>
                     </div>
                     {/* Ô nhập Vĩ độ / Kinh độ thủ công */}
-                    <div className="flex gap-2">
+                    <div className="flex gap-3">
                         <div className="flex-1">
-                            <label className="text-[9px] font-bold text-stone-500 uppercase tracking-wider">Vĩ độ (Lat)</label>
+                            <label className="text-[9px] font-black text-stone-500 uppercase tracking-wider mb-1 block">Vĩ độ (Lat)</label>
                             <input
                                 type="number"
                                 step="any"
                                 value={position.lat || ''}
                                 onChange={(e) => onPositionChange({ ...position, lat: e.target.value })}
-                                className="w-full px-2 py-1.5 text-xs font-bold text-stone-700 bg-stone-50 rounded-md border border-stone-200 focus:outline-none focus:border-moss"
+                                className="w-full px-3 py-2 text-xs font-bold text-stone-700 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-blue-600 shadow-sm"
                             />
                         </div>
                         <div className="flex-1">
-                            <label className="text-[9px] font-bold text-stone-500 uppercase tracking-wider">Kinh độ (Lng)</label>
+                            <label className="text-[9px] font-black text-stone-500 uppercase tracking-wider mb-1 block">Kinh độ (Lng)</label>
                             <input
                                 type="number"
                                 step="any"
                                 value={position.lng || ''}
                                 onChange={(e) => onPositionChange({ ...position, lng: e.target.value })}
-                                className="w-full px-2 py-1.5 text-xs font-bold text-stone-700 bg-stone-50 rounded-md border border-stone-200 focus:outline-none focus:border-moss"
+                                className="w-full px-3 py-2 text-xs font-bold text-stone-700 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-blue-600 shadow-sm"
                             />
                         </div>
                     </div>
                 </div>
                 {/* Warning message display */}
                 {warning && (
-                    <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-3 text-xs rounded-r-lg shadow-lg pointer-events-auto" role="alert">
+                    <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-3 text-xs rounded-r-xl shadow-sm" role="alert">
                         <p className="font-black uppercase text-sm mb-1">⚠️ Cảnh báo vị trí</p>
                         <p>{warning}</p>
                     </div>
                 )}
             </div>
-            <div ref={mapRef} className="w-full h-full z-0"></div>
+            {/* Vùng bản đồ */}
+            <div className="relative flex-1 w-full min-h-[250px] rounded-2xl border-2 border-stone-200 overflow-hidden shadow-inner bg-stone-100 z-0">
+                <div ref={mapRef} className="w-full h-full z-0"></div>
+            </div>
         </div>
     );
 };

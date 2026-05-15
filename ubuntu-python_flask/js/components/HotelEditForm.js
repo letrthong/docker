@@ -331,7 +331,7 @@ const HotelEditForm = ({ hotel, provinces, onClose, onSaveSuccess, onToast }) =>
                                 {isLocating ? 'Đang định vị...' : 'Vị trí của tôi'}
                             </button>
                         </div>
-                        <div className="w-full h-64 sm:h-80 bg-stone-100 rounded-2xl border-2 border-stone-200 relative overflow-hidden shadow-inner z-0">
+                        <div className="w-full h-[450px] sm:h-[500px] relative z-0">
                             <LocationPickerMap 
                                 position={pickerPos} 
                                 onPositionChange={setPickerPos} 
