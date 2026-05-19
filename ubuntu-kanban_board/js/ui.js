@@ -22,6 +22,15 @@ export const cancelBtn = document.getElementById('cancelBtn');
 export const modalTitle = document.getElementById('modalTitle');
 export const submitBtn = document.getElementById('submitBtn');
 
+// DOM Màn hình Login / Ứng dụng
+export const loginScreen = document.getElementById('loginScreen');
+export const kanbanBoard = document.getElementById('kanbanBoard');
+export const loginForm = document.getElementById('loginForm');
+export const loginUsername = document.getElementById('loginUsername');
+export const loginPassword = document.getElementById('loginPassword');
+export const logoutBtn = document.getElementById('logoutBtn');
+export const loggedInUserDisplay = document.getElementById('loggedInUserDisplay');
+
 // Modal xác nhận
 export const confirmationModalOverlay = document.getElementById('confirmationModalOverlay');
 export const confirmTitle = document.getElementById('confirmTitle');

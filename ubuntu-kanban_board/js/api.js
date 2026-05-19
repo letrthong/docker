@@ -9,6 +9,14 @@ const API_BASE_URL = '/api'; // Đổi theo route của Flask
 async function apiFetch(endpoint, options = {}) {
     showLoading();
     try {
+        // Thêm Authorization header nếu có token trong máy người dùng
+        const token = localStorage.getItem('kanban_token');
+        if (token) {
+            options.headers = {
+                ...options.headers,
+                'Authorization': `Bearer ${token}`
+            };
+        }
         const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
         
         // Nếu mã lỗi HTTP trả về khác nhóm 2xx (ví dụ: 404, 500, ...)
@@ -45,6 +53,14 @@ async function apiFetch(endpoint, options = {}) {
 
 export async function fetchCurrentUser() {
     return await apiFetch('/users/me');
+}
+
+export async function loginAPI(username, password) {
+    return await apiFetch('/users/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+    });
 }
 
 export async function fetchUsers() {

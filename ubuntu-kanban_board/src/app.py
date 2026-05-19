@@ -15,11 +15,11 @@ def init_db():
     
     if not os.path.exists(USERS_FILE):
         default_users = [
-            {"useruid": "101", "username": "alice", "permission": "create"},
-            {"useruid": "102", "username": "bob", "permission": "edit"},
-            {"useruid": "103", "username": "charlie", "permission": "view"},
-            {"useruid": "104", "username": "diana", "permission": "view"},
-            {"useruid": "105", "username": "Thong", "permission": "owner"}
+            {"useruid": "101", "username": "alice", "permission": "create", "password": "password123"},
+            {"useruid": "102", "username": "bob", "permission": "edit", "password": "password123"},
+            {"useruid": "103", "username": "charlie", "permission": "view", "password": "password123"},
+            {"useruid": "104", "username": "diana", "permission": "view", "password": "password123"},
+            {"useruid": "105", "username": "Thong", "permission": "owner", "password": "password123"}
         ]
         with open(USERS_FILE, 'w', encoding='utf-8') as f:
             json.dump(default_users, f, ensure_ascii=False, indent=4)
@@ -47,10 +47,34 @@ def log_request():
 
 # --- RESTful API ROUTES ---
 
+@app.route("/api/users/login", methods=["POST"])
+def login():
+    data = request.json
+    username = data.get("username")
+    password = data.get("password")
+    users = read_json(USERS_FILE)
+    
+    # Kiểm tra login, nếu DB cũ không có password thì mặc định là 'password123'
+    user = next((u for u in users if u['username'] == username and u.get('password', 'password123') == password), None)
+    if user:
+        return jsonify({
+            "message": "Đăng nhập thành công",
+            "token": username,
+            "user": user
+        })
+    return jsonify({"error": "Tên đăng nhập hoặc mật khẩu không chính xác"}), 401
+
 @app.route("/api/users/me", methods=["GET"])
 def get_current_user():
     users = read_json(USERS_FILE)
-    # Tạm thời giả định người dùng hiện tại là 'alice'
+    # Lấy token từ header Authorization
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    if token:
+        me = next((u for u in users if u['username'] == token), None)
+        if me:
+            return jsonify(me)
+            
+    # Tạm thời giả định người dùng hiện tại là 'alice' nếu không có token
     me = next((u for u in users if u['username'] == 'alice'), users[0])
     return jsonify(me)
 

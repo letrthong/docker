@@ -1,6 +1,8 @@
 import { getUserIdInfo, getUserlist } from './user.js';
 import { getTasks, getTaskById, fetchAndLoadTasks, addTaskData, updateTaskData, removeTaskData } from './task.js';
+import { loginAPI } from './api.js';
 import {
+    loginScreen, kanbanBoard, loginForm, loginUsername, loginPassword, logoutBtn, loggedInUserDisplay,
     totalTasksCount, todoColumn, inprogressColumn, blockedColumn, reviewColumn, doneColumn,
     openModalBtn, taskModalOverlay, addTaskForm, taskTitleInput, taskAssigneeSelect,
     checklistContainer, addChecklistItemBtn, cancelBtn, modalTitle, submitBtn,
@@ -886,16 +888,58 @@ function updateButtonStates() {
     openModalBtn.classList.toggle('btn-disabled', !canCreate);
 }
 
-// Tải dữ liệu khi trang được tải
-window.onload = async function() {
+// Hàm gom lại chức năng khởi tạo Kanban sau khi Đăng nhập
+async function initKanban() {
     user_info = await getUserIdInfo();
     userPermission = user_info.permission;
     currentUserId = user_info.useruid;
     currentUsername = user_info.username;
+
+    // Hiển thị tên người dùng trên Header
+    if (loggedInUserDisplay) loggedInUserDisplay.textContent = currentUsername;
 
     // Tải danh sách user từ backend 1 lần duy nhất lúc khởi động
     user_list = await getUserlist();
 
     await loadTasks();
     updateButtonStates();
+
+    kanbanBoard.classList.remove('hidden');
+    kanbanBoard.classList.add('flex');
+}
+
+// Kiểm tra trạng thái đăng nhập khi trang được tải
+window.onload = async function() {
+    const token = localStorage.getItem('kanban_token');
+    if (token) {
+        await initKanban();
+    } else {
+        loginScreen.classList.remove('hidden');
+        loginScreen.classList.add('flex');
+    }
 };
+
+// Xử lý sự kiện gửi Form Đăng nhập
+loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = loginUsername.value.trim();
+    const password = loginPassword.value.trim();
+
+    const response = await loginAPI(username, password);
+    if (response && response.token) {
+        localStorage.setItem('kanban_token', response.token);
+        loginForm.reset();
+        loginScreen.classList.add('hidden');
+        loginScreen.classList.remove('flex');
+        await initKanban();
+        showMessage(response.message || "Đăng nhập thành công!");
+    }
+});
+
+// Xử lý sự kiện đăng xuất
+if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+        localStorage.removeItem('kanban_token');
+        window.location.reload(); // Tải lại trang web để xóa toàn bộ trạng thái RAM
+    });
+}
