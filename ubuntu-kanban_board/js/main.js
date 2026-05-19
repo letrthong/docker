@@ -1,5 +1,5 @@
 import { getUserIdInfo, getUserlist } from './user.js';
-import { getTasks, getTaskById, loadTasksFromStorage, saveTasksToStorage, addTaskData, removeTaskData } from './task.js';
+import { getTasks, getTaskById, fetchAndLoadTasks, addTaskData, updateTaskData, removeTaskData } from './task.js';
 import {
     totalTasksCount, todoColumn, inprogressColumn, blockedColumn, reviewColumn, doneColumn,
     openModalBtn, taskModalOverlay, addTaskForm, taskTitleInput, taskAssigneeSelect,
@@ -28,25 +28,23 @@ function updateTotalTaskCount() {
     totalTasksCount.textContent = getTasks().length;
 }
 
-// Lưu dữ liệu vào localStorage
-function saveTasks() {
-    saveTasksToStorage();
+// Cập nhật giao diện sau khi thay đổi dữ liệu
+function refreshUI() {
     populateAssigneeFilter();
-    updateTotalTaskCount(); // Cập nhật tổng số công việc sau khi lưu
+    updateTotalTaskCount();
+    renderTasks(assigneeFilter.value, selectedStatuses);
 }
 
-// Tải dữ liệu từ localStorage
-function loadTasks() {
-    const loadedTasks = loadTasksFromStorage();
+// Tải dữ liệu từ backend
+async function loadTasks() {
+    const loadedTasks = await fetchAndLoadTasks();
     // Khôi phục lại màu cho người thực hiện sau khi tải
     loadedTasks.forEach(task => {
         if (task.assignee) {
             getAssigneeColor(task.assignee);
         }
     });
-    populateAssigneeFilter();
-    updateTotalTaskCount(); // Cập nhật tổng số công việc sau khi tải
-    renderTasks(assigneeFilter.value, selectedStatuses);
+    refreshUI();
 }
 
 // Tạo và hiển thị các thẻ công việc
@@ -275,7 +273,7 @@ function createTaskCard(task) {
 }
 
 // Cập nhật trạng thái của một mục trong checklist
-function updateChecklistItem(taskId, itemIndex, completed) {
+async function updateChecklistItem(taskId, itemIndex, completed) {
     const task = getTaskById(taskId);
     const isOwnerOrAssignee = (task.ownerId === currentUsername || task.assignee === currentUsername);
     const canEdit = (userPermission === 'edit' || userPermission === 'create' || (userPermission === 'owner' && isOwnerOrAssignee));
@@ -286,13 +284,13 @@ function updateChecklistItem(taskId, itemIndex, completed) {
     }
     if (task && !task.locked) {
         task.items[itemIndex].completed = completed;
-        saveTasks();
-        renderTasks(assigneeFilter.value, selectedStatuses);
+        await updateTaskData(taskId, task);
+        refreshUI();
     }
 }
 
 // Xóa một mục trong checklist
-function deleteChecklistItem(taskId, itemIndex) {
+async function deleteChecklistItem(taskId, itemIndex) {
     const task = getTaskById(taskId);
     const isOwnerOrAssignee = (task.ownerId === currentUsername || task.assignee === currentUsername);
     const canEdit = (userPermission === 'edit' || userPermission === 'create' || (userPermission === 'owner' && isOwnerOrAssignee));
@@ -304,8 +302,8 @@ function deleteChecklistItem(taskId, itemIndex) {
 
     if (task && task.items && task.items[itemIndex] && !task.locked) {
         task.items.splice(itemIndex, 1);
-        saveTasks();
-        renderTasks(assigneeFilter.value, selectedStatuses);
+        await updateTaskData(taskId, task);
+        refreshUI();
     }
 }
 
@@ -371,17 +369,17 @@ function showConfirmation(taskId, type, itemIndex = null) {
 }
 
 // Thực hiện hành động sau khi xác nhận
-function performAction() {
+async function performAction() {
     if (actionToConfirm.type === 'delete') {
-        deleteTask(actionToConfirm.id);
+        await deleteTask(actionToConfirm.id);
     } else if (actionToConfirm.type === 'clone') {
-        cloneTask(actionToConfirm.id);
+        await cloneTask(actionToConfirm.id);
     } else if (actionToConfirm.type === 'delete-item') {
-        deleteChecklistItem(actionToConfirm.id, actionToConfirm.itemIndex);
+        await deleteChecklistItem(actionToConfirm.id, actionToConfirm.itemIndex);
     } else if (actionToConfirm.type === 'accept-task') {
-        acceptTask(actionToConfirm.id);
+        await acceptTask(actionToConfirm.id);
     } else if (actionToConfirm.type === 'reject-task') {
-        rejectTask(actionToConfirm.id);
+        await rejectTask(actionToConfirm.id);
     }
 
     confirmationModalOverlay.classList.remove('show');
@@ -481,20 +479,19 @@ closeDetailModalBtn.addEventListener('click', () => {
 
 
 // Xóa một công việc
-function deleteTask(taskId) {
+async function deleteTask(taskId) {
     const task = getTaskById(taskId);
     // Kiểm tra lại quyền xóa
     if (userPermission !== 'create') {
          showMessage("Bạn không có quyền xóa công việc này.", true);
          return;
     }
-    removeTaskData(taskId);
-    saveTasks();
-    renderTasks(assigneeFilter.value, selectedStatuses);
+    await removeTaskData(taskId);
+    refreshUI();
 }
 
 // Nhân bản một công việc
-function cloneTask(taskId) {
+async function cloneTask(taskId) {
     const originalTask = getTaskById(taskId);
     const canClone = (userPermission === 'edit' || userPermission === 'create');
     if (!canClone) {
@@ -515,9 +512,8 @@ function cloneTask(taskId) {
             locked: originalTask.locked || false,
             ownerId: currentUsername // Thêm ownerId khi tạo task mới
         };
-        addTaskData(newTask);
-        saveTasks();
-        renderTasks(assigneeFilter.value, selectedStatuses);
+        await addTaskData(newTask);
+        refreshUI();
     }
 }
 
@@ -652,7 +648,7 @@ function addChecklistItem(text = '') {
 addChecklistItemBtn.addEventListener('click', () => addChecklistItem());
 
 // Thêm công việc mới hoặc cập nhật công việc hiện có
-addTaskForm.addEventListener('submit', (e) => {
+addTaskForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const task = editingTaskId ? getTaskById(editingTaskId) : null;
     const isOwnerOrAssignee = (task ? task.ownerId === currentUsername || task.assignee === currentUsername : userPermission === 'owner');
@@ -694,10 +690,9 @@ addTaskForm.addEventListener('submit', (e) => {
             locked: false,
             ownerId: currentUsername // Thêm ownerId khi tạo task mới
         };
-        addTaskData(newTask);
+        await addTaskData(newTask);
     }
-    saveTasks();
-    renderTasks(assigneeFilter.value, selectedStatuses);
+    refreshUI();
     addTaskForm.reset();
     checklistContainer.innerHTML = '';
     taskModalOverlay.classList.remove('show');
@@ -705,7 +700,7 @@ addTaskForm.addEventListener('submit', (e) => {
 });
 
 // Cập nhật trạng thái công việc
-function updateTaskStatus(taskId, newStatus) {
+async function updateTaskStatus(taskId, newStatus) {
     const task = getTaskById(taskId);
     const isOwnerOrAssignee = (task.ownerId === currentUsername || task.assignee === currentUsername);
     const canMove = (userPermission === 'edit' || userPermission === 'create' || (userPermission === 'owner' && isOwnerOrAssignee));
@@ -732,13 +727,13 @@ function updateTaskStatus(taskId, newStatus) {
 
         task.status = newStatus;
 
-        saveTasks();
-        renderTasks(assigneeFilter.value, selectedStatuses);
+        await updateTaskData(taskId, task);
+        refreshUI();
     }
 }
 
 // Chuyển task trở lại cột "Việc cần làm" từ bất kỳ trạng thái nào
-function rejectTask(taskId) {
+async function rejectTask(taskId) {
     const task = getTaskById(taskId);
 
     // Thêm kiểm tra quyền cho `rejectTask`
@@ -751,14 +746,14 @@ function rejectTask(taskId) {
         task.status = 'todo';
         task.completedAt = null; // Xóa ngày hoàn thành
         task.locked = false; // Mở khóa task
-        saveTasks();
-        renderTasks(assigneeFilter.value, selectedStatuses);
+        await updateTaskData(taskId, task);
+        refreshUI();
         detailModalOverlay.classList.remove('show');
     }
 }
 
 // Chuyển task từ "Đánh giá" sang "Hoàn thành"
-function acceptTask(taskId) {
+async function acceptTask(taskId) {
     const task = getTaskById(taskId);
 
     // Thêm kiểm tra quyền cho `acceptTask`
@@ -771,8 +766,8 @@ function acceptTask(taskId) {
         task.status = 'done';
         task.completedAt = new Date().toISOString();
         task.locked = true; // Khóa task khi đã hoàn thành
-        saveTasks();
-        renderTasks(assigneeFilter.value, selectedStatuses);
+        await updateTaskData(taskId, task);
+        refreshUI();
         detailModalOverlay.classList.remove('show');
     }
 }
@@ -784,14 +779,14 @@ dropZones.forEach(zone => {
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
     });
-    zone.addEventListener('drop', (e) => {
+    zone.addEventListener('drop', async (e) => {
         e.preventDefault();
         if (draggedItemId) {
             let newStatus = e.currentTarget.id.replace('-column', '');
             if (newStatus === 'inprogress') {
                 newStatus = 'in-progress';
             }
-            updateTaskStatus(draggedItemId, newStatus);
+            await updateTaskStatus(draggedItemId, newStatus);
         }
     });
 });
@@ -901,6 +896,6 @@ window.onload = async function() {
     // Tải danh sách user từ backend 1 lần duy nhất lúc khởi động
     user_list = await getUserlist();
 
-    loadTasks();
+    await loadTasks();
     updateButtonStates();
 };

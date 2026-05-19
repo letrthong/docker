@@ -1,4 +1,4 @@
-﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
@@ -284,6 +284,12 @@
         </div>
     </div>
     <div id="message-box" class="message-box"></div>
+    
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-[10000] hidden flex-col justify-center items-center">
+        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500"></div>
+        <p class="text-white mt-4 font-semibold text-lg">Đang xử lý...</p>
+    </div>
 
     <!-- Tải logic JS từ file bên ngoài -->
     <script type="module" src="./js/main.js"></script>

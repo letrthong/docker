@@ -47,6 +47,9 @@ export const statusFilterDropdown = document.getElementById('statusFilter');
 export const statusDropdownList = document.getElementById('statusDropdownList');
 export const statusDropdownButton = document.getElementById('dropdown-button');
 
+// DOM cho trạng thái Loading
+export const loadingOverlay = document.getElementById('loadingOverlay');
+
 // Các hàm hỗ trợ giao diện
 export function showMessage(message, isError = false) {
     const messageBox = document.getElementById('message-box');
@@ -56,6 +59,25 @@ export function showMessage(message, isError = false) {
     setTimeout(() => {
         messageBox.classList.remove('show');
     }, 3000);
+}
+
+let activeRequests = 0;
+
+export function showLoading() {
+    activeRequests++;
+    if (activeRequests === 1 && loadingOverlay) {
+        loadingOverlay.classList.remove('hidden');
+        loadingOverlay.classList.add('flex');
+    }
+}
+
+export function hideLoading() {
+    activeRequests--;
+    if (activeRequests <= 0 && loadingOverlay) {
+        activeRequests = 0;
+        loadingOverlay.classList.remove('flex');
+        loadingOverlay.classList.add('hidden');
+    }
 }
 
 export const dateFormatter = new Intl.DateTimeFormat('vi-VN', {
