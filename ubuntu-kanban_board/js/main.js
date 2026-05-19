@@ -1,10 +1,11 @@
 import { getUserIdInfo, getUserlist } from './user.js';
 import { getTasks, getTaskById, fetchAndLoadTasks, addTaskData, updateTaskData, removeTaskData } from './task.js';
-import { loginAPI, createUserAPI } from './api.js';
+import { loginAPI, createUserAPI, updateUserAPI } from './api.js';
 import {
     loginScreen, kanbanBoard, loginForm, loginUsername, loginPassword, logoutBtn, loggedInUserDisplay,
     addUserBtn, userModalOverlay, addUserForm, newUsername, newUserPassword, newUserRole, cancelUserBtn,
     userProfileContainer, userProfileBtn, userInfoDropdown, dropdownUsername, dropdownRole,
+    manageUsersDropdownItem, openManageUsersBtn, manageUsersModalOverlay, closeManageUsersBtn, userListTableBody,
     totalTasksCount, todoColumn, inprogressColumn, blockedColumn, reviewColumn, doneColumn,
     openModalBtn, taskModalOverlay, addTaskForm, taskTitleInput, taskAssigneeSelect,
     checklistContainer, addChecklistItemBtn, cancelBtn, modalTitle, submitBtn,
@@ -949,6 +950,74 @@ if (addUserForm) {
     });
 }
 
+// --- Logic Quản lý User ---
+if (openManageUsersBtn) {
+    openManageUsersBtn.addEventListener('click', async () => {
+        userInfoDropdown.classList.add('hidden');
+        userInfoDropdown.classList.remove('flex');
+        await renderManageUsersTable();
+        manageUsersModalOverlay.classList.add('show');
+    });
+}
+
+if (closeManageUsersBtn) {
+    closeManageUsersBtn.addEventListener('click', () => {
+        manageUsersModalOverlay.classList.remove('show');
+    });
+}
+
+async function renderManageUsersTable() {
+    if (!userListTableBody) return;
+    user_list = await getUserlist(); // Cập nhật danh sách mới nhất
+    userListTableBody.innerHTML = '';
+    
+    user_list.forEach(user => {
+        const tr = document.createElement('tr');
+        tr.className = "border-b hover:bg-gray-50 transition-colors";
+        
+        const isOwner = user.permission === 'owner';
+        const isDisabled = user.disabled === true;
+        const statusText = isDisabled ? '<span class="text-red-600 font-semibold">Vô hiệu hóa</span>' : '<span class="text-green-600 font-semibold">Hoạt động</span>';
+        
+        // Vai trò
+        const roleMap = {
+            'create': 'Người tạo (Create)',
+            'edit': 'Chỉnh sửa (Edit)',
+            'view': 'Chỉ xem (View)',
+            'owner': 'Quản lý (Owner)'
+        };
+        const roleText = roleMap[user.permission] || user.permission;
+
+        tr.innerHTML = `
+            <td class="py-3 px-4 text-sm text-gray-800 font-medium">${user.username}</td>
+            <td class="py-3 px-4 text-sm text-gray-600">${roleText}</td>
+            <td class="py-3 px-4 text-sm">${statusText}</td>
+            <td class="py-3 px-4 text-center">
+                ${!isOwner ? `
+                    <button class="toggle-user-status-btn text-xs font-semibold py-1 px-3 rounded-lg transition-colors ${isDisabled ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}" data-uid="${user.useruid}" data-disabled="${isDisabled}">
+                        ${isDisabled ? 'Kích hoạt' : 'Vô hiệu hóa'}
+                    </button>
+                ` : '<span class="text-xs text-gray-400 font-medium">Không thể sửa</span>'}
+            </td>
+        `;
+        userListTableBody.appendChild(tr);
+    });
+
+    // Thêm event listener cho các nút toggle
+    document.querySelectorAll('.toggle-user-status-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const uid = e.target.getAttribute('data-uid');
+            const currentlyDisabled = e.target.getAttribute('data-disabled') === 'true';
+            
+            const response = await updateUserAPI(uid, { disabled: !currentlyDisabled });
+            if (response) {
+                showMessage(!currentlyDisabled ? "Đã vô hiệu hóa tài khoản!" : "Đã kích hoạt lại tài khoản!");
+                await renderManageUsersTable(); // Render lại bảng để cập nhật trạng thái
+            }
+        });
+    });
+}
+
 // Hàm gom lại chức năng khởi tạo Kanban sau khi Đăng nhập
 async function initKanban() {
     user_info = await getUserIdInfo();
@@ -967,6 +1036,15 @@ async function initKanban() {
             'owner': 'Quản lý (Owner)'
         };
         dropdownRole.textContent = roleMap[userPermission] || (userPermission ? userPermission.toUpperCase() : 'Không rõ');
+    }
+    
+    // Hiển thị nút Quản lý User nếu là Owner
+    if (manageUsersDropdownItem) {
+        if (userPermission === 'owner') {
+            manageUsersDropdownItem.classList.remove('hidden');
+        } else {
+            manageUsersDropdownItem.classList.add('hidden');
+        }
     }
 
     // Tải danh sách user từ backend 1 lần duy nhất lúc khởi động

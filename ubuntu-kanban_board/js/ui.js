@@ -46,6 +46,13 @@ export const userProfileBtn = document.getElementById('userProfileBtn');
 export const userInfoDropdown = document.getElementById('userInfoDropdown');
 export const dropdownUsername = document.getElementById('dropdownUsername');
 export const dropdownRole = document.getElementById('dropdownRole');
+export const manageUsersDropdownItem = document.getElementById('manageUsersDropdownItem');
+export const openManageUsersBtn = document.getElementById('openManageUsersBtn');
+
+// Quản lý Users Modal
+export const manageUsersModalOverlay = document.getElementById('manageUsersModalOverlay');
+export const closeManageUsersBtn = document.getElementById('closeManageUsersBtn');
+export const userListTableBody = document.getElementById('userListTableBody');
 
 // Modal xác nhận
 export const confirmationModalOverlay = document.getElementById('confirmationModalOverlay');

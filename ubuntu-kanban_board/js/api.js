@@ -75,6 +75,14 @@ export async function createUserAPI(userData) {
     });
 }
 
+export async function updateUserAPI(useruid, userData) {
+    return await apiFetch(`/users/${useruid}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData)
+    });
+}
+
 // --- 2. API CÔNG VIỆC (TASKS) ---
 
 export async function fetchTasksAPI() {

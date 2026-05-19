@@ -53,6 +53,8 @@ def login():
     # Kiểm tra login, nếu DB cũ không có password thì mặc định là 'password123'
     user = next((u for u in users if u['username'] == username and u.get('password', 'password123') == password), None)
     if user:
+        if user.get('disabled'):
+            return jsonify({"error": "Tài khoản của bạn đã bị vô hiệu hóa"}), 403
         return jsonify({
             "message": "Đăng nhập thành công",
             "token": username,
@@ -94,6 +96,19 @@ def create_user():
     users.append(new_user)
     write_json(USERS_FILE, users)
     return jsonify({"message": "Tạo người dùng thành công", "user": new_user}), 201
+
+@app.route("/api/users/<useruid>", methods=["PUT"])
+def update_user(useruid):
+    updated_data = request.json
+    users = read_json(USERS_FILE)
+    for i, user in enumerate(users):
+        if user['useruid'] == useruid:
+            # Cập nhật trạng thái disabled
+            if 'disabled' in updated_data:
+                users[i]['disabled'] = updated_data['disabled']
+            write_json(USERS_FILE, users)
+            return jsonify({"message": "User updated successfully", "user": users[i]})
+    return jsonify({"error": "User not found"}), 404
 
 @app.route("/api/tasks", methods=["GET"])
 def get_tasks():
