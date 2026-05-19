@@ -1,0 +1,14 @@
+version: '3.9'
+
+services:
+  ubuntu_node:
+    image: ubuntu_dlt
+    container_name: ubuntu_dlt
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "2223:22" # SSH access: host 2223 -> container 22
+    stdin_open: true
+    tty: true
+     

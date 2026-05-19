@@ -1,0 +1,49 @@
+7. (Optional) Open a new terminal/tab and receive DLT logs via TCP:
+	# Make sure dlt-daemon is started with TCP enabled (option -t)
+	# In a new terminal/tab, SSH into the container and run:
+	dlt-receive -a 127.0.0.1 -p 3490
+	# You will see logs sent from dlt-example4 if dlt-daemon is running with TCP support.
+
+
+# Ubuntu DLT Docker Usage
+
+## SSH Access
+- Default user: `root`, password: `1234`
+- SSH port is mapped to 2223 (see docker-compose.yml)
+
+Connect via:
+    ssh root@localhost -p 2223
+
+## Example workflow
+1. Build and start container:
+	docker compose up --build -d
+2. SSH into container:
+	ssh root@localhost -p 2223
+	# Nếu không kết nối được:
+	# - Kiểm tra container đã chạy: docker ps
+	# - Kiểm tra port đã map đúng: docker-compose.yml phải có "2223:22"
+	# - Kiểm tra SSH server trong container: docker exec -it ubuntu_dlt bash rồi service ssh status
+	# - Kiểm tra log container: docker logs ubuntu_dlt
+3. (Optional) Check SSH service inside container:
+	service ssh status
+	service ssh restart
+4. Start DLT Daemon before running the example:
+	ls -l /usr/local/bin/dlt-daemon           # Check if dlt-daemon is installed
+	dlt-daemon &                              # Start DLT Daemon in background
+	ps aux | grep dlt-daemon                  # Verify dlt-daemon is running
+5. Run the dlt-example4 binary:
+	ls -l /usr/src/myapp/build/dlt-example4   # Check if the binary exists
+	cd /usr/src/myapp/build/                  # Go to build directory
+	./dlt-example4                            # Run the example
+6. View DLT logs after running the example:
+	# By default, DLT Daemon outputs logs to stdout. You can redirect output to a file if needed:
+	#   dlt-daemon > /tmp/dlt.log 2>&1 &
+	#   tail -f /tmp/dlt.log
+	# Or simply observe the output in the terminal where dlt-daemon is running.
+
+## Rebuild container
+	docker compose down
+	docker compose up --build -d
+
+
+ 
