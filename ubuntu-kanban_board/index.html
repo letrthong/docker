@@ -137,7 +137,7 @@
                     <input type="password" id="loginPassword" placeholder="Mật khẩu" required class="p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <button type="submit" class="bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition mt-2">Đăng nhập</button>
                 </form>
-                <p class="mt-4 text-xs text-center text-gray-500">Mật khẩu mặc định: <strong>password123</strong></p>
+                <p class="mt-4 text-xs text-center text-gray-500">Tài khoản mặc định: <strong>admin</strong> / Mật khẩu: <strong>admin</strong></p>
             </div>
         </div>
 
@@ -176,15 +176,34 @@
                      <p id="totalTasksCount" class="text-gray-700 font-medium">0</p>
                 </div>
 
-                <!-- Nút Thêm đã được tối giản -->
-                <button id="openModalBtn" class="bg-gray-100 text-gray-600 p-3 rounded-full transition duration-300 ease-in-out hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 flex-shrink-0">
+                <!-- Nút Thêm User (Chỉ hiển thị cho Owner) -->
+                <button id="addUserBtn" class="hidden bg-gray-100 text-gray-600 p-3 rounded-full transition duration-300 ease-in-out hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 flex-shrink-0" title="Thêm Người dùng">
+                    <i class="fas fa-user-plus"></i>
+                </button>
+
+                <!-- Nút Thêm Công việc -->
+                <button id="openModalBtn" class="bg-gray-100 text-gray-600 p-3 rounded-full transition duration-300 ease-in-out hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 flex-shrink-0" title="Thêm Công việc">
                     <i class="fas fa-plus"></i>
                 </button>
 
                 <!-- Hiển thị tên người dùng -->
-                <div class="flex items-center bg-white px-3 py-2 rounded-full shadow-sm border border-gray-200">
-                    <i class="fas fa-user-circle text-blue-500 mr-2 text-lg"></i>
-                    <span id="loggedInUserDisplay" class="text-sm font-semibold text-gray-700"></span>
+                <div class="relative" id="userProfileContainer">
+                    <div id="userProfileBtn" class="flex items-center bg-white px-3 py-2 rounded-full shadow-sm border border-gray-200 cursor-pointer hover:bg-gray-50 transition">
+                        <i class="fas fa-user-circle text-blue-500 mr-2 text-lg"></i>
+                        <span id="loggedInUserDisplay" class="text-sm font-semibold text-gray-700"></span>
+                    </div>
+                    
+                    <!-- Dropdown thông tin user -->
+                    <div id="userInfoDropdown" class="absolute top-full right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 hidden z-50 flex-col overflow-hidden cursor-default" onclick="event.stopPropagation()">
+                        <div class="p-4 bg-gray-50">
+                            <p class="text-xs text-gray-500 mb-1">Tài khoản:</p>
+                            <p class="text-sm font-bold text-gray-800" id="dropdownUsername"></p>
+                        </div>
+                        <div class="p-4 border-t border-gray-100 bg-white">
+                            <p class="text-xs text-gray-500 mb-1">Vai trò:</p>
+                            <p class="text-sm font-semibold text-blue-600" id="dropdownRole"></p>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Nút Đăng xuất -->
@@ -282,6 +301,27 @@
                     Xác nhận
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- Cửa sổ Popup (Modal) để thêm người dùng -->
+    <div id="userModalOverlay" class="modal-overlay">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Thêm Người Dùng Mới</h2>
+            <form id="addUserForm" class="flex flex-col gap-4">
+                <input type="text" id="newUsername" placeholder="Tên đăng nhập" required class="p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <input type="password" id="newUserPassword" placeholder="Mật khẩu" required class="p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <select id="newUserRole" class="p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="view">Chỉ xem (View)</option>
+                    <option value="edit">Chỉnh sửa (Edit)</option>
+                    <option value="create">Người tạo (Create)</option>
+                    <option value="owner">Quản lý (Owner)</option>
+                </select>
+                <div class="flex justify-end gap-4 mt-4">
+                    <button type="button" id="cancelUserBtn" class="bg-gray-300 text-gray-800 font-semibold py-2 px-6 rounded-xl transition duration-300 hover:bg-gray-400">Hủy</button>
+                    <button type="submit" class="bg-blue-600 text-white font-semibold py-2 px-6 rounded-xl transition duration-300 hover:bg-blue-700">Tạo Người Dùng</button>
+                </div>
+            </form>
         </div>
     </div>
 

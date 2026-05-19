@@ -1,8 +1,10 @@
 import { getUserIdInfo, getUserlist } from './user.js';
 import { getTasks, getTaskById, fetchAndLoadTasks, addTaskData, updateTaskData, removeTaskData } from './task.js';
-import { loginAPI } from './api.js';
+import { loginAPI, createUserAPI } from './api.js';
 import {
     loginScreen, kanbanBoard, loginForm, loginUsername, loginPassword, logoutBtn, loggedInUserDisplay,
+    addUserBtn, userModalOverlay, addUserForm, newUsername, newUserPassword, newUserRole, cancelUserBtn,
+    userProfileContainer, userProfileBtn, userInfoDropdown, dropdownUsername, dropdownRole,
     totalTasksCount, todoColumn, inprogressColumn, blockedColumn, reviewColumn, doneColumn,
     openModalBtn, taskModalOverlay, addTaskForm, taskTitleInput, taskAssigneeSelect,
     checklistContainer, addChecklistItemBtn, cancelBtn, modalTitle, submitBtn,
@@ -875,9 +877,22 @@ statusDropdownButton.addEventListener('click', (e) => {
     statusFilterDropdown.classList.toggle('active');
 });
 
+// Hiển thị dropdown user profile
+if (userProfileBtn && userInfoDropdown) {
+    userProfileBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        userInfoDropdown.classList.toggle('hidden');
+        userInfoDropdown.classList.toggle('flex');
+    });
+}
+
 document.addEventListener('click', (e) => {
     if (!statusFilterDropdown.contains(e.target)) {
         statusFilterDropdown.classList.remove('active');
+    }
+    if (userInfoDropdown && userProfileContainer && !userProfileContainer.contains(e.target)) {
+        userInfoDropdown.classList.add('hidden');
+        userInfoDropdown.classList.remove('flex');
     }
 });
 
@@ -886,6 +901,52 @@ function updateButtonStates() {
     const canCreate = (userPermission === 'create' || userPermission === 'owner' || userPermission === 'edit');
     openModalBtn.disabled = !canCreate;
     openModalBtn.classList.toggle('btn-disabled', !canCreate);
+    
+    // Nút tạo user chỉ dành cho Owner
+    if (addUserBtn) {
+        if (userPermission === 'owner') {
+            addUserBtn.classList.remove('hidden');
+        } else {
+            addUserBtn.classList.add('hidden');
+        }
+    }
+}
+
+// --- Logic Thêm Người Dùng ---
+if (addUserBtn) {
+    addUserBtn.addEventListener('click', () => {
+        userModalOverlay.classList.add('show');
+    });
+}
+
+if (cancelUserBtn) {
+    cancelUserBtn.addEventListener('click', () => {
+        userModalOverlay.classList.remove('show');
+        addUserForm.reset();
+    });
+}
+
+if (addUserForm) {
+    addUserForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const userData = {
+            username: newUsername.value.trim(),
+            password: newUserPassword.value.trim(),
+            permission: newUserRole.value
+        };
+        
+        const response = await createUserAPI(userData);
+        if (response) {
+            showMessage("Đã tạo người dùng thành công!");
+            userModalOverlay.classList.remove('show');
+            addUserForm.reset();
+            
+            // Cập nhật lại danh sách người dùng vào bộ lọc gán việc
+            user_list = await getUserlist();
+            populateAssigneeFilter();
+        }
+    });
 }
 
 // Hàm gom lại chức năng khởi tạo Kanban sau khi Đăng nhập
@@ -897,6 +958,16 @@ async function initKanban() {
 
     // Hiển thị tên người dùng trên Header
     if (loggedInUserDisplay) loggedInUserDisplay.textContent = currentUsername;
+    if (dropdownUsername) dropdownUsername.textContent = currentUsername;
+    if (dropdownRole) {
+        const roleMap = {
+            'create': 'Người tạo (Create)',
+            'edit': 'Chỉnh sửa (Edit)',
+            'view': 'Chỉ xem (View)',
+            'owner': 'Quản lý (Owner)'
+        };
+        dropdownRole.textContent = roleMap[userPermission] || (userPermission ? userPermission.toUpperCase() : 'Không rõ');
+    }
 
     // Tải danh sách user từ backend 1 lần duy nhất lúc khởi động
     user_list = await getUserlist();

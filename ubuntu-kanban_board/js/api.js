@@ -67,6 +67,14 @@ export async function fetchUsers() {
     return await apiFetch('/users');
 }
 
+export async function createUserAPI(userData) {
+    return await apiFetch('/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData)
+    });
+}
+
 // --- 2. API CÔNG VIỆC (TASKS) ---
 
 export async function fetchTasksAPI() {

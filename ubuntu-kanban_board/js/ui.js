@@ -31,6 +31,22 @@ export const loginPassword = document.getElementById('loginPassword');
 export const logoutBtn = document.getElementById('logoutBtn');
 export const loggedInUserDisplay = document.getElementById('loggedInUserDisplay');
 
+// User Modal
+export const addUserBtn = document.getElementById('addUserBtn');
+export const userModalOverlay = document.getElementById('userModalOverlay');
+export const addUserForm = document.getElementById('addUserForm');
+export const newUsername = document.getElementById('newUsername');
+export const newUserPassword = document.getElementById('newUserPassword');
+export const newUserRole = document.getElementById('newUserRole');
+export const cancelUserBtn = document.getElementById('cancelUserBtn');
+
+// Profile Dropdown
+export const userProfileContainer = document.getElementById('userProfileContainer');
+export const userProfileBtn = document.getElementById('userProfileBtn');
+export const userInfoDropdown = document.getElementById('userInfoDropdown');
+export const dropdownUsername = document.getElementById('dropdownUsername');
+export const dropdownRole = document.getElementById('dropdownRole');
+
 // Modal xác nhận
 export const confirmationModalOverlay = document.getElementById('confirmationModalOverlay');
 export const confirmTitle = document.getElementById('confirmTitle');

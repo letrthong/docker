@@ -15,11 +15,7 @@ def init_db():
     
     if not os.path.exists(USERS_FILE):
         default_users = [
-            {"useruid": "101", "username": "alice", "permission": "create", "password": "password123"},
-            {"useruid": "102", "username": "bob", "permission": "edit", "password": "password123"},
-            {"useruid": "103", "username": "charlie", "permission": "view", "password": "password123"},
-            {"useruid": "104", "username": "diana", "permission": "view", "password": "password123"},
-            {"useruid": "105", "username": "Thong", "permission": "owner", "password": "password123"}
+            {"useruid": "1", "username": "admin", "permission": "owner", "password": "admin"}
         ]
         with open(USERS_FILE, 'w', encoding='utf-8') as f:
             json.dump(default_users, f, ensure_ascii=False, indent=4)
@@ -81,6 +77,23 @@ def get_current_user():
 @app.route("/api/users", methods=["GET"])
 def get_users():
     return jsonify(read_json(USERS_FILE))
+
+@app.route("/api/users", methods=["POST"])
+def create_user():
+    new_user = request.json
+    users = read_json(USERS_FILE)
+    
+    # Kiểm tra xem username đã tồn tại chưa
+    if any(u['username'] == new_user.get('username') for u in users):
+        return jsonify({"error": "Tên đăng nhập đã tồn tại"}), 400
+        
+    # Tạo ID mới
+    new_uid = str(max([int(u['useruid']) for u in users if str(u.get('useruid', '')).isdigit()] + [0]) + 1)
+    new_user['useruid'] = new_uid
+    
+    users.append(new_user)
+    write_json(USERS_FILE, users)
+    return jsonify({"message": "Tạo người dùng thành công", "user": new_user}), 201
 
 @app.route("/api/tasks", methods=["GET"])
 def get_tasks():
