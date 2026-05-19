@@ -1,4 +1,5 @@
-import { getUserIdInfo, getUserlist } from './api.js';
+import { getUserIdInfo, getUserlist } from './user.js';
+import { getTasks, getTaskById, loadTasksFromStorage, saveTasksToStorage, addTaskData, removeTaskData } from './task.js';
 import {
     totalTasksCount, todoColumn, inprogressColumn, blockedColumn, reviewColumn, doneColumn,
     openModalBtn, taskModalOverlay, addTaskForm, taskTitleInput, taskAssigneeSelect,
@@ -10,13 +11,14 @@ import {
     showMessage, dateFormatter, getAssigneeColor
 } from './ui.js';
 
-const user_info = getUserIdInfo();
+const user_info = await getUserIdInfo();
 const userPermission = user_info.permission;
 const currentUserId = user_info.useruid;
 const currentUsername = user_info.username;
 
-// Mảng toàn cục để lưu trữ dữ liệu công việc, mô phỏng cơ sở dữ liệu
-let tasks = [];
+// Tải danh sách user từ backend 1 lần duy nhất lúc khởi động
+const user_list = await getUserlist();
+
 let draggedItemId = null;
 let editingTaskId = null;
 let actionToConfirm = { id: null, type: null, itemIndex: null }; // Để xử lý cả xóa và nhân bản, và chỉ mục mục checklist
@@ -24,28 +26,25 @@ let selectedStatuses = ['all']; // Mặc định hiển thị tất cả
 
 // Cập nhật tổng số công việc
 function updateTotalTaskCount() {
-    totalTasksCount.textContent = tasks.length;
+    totalTasksCount.textContent = getTasks().length;
 }
 
 // Lưu dữ liệu vào localStorage
 function saveTasks() {
-    localStorage.setItem('kanban_tasks', JSON.stringify(tasks));
+    saveTasksToStorage();
     populateAssigneeFilter();
     updateTotalTaskCount(); // Cập nhật tổng số công việc sau khi lưu
 }
 
 // Tải dữ liệu từ localStorage
 function loadTasks() {
-    const storedTasks = localStorage.getItem('kanban_tasks');
-    if (storedTasks) {
-        tasks = JSON.parse(storedTasks);
-        // Khôi phục lại màu cho người thực hiện sau khi tải
-        tasks.forEach(task => {
-            if (task.assignee) {
-                getAssigneeColor(task.assignee);
-            }
-        });
-    }
+    const loadedTasks = loadTasksFromStorage();
+    // Khôi phục lại màu cho người thực hiện sau khi tải
+    loadedTasks.forEach(task => {
+        if (task.assignee) {
+            getAssigneeColor(task.assignee);
+        }
+    });
     populateAssigneeFilter();
     updateTotalTaskCount(); // Cập nhật tổng số công việc sau khi tải
     renderTasks(assigneeFilter.value, selectedStatuses);
@@ -61,7 +60,7 @@ function renderTasks(assigneeFilterValue = 'all', statusFilterValues = ['all']) 
     doneColumn.innerHTML = '';
 
     // Lọc công việc
-    const filteredTasks = tasks.filter(task => {
+    const filteredTasks = getTasks().filter(task => {
         const normalizedAssignee = task.assignee ? task.assignee.toLowerCase().trim() : '';
         const assigneeMatch = (assigneeFilterValue === 'all' || normalizedAssignee === assigneeFilterValue);
         const statusMatch = (statusFilterValues.includes('all') || statusFilterValues.includes(task.status));
@@ -89,9 +88,8 @@ function renderTasks(assigneeFilterValue = 'all', statusFilterValues = ['all']) 
 function populateAssigneeFilter() {
     const currentFilterValue = assigneeFilter.value;
     assigneeFilter.innerHTML = '<option value="all">Tất cả</option>';
-    const userList = getUserlist();
 
-    userList.forEach((user) => {
+    user_list.forEach((user) => {
         const option = document.createElement('option');
         option.value = user.username.toLowerCase().trim();
         option.textContent = user.username;
@@ -279,7 +277,7 @@ function createTaskCard(task) {
 
 // Cập nhật trạng thái của một mục trong checklist
 function updateChecklistItem(taskId, itemIndex, completed) {
-    const task = tasks.find(t => t.id === taskId);
+    const task = getTaskById(taskId);
     const isOwnerOrAssignee = (task.ownerId === currentUsername || task.assignee === currentUsername);
     const canEdit = (userPermission === 'edit' || userPermission === 'create' || (userPermission === 'owner' && isOwnerOrAssignee));
 
@@ -296,7 +294,7 @@ function updateChecklistItem(taskId, itemIndex, completed) {
 
 // Xóa một mục trong checklist
 function deleteChecklistItem(taskId, itemIndex) {
-    const task = tasks.find(t => t.id === taskId);
+    const task = getTaskById(taskId);
     const isOwnerOrAssignee = (task.ownerId === currentUsername || task.assignee === currentUsername);
     const canEdit = (userPermission === 'edit' || userPermission === 'create' || (userPermission === 'owner' && isOwnerOrAssignee));
 
@@ -315,7 +313,7 @@ function deleteChecklistItem(taskId, itemIndex) {
 
 // Hiển thị modal xác nhận chung
 function showConfirmation(taskId, type, itemIndex = null) {
-    const task = tasks.find(t => t.id === taskId);
+    const task = getTaskById(taskId);
     const isOwnerOrAssignee = (task.ownerId === currentUsername || task.assignee === currentUsername);
     const canEdit = (userPermission === 'edit' || userPermission === 'create');
     const canDelete = userPermission === 'create';
@@ -432,7 +430,7 @@ function showTaskDetails(task) {
             checkbox.type = 'checkbox';
             checkbox.checked = item.completed;
 
-            const isOwnerOrAssignee = (editingTaskId ? tasks.find(t => t.id === editingTaskId)?.ownerId === currentUsername || tasks.find(t => t.id === editingTaskId)?.assignee === currentUsername : userPermission === 'owner');
+            const isOwnerOrAssignee = (editingTaskId ? getTaskById(editingTaskId)?.ownerId === currentUsername || getTaskById(editingTaskId)?.assignee === currentUsername : userPermission === 'owner');
             const canEdit = (userPermission === 'edit' || userPermission === 'create' || (userPermission === 'owner' && isOwnerOrAssignee));
 
             checkbox.disabled = !canEdit || task.locked;
@@ -485,20 +483,20 @@ closeDetailModalBtn.addEventListener('click', () => {
 
 // Xóa một công việc
 function deleteTask(taskId) {
-    const task = tasks.find(t => t.id === taskId);
+    const task = getTaskById(taskId);
     // Kiểm tra lại quyền xóa
     if (userPermission !== 'create') {
          showMessage("Bạn không có quyền xóa công việc này.", true);
          return;
     }
-    tasks = tasks.filter(t => t.id !== taskId);
+    removeTaskData(taskId);
     saveTasks();
     renderTasks(assigneeFilter.value, selectedStatuses);
 }
 
 // Nhân bản một công việc
 function cloneTask(taskId) {
-    const originalTask = tasks.find(t => t.id === taskId);
+    const originalTask = getTaskById(taskId);
     const canClone = (userPermission === 'edit' || userPermission === 'create');
     if (!canClone) {
         showMessage("Bạn không có quyền nhân bản công việc này.", true);
@@ -518,7 +516,7 @@ function cloneTask(taskId) {
             locked: originalTask.locked || false,
             ownerId: currentUsername // Thêm ownerId khi tạo task mới
         };
-        tasks.push(newTask);
+        addTaskData(newTask);
         saveTasks();
         renderTasks(assigneeFilter.value, selectedStatuses);
     }
@@ -536,8 +534,7 @@ function populateAssigneeSelect(selectedAssignee = '') {
         taskAssigneeSelect.appendChild(option);
     } else if (userPermission === 'edit' || userPermission === 'create') {
         // Vai trò Edit và Creator có thể gán cho bất kỳ ai
-        const userList = getUserlist();
-        userList.forEach(user => {
+        user_list.forEach(user => {
             const option = document.createElement('option');
             option.value = user.username;
             option.textContent = user.username;
@@ -573,7 +570,7 @@ openModalBtn.addEventListener('click', () => {
 
 // Mở modal để chỉnh sửa công việc
 function openEditModal(taskId) {
-    const task = tasks.find(t => t.id === taskId);
+    const task = getTaskById(taskId);
     const isOwnerOrAssignee = (task.ownerId === currentUsername || task.assignee === currentUsername);
     const canEdit = (userPermission === 'edit' || userPermission === 'create' || (userPermission === 'owner' && isOwnerOrAssignee));
 
@@ -620,7 +617,7 @@ confirmActionBtn.addEventListener('click', performAction);
 
 // Thêm một mục vào checklist trong Modal
 function addChecklistItem(text = '') {
-    const isOwnerOrAssignee = (editingTaskId ? tasks.find(t => t.id === editingTaskId)?.ownerId === currentUsername || tasks.find(t => t.id === editingTaskId)?.assignee === currentUsername : userPermission === 'owner');
+    const isOwnerOrAssignee = (editingTaskId ? getTaskById(editingTaskId)?.ownerId === currentUsername || getTaskById(editingTaskId)?.assignee === currentUsername : userPermission === 'owner');
     const canCreate = (userPermission === 'create' || userPermission === 'edit' || (userPermission === 'owner' && isOwnerOrAssignee));
 
     if (!canCreate && editingTaskId) {
@@ -658,7 +655,7 @@ addChecklistItemBtn.addEventListener('click', () => addChecklistItem());
 // Thêm công việc mới hoặc cập nhật công việc hiện có
 addTaskForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    const task = editingTaskId ? tasks.find(t => t.id === editingTaskId) : null;
+    const task = editingTaskId ? getTaskById(editingTaskId) : null;
     const isOwnerOrAssignee = (task ? task.ownerId === currentUsername || task.assignee === currentUsername : userPermission === 'owner');
     const canEdit = (userPermission === 'edit' || userPermission === 'create' || (userPermission === 'owner' && isOwnerOrAssignee));
 
@@ -698,7 +695,7 @@ addTaskForm.addEventListener('submit', (e) => {
             locked: false,
             ownerId: currentUsername // Thêm ownerId khi tạo task mới
         };
-        tasks.push(newTask);
+        addTaskData(newTask);
     }
     saveTasks();
     renderTasks(assigneeFilter.value, selectedStatuses);
@@ -710,7 +707,7 @@ addTaskForm.addEventListener('submit', (e) => {
 
 // Cập nhật trạng thái công việc
 function updateTaskStatus(taskId, newStatus) {
-    const task = tasks.find(t => t.id === taskId);
+    const task = getTaskById(taskId);
     const isOwnerOrAssignee = (task.ownerId === currentUsername || task.assignee === currentUsername);
     const canMove = (userPermission === 'edit' || userPermission === 'create' || (userPermission === 'owner' && isOwnerOrAssignee));
 
@@ -743,7 +740,7 @@ function updateTaskStatus(taskId, newStatus) {
 
 // Chuyển task trở lại cột "Việc cần làm" từ bất kỳ trạng thái nào
 function rejectTask(taskId) {
-    const task = tasks.find(t => t.id === taskId);
+    const task = getTaskById(taskId);
 
     // Thêm kiểm tra quyền cho `rejectTask`
     if (userPermission !== 'create' && userPermission !== 'edit') {
@@ -763,7 +760,7 @@ function rejectTask(taskId) {
 
 // Chuyển task từ "Đánh giá" sang "Hoàn thành"
 function acceptTask(taskId) {
-    const task = tasks.find(t => t.id === taskId);
+    const task = getTaskById(taskId);
 
     // Thêm kiểm tra quyền cho `acceptTask`
     if (userPermission !== 'create' && userPermission !== 'edit') {
