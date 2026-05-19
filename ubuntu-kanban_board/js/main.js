@@ -11,13 +11,12 @@ import {
     showMessage, dateFormatter, getAssigneeColor
 } from './ui.js';
 
-const user_info = await getUserIdInfo();
-const userPermission = user_info.permission;
-const currentUserId = user_info.useruid;
-const currentUsername = user_info.username;
+let user_info;
+let userPermission;
+let currentUserId;
+let currentUsername;
 
-// Tải danh sách user từ backend 1 lần duy nhất lúc khởi động
-const user_list = await getUserlist();
+let user_list = [];
 
 let draggedItemId = null;
 let editingTaskId = null;
@@ -893,7 +892,15 @@ function updateButtonStates() {
 }
 
 // Tải dữ liệu khi trang được tải
-window.onload = function() {
+window.onload = async function() {
+    user_info = await getUserIdInfo();
+    userPermission = user_info.permission;
+    currentUserId = user_info.useruid;
+    currentUsername = user_info.username;
+
+    // Tải danh sách user từ backend 1 lần duy nhất lúc khởi động
+    user_list = await getUserlist();
+
     loadTasks();
     updateButtonStates();
 };
