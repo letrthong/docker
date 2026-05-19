@@ -25,20 +25,9 @@ COPY . .
 # Build frontend
 RUN npm run build
 
-# Copy file tĩnh sang Flask static
-
-# Diagnostic: Check if build output exists
- 
-RUN ls -l /app/dist
-
-# Ensure static directory exists
-RUN mkdir -p /app/src/static
-
-# Copy ALL static files, not just index.html
-RUN cp -fv /app/dist/*html /app/src/static/
-
-# List contents after copy for verification
-RUN ls -l /app/src/static
+# Copy toàn bộ file tĩnh (HTML, JS, CSS, Assets) sang Flask static
+RUN mkdir -p /app/src/static && \
+    cp -r /app/dist/* /app/src/static/
 
 EXPOSE 5000
 
