@@ -40,8 +40,8 @@ function updateTotalTaskCount() {
 
 // Cập nhật giao diện sau khi thay đổi dữ liệu
 function refreshUI() {
-    populateAssigneeFilter();
     populateProjectFilter();
+    populateAssigneeFilter();
     updateTotalTaskCount();
     renderTasks(assigneeFilter.value, selectedStatuses, projectFilter.value);
 }
@@ -59,7 +59,7 @@ async function loadTasks() {
 }
 
 // Tạo và hiển thị các thẻ công việc
-function renderTasks(assigneeFilterValue = 'all', statusFilterValues = ['all'], projectFilterValue = 'all') {
+function renderTasks(assigneeFilterValue = 'all', statusFilterValues = ['all'], projectFilterValue = 'none') {
     // Xóa nội dung cũ trong các cột
     todoColumn.innerHTML = '';
     inprogressColumn.innerHTML = '';
@@ -89,7 +89,7 @@ function renderTasks(assigneeFilterValue = 'all', statusFilterValues = ['all'], 
         const normalizedAssignee = task.assignee ? task.assignee.toLowerCase().trim() : '';
         const assigneeMatch = (assigneeFilterValue === 'all' || normalizedAssignee === assigneeFilterValue);
         const statusMatch = (statusFilterValues.includes('all') || statusFilterValues.includes(task.status));
-        const projectMatch = (projectFilterValue === 'all' || task.projectId === projectFilterValue);
+        const projectMatch = (task.projectId === projectFilterValue) || (!task.projectId && projectFilterValue === 'none');
         return assigneeMatch && statusMatch && projectMatch;
     });
 
@@ -114,7 +114,7 @@ function renderTasks(assigneeFilterValue = 'all', statusFilterValues = ['all'], 
 export function populateProjectFilter() {
     if (!projectFilter) return;
     const currentFilterValue = projectFilter.value;
-    projectFilter.innerHTML = '<option value="all">Tất cả dự án</option>';
+    projectFilter.innerHTML = '';
 
     // Lọc dự án: Owner thấy toàn bộ, người dùng bình thường chỉ thấy dự án mình tham gia
     const visibleProjects = userPermission === 'owner' 
@@ -128,11 +128,16 @@ export function populateProjectFilter() {
         projectFilter.appendChild(option);
     });
 
+    const noneOption = document.createElement('option');
+    noneOption.value = 'none';
+    noneOption.textContent = 'Ngoài dự án';
+    projectFilter.appendChild(noneOption);
+
     // Nếu giá trị đã chọn trước đó vẫn còn trong danh sách, giữ nguyên
     if (Array.from(projectFilter.options).some(opt => opt.value === currentFilterValue)) {
         projectFilter.value = currentFilterValue;
     } else {
-        projectFilter.value = 'all';
+        projectFilter.value = projectFilter.options[0].value;
     }
 }
 
@@ -143,7 +148,8 @@ export function populateAssigneeFilter() {
 
     // Bỏ qua những user đã bị vô hiệu hóa
     let usersToDisplay = user_list.filter(u => !u.disabled);
-    if (projectFilter && projectFilter.value !== 'all') {
+    
+    if (projectFilter && projectFilter.value && projectFilter.value !== 'none') {
         const project = project_list.find(p => p.id === projectFilter.value);
         if (project && project.users) {
             // Chỉ hiển thị user thuộc dự án
@@ -151,6 +157,8 @@ export function populateAssigneeFilter() {
         } else {
             usersToDisplay = [];
         }
+    } else if (userPermission !== 'owner') {
+        usersToDisplay = usersToDisplay.filter(u => u.useruid === currentUserId);
     }
 
     usersToDisplay.forEach((user) => {
@@ -601,7 +609,7 @@ async function cloneTask(taskId) {
 
 // Hàm để điền danh sách dự án vào select box
 function populateProjectSelect(selectedProject = '') {
-    taskProjectSelect.innerHTML = '<option value="">-- Chọn dự án (Không bắt buộc) --</option>';
+    taskProjectSelect.innerHTML = '<option value="">-- Chọn dự án (Bắt buộc) --</option>';
     
     // Lọc dự án: Owner thấy toàn bộ, người dùng bình thường chỉ thấy dự án mình tham gia
     const visibleProjects = userPermission === 'owner' 
@@ -676,6 +684,16 @@ if (taskProjectSelect) {
 
 // Mở modal để thêm công việc mới
 openModalBtn.addEventListener('click', () => {
+    // Nếu người dùng chưa có dự án nào, chặn việc tạo task
+    const visibleProjects = userPermission === 'owner' 
+        ? project_list 
+        : project_list.filter(p => p.users && p.users.includes(currentUserId));
+        
+    if (visibleProjects.length === 0) {
+        showMessage("Bạn chưa tham gia dự án nào, không thể tạo công việc.", true);
+        return;
+    }
+
     if (userPermission === 'create' || userPermission === 'owner' || userPermission === 'edit') {
         editingTaskId = null;
         modalTitle.textContent = "Thêm Công Việc Mới";
@@ -683,7 +701,9 @@ openModalBtn.addEventListener('click', () => {
         addTaskForm.reset();
         checklistContainer.innerHTML = '';
         addChecklistItem();
-        populateProjectSelect();
+        
+        const defaultProject = projectFilter && projectFilter.value !== 'none' ? projectFilter.value : '';
+        populateProjectSelect(defaultProject);
         populateAssigneeSelect('', taskProjectSelect.value);
         taskModalOverlay.classList.add('show');
     } else {
@@ -791,6 +811,12 @@ addTaskForm.addEventListener('submit', async (e) => {
     const title = taskTitleInput.value.trim();
     const projectId = taskProjectSelect.value;
     const assignee = taskAssigneeSelect.value.trim();
+    
+    if (!projectId) {
+        showMessage("Vui lòng chọn một dự án cho công việc này.", true);
+        return;
+    }
+    
     const items = Array.from(checklistContainer.querySelectorAll('input')).map(input => ({
         text: input.value.trim(),
         completed: false

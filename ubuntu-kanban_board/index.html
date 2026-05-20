@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
@@ -152,7 +152,6 @@
                 <div class="flex flex-col w-full md:w-auto">
                     <label for="projectFilter" class="text-gray-700 text-xs font-medium whitespace-nowrap mb-1">Lọc theo dự án:</label>
                     <select id="projectFilter" class="p-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
-                        <option value="all">Tất cả dự án</option>
                     </select>
                 </div>
                 <div class="flex flex-col w-full md:w-auto">
@@ -286,8 +285,8 @@
             <h2 id="modalTitle" class="text-2xl font-bold text-gray-800 mb-4">Thêm Công Việc Mới</h2>
             <form id="addTaskForm" class="flex flex-col gap-4">
                 <input type="text" id="taskTitleInput" placeholder="Tiêu đề công việc..." required class="p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <select id="taskProjectSelect" class="p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="">-- Chọn dự án (Không bắt buộc) --</option>
+                <select id="taskProjectSelect" required class="p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">-- Chọn dự án (Bắt buộc) --</option>
                 </select>
                 <select type="text" id="taskAssigneeSelect" placeholder="Người thực hiện... (ID hoặc Tên)" class="p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
 
