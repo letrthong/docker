@@ -90,3 +90,5 @@ Tất cả các API endpoints sẽ bắt đầu với: `http://localhost:5000/ap
   ```json
   { "message": "Task deleted successfully" }
   ```
+### sprints trong dự án
+1 dụ án sẽ có nhiều sprints và lúc tạo task lựa chọn multiselect sprints do thực tế 1 task có thể làm trong nhiều sprints
