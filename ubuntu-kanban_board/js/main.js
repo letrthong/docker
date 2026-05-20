@@ -128,15 +128,18 @@ export function populateProjectFilter() {
         projectFilter.appendChild(option);
     });
 
-    const noneOption = document.createElement('option');
-    noneOption.value = 'none';
-    noneOption.textContent = 'Ngoài dự án';
-    projectFilter.appendChild(noneOption);
+    // Chỉ hiển thị "Không có dự án" nếu người dùng chưa có dự án nào
+    if (visibleProjects.length === 0) {
+        const noneOption = document.createElement('option');
+        noneOption.value = 'none';
+        noneOption.textContent = 'Không có dự án';
+        projectFilter.appendChild(noneOption);
+    }
 
     // Nếu giá trị đã chọn trước đó vẫn còn trong danh sách, giữ nguyên
     if (Array.from(projectFilter.options).some(opt => opt.value === currentFilterValue)) {
         projectFilter.value = currentFilterValue;
-    } else {
+    } else if (projectFilter.options.length > 0) {
         projectFilter.value = projectFilter.options[0].value;
     }
 }
