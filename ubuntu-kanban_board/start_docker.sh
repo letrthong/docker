@@ -1,5 +1,6 @@
 #!/bin/bash
 
+mkdir -p out
 # remove the rest containers if have
 docker compose down
 
