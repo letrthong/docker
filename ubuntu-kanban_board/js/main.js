@@ -717,17 +717,24 @@ if (taskProjectSelect) {
 
 // Mở modal để thêm công việc mới
 openModalBtn.addEventListener('click', () => {
-    // Nếu người dùng chưa có dự án nào, chặn việc tạo task
-    const visibleProjects = userPermission === 'owner' 
-        ? project_list 
-        : project_list.filter(p => p.users && p.users.includes(currentUserId));
-        
-    const canCreateGlobally = userPermission === 'owner' || project_list.some(p => {
-        const perm = getProjectPermission(p.id);
-        return isUserInProject(p, currentUserId) && (perm === 'create' || perm === 'edit');
-    });
+    let canCreate = false;
+    if (userPermission === 'owner') {
+        canCreate = true;
+    } else {
+        // Kiểm tra quyền dựa trên dự án đang được lọc ở màn hình chính
+        if (projectFilter.value && projectFilter.value !== 'none') {
+            const perm = getProjectPermission(projectFilter.value);
+            canCreate = (perm === 'create' || perm === 'edit');
+        } else {
+            // Nếu đang xem "Ngoài dự án", kiểm tra xem họ có quyền tạo ở bất kỳ dự án nào không
+            canCreate = project_list.some(p => {
+                const perm = getProjectPermission(p.id);
+                return isUserInProject(p, currentUserId) && (perm === 'create' || perm === 'edit');
+            });
+        }
+    }
 
-    if (canCreateGlobally) {
+    if (canCreate) {
         editingTaskId = null;
         modalTitle.textContent = "Thêm Công Việc Mới";
         submitBtn.textContent = "Thêm Công Việc";
@@ -740,7 +747,7 @@ openModalBtn.addEventListener('click', () => {
         populateAssigneeSelect('', taskProjectSelect.value);
         taskModalOverlay.classList.add('show');
     } else {
-        showMessage("Bạn không có quyền tạo công việc mới.", true);
+        showMessage("Bạn không có quyền tạo công việc mới trong dự án này.", true);
     }
 });
 
@@ -752,7 +759,11 @@ function openEditModal(taskId) {
     const canEdit = (projPerm === 'edit' || projPerm === 'create' || projPerm === 'owner' || isOwnerOrAssignee);
 
     if (!canEdit) {
-        showMessage("Bạn không có quyền chỉnh sửa công việc này.", true);
+        if (editingTaskId) {
+            showMessage("Bạn không có quyền chỉnh sửa công việc này.", true);
+        } else {
+            showMessage("Bạn không có quyền tạo công việc trong dự án này.", true);
+        }
         return;
     }
 
