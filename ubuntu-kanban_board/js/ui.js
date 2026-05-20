@@ -38,7 +38,6 @@ export const userModalOverlay = document.getElementById('userModalOverlay');
 export const addUserForm = document.getElementById('addUserForm');
 export const newUsername = document.getElementById('newUsername');
 export const newUserPassword = document.getElementById('newUserPassword');
-export const newUserRole = document.getElementById('newUserRole');
 export const cancelUserBtn = document.getElementById('cancelUserBtn');
 export const userModalTitle = document.getElementById('userModalTitle');
 export const submitUserBtn = document.getElementById('submitUserBtn');

@@ -33,6 +33,23 @@ let editingTaskId = null;
 let actionToConfirm = { id: null, type: null, itemIndex: null }; // Để xử lý cả xóa và nhân bản, và chỉ mục mục checklist
 let selectedStatuses = ['all']; // Mặc định hiển thị tất cả
 
+// Helpers kiểm tra quyền cục bộ
+export function isUserInProject(project, userId) {
+    if (!project || !project.users) return false;
+    return project.users.some(u => (typeof u === 'string' ? u : u.useruid) === userId);
+}
+
+export function getProjectPermission(projectId) {
+    if (userPermission === 'owner') return 'owner'; // System admin luôn có quyền tối cao
+    if (!projectId || projectId === 'none' || projectId === 'all') return 'view';
+    const project = project_list.find(p => p.id === projectId);
+    if (project && project.users) {
+        const pUser = project.users.find(u => (typeof u === 'string' ? u : u.useruid) === currentUserId);
+        if (pUser) return typeof pUser === 'string' ? 'view' : (pUser.permission || 'view');
+    }
+    return 'view';
+}
+
 // Cập nhật tổng số công việc
 function updateTotalTaskCount() {
     totalTasksCount.textContent = getTasks().length;
@@ -80,7 +97,7 @@ function renderTasks(assigneeFilterValue = 'all', statusFilterValues = ['all'], 
             } else {
                 // Ẩn công việc thuộc dự án mà mình không phải thành viên
                 const project = project_list.find(p => p.id === task.projectId);
-                if (!project || !project.users || !project.users.includes(currentUserId)) {
+                if (!project || !isUserInProject(project, currentUserId)) {
                     return false;
                 }
             }
@@ -119,7 +136,7 @@ export function populateProjectFilter() {
     // Lọc dự án: Owner thấy toàn bộ, người dùng bình thường chỉ thấy dự án mình tham gia
     const visibleProjects = userPermission === 'owner' 
         ? project_list 
-        : project_list.filter(p => p.users && p.users.includes(currentUserId));
+        : project_list.filter(p => isUserInProject(p, currentUserId));
 
     visibleProjects.forEach((project) => {
         const option = document.createElement('option');
@@ -156,12 +173,15 @@ export function populateAssigneeFilter() {
         const project = project_list.find(p => p.id === projectFilter.value);
         if (project && project.users) {
             // Chỉ hiển thị user thuộc dự án
-            usersToDisplay = usersToDisplay.filter(u => project.users.includes(u.useruid));
+            usersToDisplay = usersToDisplay.filter(u => isUserInProject(project, u.useruid));
         } else {
             usersToDisplay = [];
         }
     } else if (userPermission !== 'owner') {
-        usersToDisplay = usersToDisplay.filter(u => u.useruid === currentUserId);
+        const myProjects = project_list.filter(p => isUserInProject(p, currentUserId));
+        const allowedUserIds = new Set([currentUserId]);
+        myProjects.forEach(p => p.users.forEach(pu => allowedUserIds.add(typeof pu === 'string' ? pu : pu.useruid)));
+        usersToDisplay = usersToDisplay.filter(u => allowedUserIds.has(u.useruid));
     }
 
     usersToDisplay.forEach((user) => {
@@ -199,8 +219,9 @@ function createTaskCard(task) {
     // Kiểm tra xem người dùng hiện tại có phải là chủ sở hữu hoặc người được gán của task hay không
     const isOwnerOrAssignee = (task.ownerId === currentUsername || task.assignee === currentUsername);
 
-    // Quyền kéo thả: 'edit' và 'create' có thể kéo tất cả, 'owner' chỉ kéo task của họ (do tạo hoặc được gán)
-    const canDrag = (userPermission === 'edit' || userPermission === 'create' || (userPermission === 'owner' && isOwnerOrAssignee));
+    const projPerm = getProjectPermission(task.projectId);
+    
+    const canDrag = (projPerm === 'edit' || projPerm === 'create' || projPerm === 'owner' || isOwnerOrAssignee);
 
     const isDraggable = canDrag && !task.locked;
     card.draggable = isDraggable; // Quyền 'view' không thể kéo thả
@@ -219,14 +240,13 @@ function createTaskCard(task) {
     const actionsContainer = document.createElement('div');
     actionsContainer.className = "flex justify-end gap-2 mb-2";
 
-    // Quyền chỉnh sửa: 'edit' và 'create' có thể chỉnh sửa tất cả, 'owner' chỉ task của họ
-    const canEdit = (userPermission === 'edit' || userPermission === 'create' || (userPermission === 'owner' && isOwnerOrAssignee));
+    const canEdit = (projPerm === 'edit' || projPerm === 'create' || projPerm === 'owner' || isOwnerOrAssignee);
 
     // Nút Nhân bản
     const cloneBtn = document.createElement('button');
     cloneBtn.innerHTML = `<i class="fas fa-clone text-gray-500 hover:text-gray-700"></i>`;
-    // Chỉ Edit và Creator mới có quyền nhân bản task
-    const canClone = (userPermission === 'edit' || userPermission === 'create');
+    
+    const canClone = (projPerm === 'edit' || projPerm === 'create' || projPerm === 'owner');
     cloneBtn.className = `p-1 rounded-full hover:bg-gray-200 ${!canClone || task.locked ? 'opacity-50 cursor-not-allowed' : ''}`;
     cloneBtn.disabled = !canClone || task.locked;
     cloneBtn.onclick = (e) => {
@@ -249,8 +269,8 @@ function createTaskCard(task) {
     // Nút Xóa
     const deleteBtn = document.createElement('button');
     deleteBtn.innerHTML = `<i class="fas fa-trash-alt text-red-500 hover:text-red-700"></i>`;
-    // Chỉ Creator mới có quyền xóa task
-    const canDelete = userPermission === 'create';
+    
+    const canDelete = (projPerm === 'create' || projPerm === 'owner');
     deleteBtn.className = `p-1 rounded-full hover:bg-gray-200 ${!canDelete || task.locked ? 'opacity-50 cursor-not-allowed' : ''}`;
     deleteBtn.disabled = !canDelete || task.locked;
     deleteBtn.onclick = (e) => {
@@ -368,7 +388,8 @@ function createTaskCard(task) {
 async function updateChecklistItem(taskId, itemIndex, completed) {
     const task = getTaskById(taskId);
     const isOwnerOrAssignee = (task.ownerId === currentUsername || task.assignee === currentUsername);
-    const canEdit = (userPermission === 'edit' || userPermission === 'create' || (userPermission === 'owner' && isOwnerOrAssignee));
+    const projPerm = getProjectPermission(task ? task.projectId : null);
+    const canEdit = (projPerm === 'edit' || projPerm === 'create' || projPerm === 'owner' || isOwnerOrAssignee);
 
     if (!canEdit) {
         showMessage("Bạn không có quyền chỉnh sửa công việc này.", true);
@@ -385,7 +406,8 @@ async function updateChecklistItem(taskId, itemIndex, completed) {
 async function deleteChecklistItem(taskId, itemIndex) {
     const task = getTaskById(taskId);
     const isOwnerOrAssignee = (task.ownerId === currentUsername || task.assignee === currentUsername);
-    const canEdit = (userPermission === 'edit' || userPermission === 'create' || (userPermission === 'owner' && isOwnerOrAssignee));
+    const projPerm = getProjectPermission(task ? task.projectId : null);
+    const canEdit = (projPerm === 'edit' || projPerm === 'create' || projPerm === 'owner' || isOwnerOrAssignee);
 
     if (!canEdit) {
         showMessage("Bạn không có quyền chỉnh sửa công việc này.", true);
@@ -403,10 +425,11 @@ async function deleteChecklistItem(taskId, itemIndex) {
 // Hiển thị modal xác nhận chung
 function showConfirmation(taskId, type, itemIndex = null) {
     const task = getTaskById(taskId);
-    const isOwnerOrAssignee = (task.ownerId === currentUsername || task.assignee === currentUsername);
-    const canEdit = (userPermission === 'edit' || userPermission === 'create');
-    const canDelete = userPermission === 'create';
-    const canClone = (userPermission === 'edit' || userPermission === 'create');
+    const isOwnerOrAssignee = task ? (task.ownerId === currentUsername || task.assignee === currentUsername) : false;
+    const projPerm = getProjectPermission(task ? task.projectId : null);
+    const canEdit = (projPerm === 'edit' || projPerm === 'create' || projPerm === 'owner' || isOwnerOrAssignee);
+    const canDelete = (projPerm === 'create' || projPerm === 'owner');
+    const canClone = (projPerm === 'edit' || projPerm === 'create' || projPerm === 'owner');
 
     // Kiểm tra quyền xóa riêng
     if (type === 'delete' && !canDelete) {
@@ -519,10 +542,12 @@ function showTaskDetails(task) {
             checkbox.type = 'checkbox';
             checkbox.checked = item.completed;
 
-            const isOwnerOrAssignee = (editingTaskId ? getTaskById(editingTaskId)?.ownerId === currentUsername || getTaskById(editingTaskId)?.assignee === currentUsername : userPermission === 'owner');
-            const canEdit = (userPermission === 'edit' || userPermission === 'create' || (userPermission === 'owner' && isOwnerOrAssignee));
+            const currentTask = editingTaskId ? getTaskById(editingTaskId) : task;
+            const projPerm = getProjectPermission(currentTask ? currentTask.projectId : null);
+            const isOwnerOrAssignee = currentTask ? (currentTask.ownerId === currentUsername || currentTask.assignee === currentUsername) : false;
+            const canEditCheckbox = (projPerm === 'edit' || projPerm === 'create' || projPerm === 'owner' || isOwnerOrAssignee);
 
-            checkbox.disabled = !canEdit || task.locked;
+            checkbox.disabled = !canEditCheckbox || task.locked;
             checkbox.className = 'form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer';
             checkbox.onchange = () => {
                 updateChecklistItem(task.id, index, checkbox.checked);
@@ -544,7 +569,7 @@ function showTaskDetails(task) {
     existingActionButtons.forEach(btn => btn.remove());
 
     // Thêm nút hành động mới nếu task đang ở trạng thái "Đánh giá"
-    if (task.status === 'review' && (userPermission === 'edit' || userPermission === 'create')) {
+    if (task.status === 'review' && (getProjectPermission(task.projectId) === 'edit' || getProjectPermission(task.projectId) === 'create' || getProjectPermission(task.projectId) === 'owner')) {
         const acceptBtn = document.createElement('button');
         acceptBtn.id = 'acceptDetailBtn';
         acceptBtn.textContent = 'Chấp nhận';
@@ -573,8 +598,8 @@ closeDetailModalBtn.addEventListener('click', () => {
 // Xóa một công việc
 async function deleteTask(taskId) {
     const task = getTaskById(taskId);
-    // Kiểm tra lại quyền xóa
-    if (userPermission !== 'create') {
+    const projPerm = getProjectPermission(task.projectId);
+    if (projPerm !== 'create' && projPerm !== 'owner') {
          showMessage("Bạn không có quyền xóa công việc này.", true);
          return;
     }
@@ -585,7 +610,8 @@ async function deleteTask(taskId) {
 // Nhân bản một công việc
 async function cloneTask(taskId) {
     const originalTask = getTaskById(taskId);
-    const canClone = (userPermission === 'edit' || userPermission === 'create');
+    const projPerm = getProjectPermission(originalTask.projectId);
+    const canClone = (projPerm === 'edit' || projPerm === 'create' || projPerm === 'owner');
     if (!canClone) {
         showMessage("Bạn không có quyền nhân bản công việc này.", true);
         return;
@@ -617,7 +643,11 @@ function populateProjectSelect(selectedProject = '') {
     // Lọc dự án: Owner thấy toàn bộ, người dùng bình thường chỉ thấy dự án mình tham gia
     const visibleProjects = userPermission === 'owner' 
         ? project_list 
-        : project_list.filter(p => p.users && p.users.includes(currentUserId));
+        : project_list.filter(p => {
+            if (!isUserInProject(p, currentUserId)) return false;
+            const perm = getProjectPermission(p.id);
+            return perm === 'create' || perm === 'edit';
+        });
 
     visibleProjects.forEach(project => {
         const option = document.createElement('option');
@@ -649,7 +679,7 @@ function populateAssigneeSelect(selectedAssignee = '', projectId = '') {
         const project = project_list.find(p => p.id === projectId);
         if (project && project.users) {
             // Chỉ lấy những user nằm trong project
-            usersToDisplay = usersToDisplay.filter(u => project.users.includes(u.useruid));
+            usersToDisplay = usersToDisplay.filter(u => isUserInProject(project, u.useruid));
         } else {
             usersToDisplay = [];
         }
@@ -692,12 +722,12 @@ openModalBtn.addEventListener('click', () => {
         ? project_list 
         : project_list.filter(p => p.users && p.users.includes(currentUserId));
         
-    if (visibleProjects.length === 0) {
-        showMessage("Bạn chưa tham gia dự án nào, không thể tạo công việc.", true);
-        return;
-    }
+    const canCreateGlobally = userPermission === 'owner' || project_list.some(p => {
+        const perm = getProjectPermission(p.id);
+        return isUserInProject(p, currentUserId) && (perm === 'create' || perm === 'edit');
+    });
 
-    if (userPermission === 'create' || userPermission === 'owner' || userPermission === 'edit') {
+    if (canCreateGlobally) {
         editingTaskId = null;
         modalTitle.textContent = "Thêm Công Việc Mới";
         submitBtn.textContent = "Thêm Công Việc";
@@ -717,8 +747,9 @@ openModalBtn.addEventListener('click', () => {
 // Mở modal để chỉnh sửa công việc
 function openEditModal(taskId) {
     const task = getTaskById(taskId);
+    const projPerm = getProjectPermission(task.projectId);
     const isOwnerOrAssignee = (task.ownerId === currentUsername || task.assignee === currentUsername);
-    const canEdit = (userPermission === 'edit' || userPermission === 'create' || (userPermission === 'owner' && isOwnerOrAssignee));
+    const canEdit = (projPerm === 'edit' || projPerm === 'create' || projPerm === 'owner' || isOwnerOrAssignee);
 
     if (!canEdit) {
         showMessage("Bạn không có quyền chỉnh sửa công việc này.", true);
@@ -764,13 +795,12 @@ confirmActionBtn.addEventListener('click', performAction);
 
 // Thêm một mục vào checklist trong Modal
 function addChecklistItem(text = '') {
-    const isOwnerOrAssignee = (editingTaskId ? getTaskById(editingTaskId)?.ownerId === currentUsername || getTaskById(editingTaskId)?.assignee === currentUsername : userPermission === 'owner');
-    const canCreate = (userPermission === 'create' || userPermission === 'edit' || (userPermission === 'owner' && isOwnerOrAssignee));
+    const currentTask = editingTaskId ? getTaskById(editingTaskId) : null;
+    const projPerm = getProjectPermission(currentTask ? currentTask.projectId : projectFilter.value);
+    const isOwnerOrAssignee = currentTask ? (currentTask.ownerId === currentUsername || currentTask.assignee === currentUsername) : false;
+    const canCreate = (projPerm === 'create' || projPerm === 'edit' || projPerm === 'owner' || isOwnerOrAssignee);
 
-    if (!canCreate && editingTaskId) {
-         showMessage("Bạn không có quyền thêm mục checklist.", true);
-         return;
-    } else if (!canCreate && !editingTaskId && userPermission !== 'create' && userPermission !== 'edit') {
+    if (!canCreate) {
         showMessage("Bạn không có quyền thêm mục checklist.", true);
         return;
     }
@@ -803,8 +833,9 @@ addChecklistItemBtn.addEventListener('click', () => addChecklistItem());
 addTaskForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const task = editingTaskId ? getTaskById(editingTaskId) : null;
+    const projPerm = getProjectPermission(taskProjectSelect.value);
     const isOwnerOrAssignee = (task ? task.ownerId === currentUsername || task.assignee === currentUsername : userPermission === 'owner');
-    const canEdit = (userPermission === 'edit' || userPermission === 'create' || (userPermission === 'owner' && isOwnerOrAssignee));
+    const canEdit = (projPerm === 'edit' || projPerm === 'create' || projPerm === 'owner' || isOwnerOrAssignee);
 
     if (!canEdit) {
         showMessage("Bạn không có quyền chỉnh sửa công việc này.", true);
@@ -863,8 +894,9 @@ addTaskForm.addEventListener('submit', async (e) => {
 // Cập nhật trạng thái công việc
 async function updateTaskStatus(taskId, newStatus) {
     const task = getTaskById(taskId);
+    const projPerm = getProjectPermission(task.projectId);
     const isOwnerOrAssignee = (task.ownerId === currentUsername || task.assignee === currentUsername);
-    const canMove = (userPermission === 'edit' || userPermission === 'create' || (userPermission === 'owner' && isOwnerOrAssignee));
+    const canMove = (projPerm === 'edit' || projPerm === 'create' || projPerm === 'owner' || isOwnerOrAssignee);
 
     if (!canMove) {
         showMessage("Bạn không có quyền di chuyển công việc này.", true);
@@ -896,9 +928,9 @@ async function updateTaskStatus(taskId, newStatus) {
 // Chuyển task trở lại cột "Việc cần làm" từ bất kỳ trạng thái nào
 async function rejectTask(taskId) {
     const task = getTaskById(taskId);
+    const projPerm = getProjectPermission(task.projectId);
 
-    // Thêm kiểm tra quyền cho `rejectTask`
-    if (userPermission !== 'create' && userPermission !== 'edit') {
+    if (projPerm !== 'create' && projPerm !== 'edit' && projPerm !== 'owner') {
          showMessage("Bạn không có quyền từ chối công việc này.", true);
          return;
     }
@@ -916,9 +948,9 @@ async function rejectTask(taskId) {
 // Chuyển task từ "Đánh giá" sang "Hoàn thành"
 async function acceptTask(taskId) {
     const task = getTaskById(taskId);
+    const projPerm = getProjectPermission(task.projectId);
 
-    // Thêm kiểm tra quyền cho `acceptTask`
-    if (userPermission !== 'create' && userPermission !== 'edit') {
+    if (projPerm !== 'create' && projPerm !== 'edit' && projPerm !== 'owner') {
          showMessage("Bạn không có quyền chấp nhận công việc này.", true);
          return;
     }
@@ -956,6 +988,7 @@ dropZones.forEach(zone => {
 if (projectFilter) {
     projectFilter.addEventListener('change', (e) => {
         populateAssigneeFilter(); // Cập nhật lại dropdown người thực hiện khi đổi Project
+        updateButtonStates();
         renderTasks(assigneeFilter.value, selectedStatuses, e.target.value);
     });
 }
@@ -1063,7 +1096,21 @@ document.addEventListener('click', (e) => {
 
 // Hàm cập nhật trạng thái nút dựa trên quyền
 function updateButtonStates() {
-    const canCreate = (userPermission === 'create' || userPermission === 'owner' || userPermission === 'edit');
+    let canCreate = false;
+    if (userPermission === 'owner') {
+        canCreate = true;
+    } else {
+        if (projectFilter.value && projectFilter.value !== 'none') {
+            const perm = getProjectPermission(projectFilter.value);
+            canCreate = (perm === 'create' || perm === 'edit');
+        } else {
+            canCreate = project_list.some(p => {
+                const perm = getProjectPermission(p.id);
+                return isUserInProject(p, currentUserId) && (perm === 'create' || perm === 'edit');
+            });
+        }
+    }
+
     openModalBtn.disabled = !canCreate;
     openModalBtn.classList.toggle('btn-disabled', !canCreate);
     
@@ -1093,10 +1140,8 @@ export async function initKanban() {
     if (dropdownUsername) dropdownUsername.textContent = currentUsername;
     if (dropdownRole) {
         const roleMap = {
-            'create': 'Người tạo (Create)',
-            'edit': 'Chỉnh sửa (Edit)',
-            'view': 'Chỉ xem (View)',
-            'owner': 'Quản lý (Owner)'
+            'owner': 'Quản trị hệ thống (Owner)',
+            'user': 'Người dùng'
         };
         dropdownRole.textContent = roleMap[userPermission] || (userPermission ? userPermission.toUpperCase() : 'Không rõ');
     }

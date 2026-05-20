@@ -1,7 +1,7 @@
 import { createUserAPI, updateUserAPI, fetchProjectsAPI, createProjectAPI, updateProjectAPI } from './api.js';
 import { getUserlist } from './user.js';
 import {
-    addUserBtn, userModalOverlay, addUserForm, newUsername, newUserPassword, newUserRole, cancelUserBtn, userModalTitle, submitUserBtn,
+    addUserBtn, userModalOverlay, addUserForm, newUsername, newUserPassword, cancelUserBtn, userModalTitle, submitUserBtn,
     openManageUsersBtn, manageUsersModalOverlay, closeManageUsersBtn, userListTableBody, openAddUserFromManageBtn,
     openManageProjectsBtn, manageProjectsModalOverlay, closeManageProjectsBtn, projectListTableBody, openAddProjectBtn,
     projectModalOverlay, projectModalTitle, projectForm, projectName, projectDescription, projectUsersContainer, cancelProjectBtn, submitProjectBtn,
@@ -27,7 +27,6 @@ export function initAdmin() {
             newUsername.classList.add('bg-gray-200', 'cursor-not-allowed');
             newUserPassword.placeholder = "Mật khẩu (để trống nếu không đổi)";
             newUserPassword.required = false;
-            newUserRole.value = user.permission;
         } else {
             editingUserUid = null;
             userModalTitle.textContent = "Thêm Người Dùng Mới";
@@ -37,7 +36,6 @@ export function initAdmin() {
             newUsername.classList.remove('bg-gray-200', 'cursor-not-allowed');
             newUserPassword.placeholder = "Mật khẩu";
             newUserPassword.required = true;
-            newUserRole.value = 'view';
         }
         userModalOverlay.classList.add('show');
     }
@@ -55,7 +53,7 @@ export function initAdmin() {
             
             const userData = {
                 username: newUsername.value.trim(),
-                permission: newUserRole.value
+                permission: 'user' // Mặc định là user thường
             };
             
             const pass = newUserPassword.value.trim();
@@ -119,10 +117,8 @@ export function initAdmin() {
             const statusText = isDisabled ? '<span class="text-red-600 font-semibold">Vô hiệu hóa</span>' : '<span class="text-green-600 font-semibold">Hoạt động</span>';
             
             const roleMap = {
-                'create': 'Người tạo (Create)',
-                'edit': 'Chỉnh sửa (Edit)',
-                'view': 'Chỉ xem (View)',
-                'owner': 'Quản lý (Owner)'
+                'owner': 'Quản trị hệ thống (Owner)',
+                'user': 'Người dùng'
             };
             const roleText = roleMap[user.permission] || user.permission;
 
@@ -149,8 +145,7 @@ export function initAdmin() {
                 const btnElement = e.currentTarget;
                 const uid = btnElement.getAttribute('data-uid');
                 const username = btnElement.getAttribute('data-username');
-                const permission = btnElement.getAttribute('data-role');
-                openUserModal({ useruid: uid, username, permission });
+                openUserModal({ useruid: uid, username });
             });
         });
 
@@ -202,8 +197,10 @@ export function initAdmin() {
             
             const memberCount = project.users ? project.users.length : 0;
             const memberNames = (project.users || []).map(uid => {
-                const user = user_list.find(u => u.useruid === uid);
-                return user ? user.username : uid;
+                const actualUid = typeof uid === 'string' ? uid : uid.useruid;
+                const role = typeof uid === 'string' ? 'view' : (uid.permission || 'view');
+                const user = user_list.find(u => u.useruid === actualUid);
+                return user ? `${user.username} (${role})` : actualUid;
             }).join(', ');
             
             tr.innerHTML = `
@@ -234,15 +231,37 @@ export function initAdmin() {
         projectUsersContainer.innerHTML = '';
         
         user_list.forEach(user => {
-            const isChecked = project && project.users && project.users.includes(user.useruid);
+            let isChecked = false;
+            let userProjRole = 'view';
+            if (project && project.users) {
+                const pUser = project.users.find(u => (typeof u === 'string' ? u : u.useruid) === user.useruid);
+                if (pUser) {
+                    isChecked = true;
+                    userProjRole = typeof pUser === 'string' ? 'view' : (pUser.permission || 'view');
+                }
+            }
+            
             const div = document.createElement('div');
-            div.className = 'flex items-center';
+            div.className = 'flex items-center justify-between p-2 hover:bg-gray-100 rounded-lg border-b border-gray-100';
             const disabledText = user.disabled ? ' <span class="text-red-500 ml-1 text-xs">(Đã vô hiệu hóa)</span>' : '';
             div.innerHTML = `
-                <input type="checkbox" id="user-chk-${user.useruid}" value="${user.useruid}" ${isChecked ? 'checked' : ''} class="project-user-checkbox form-checkbox h-4 w-4 text-blue-600 rounded">
-                <label for="user-chk-${user.useruid}" class="ml-2 text-sm text-gray-700">${user.username} (${user.permission})${disabledText}</label>
+                <div class="flex items-center">
+                    <input type="checkbox" id="user-chk-${user.useruid}" value="${user.useruid}" ${isChecked ? 'checked' : ''} class="project-user-checkbox form-checkbox h-4 w-4 text-blue-600 rounded">
+                    <label for="user-chk-${user.useruid}" class="ml-2 text-sm text-gray-700 font-medium">${user.username}${disabledText}</label>
+                </div>
+                <select id="user-role-${user.useruid}" class="project-user-role-select text-sm p-1 border border-gray-300 rounded focus:outline-none bg-white" ${isChecked ? '' : 'disabled'}>
+                    <option value="view" ${userProjRole === 'view' ? 'selected' : ''}>Chỉ xem (View)</option>
+                    <option value="edit" ${userProjRole === 'edit' ? 'selected' : ''}>Chỉnh sửa (Edit)</option>
+                    <option value="create" ${userProjRole === 'create' ? 'selected' : ''}>Quản lý (Create)</option>
+                </select>
             `;
             projectUsersContainer.appendChild(div);
+
+            const chk = div.querySelector(`#user-chk-${user.useruid}`);
+            const sel = div.querySelector(`#user-role-${user.useruid}`);
+            chk.addEventListener('change', (e) => {
+                sel.disabled = !e.target.checked;
+            });
         });
 
         if (project) {
@@ -269,7 +288,17 @@ export function initAdmin() {
     if (projectForm) {
         projectForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const selectedUsers = Array.from(document.querySelectorAll('.project-user-checkbox:checked')).map(chk => chk.value);
+            
+            const selectedUsers = [];
+            document.querySelectorAll('.project-user-checkbox:checked').forEach(chk => {
+                const uid = chk.value;
+                const roleSelect = document.getElementById(`user-role-${uid}`);
+                selectedUsers.push({
+                    useruid: uid,
+                    permission: roleSelect.value
+                });
+            });
+
             const projectData = {
                 name: projectName.value.trim(),
                 description: projectDescription.value.trim(),
