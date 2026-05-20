@@ -15,6 +15,7 @@ export const openModalBtn = document.getElementById('openModalBtn');
 export const taskModalOverlay = document.getElementById('taskModalOverlay');
 export const addTaskForm = document.getElementById('addTaskForm');
 export const taskTitleInput = document.getElementById('taskTitleInput');
+export const taskProjectSelect = document.getElementById('taskProjectSelect');
 export const taskAssigneeSelect = document.getElementById('taskAssigneeSelect');
 export const checklistContainer = document.getElementById('checklistContainer');
 export const addChecklistItemBtn = document.getElementById('addChecklistItemBtn');
@@ -39,6 +40,8 @@ export const newUsername = document.getElementById('newUsername');
 export const newUserPassword = document.getElementById('newUserPassword');
 export const newUserRole = document.getElementById('newUserRole');
 export const cancelUserBtn = document.getElementById('cancelUserBtn');
+export const userModalTitle = document.getElementById('userModalTitle');
+export const submitUserBtn = document.getElementById('submitUserBtn');
 
 // Profile Dropdown
 export const userProfileContainer = document.getElementById('userProfileContainer');
@@ -48,11 +51,40 @@ export const dropdownUsername = document.getElementById('dropdownUsername');
 export const dropdownRole = document.getElementById('dropdownRole');
 export const manageUsersDropdownItem = document.getElementById('manageUsersDropdownItem');
 export const openManageUsersBtn = document.getElementById('openManageUsersBtn');
+export const manageProjectsDropdownItem = document.getElementById('manageProjectsDropdownItem');
+export const openManageProjectsBtn = document.getElementById('openManageProjectsBtn');
+export const changePasswordDropdownItem = document.getElementById('changePasswordDropdownItem');
+export const openChangePasswordBtn = document.getElementById('openChangePasswordBtn');
+
+// Đổi Mật Khẩu Modal
+export const changePasswordModalOverlay = document.getElementById('changePasswordModalOverlay');
+export const changePasswordForm = document.getElementById('changePasswordForm');
+export const newPasswordInput = document.getElementById('newPasswordInput');
+export const confirmPasswordInput = document.getElementById('confirmPasswordInput');
+export const cancelChangePasswordBtn = document.getElementById('cancelChangePasswordBtn');
+export const submitChangePasswordBtn = document.getElementById('submitChangePasswordBtn');
 
 // Quản lý Users Modal
 export const manageUsersModalOverlay = document.getElementById('manageUsersModalOverlay');
 export const closeManageUsersBtn = document.getElementById('closeManageUsersBtn');
 export const userListTableBody = document.getElementById('userListTableBody');
+export const openAddUserFromManageBtn = document.getElementById('openAddUserFromManageBtn');
+
+// Quản lý Dự án Modal
+export const manageProjectsModalOverlay = document.getElementById('manageProjectsModalOverlay');
+export const closeManageProjectsBtn = document.getElementById('closeManageProjectsBtn');
+export const projectListTableBody = document.getElementById('projectListTableBody');
+export const openAddProjectBtn = document.getElementById('openAddProjectBtn');
+
+// Form Dự án Modal
+export const projectModalOverlay = document.getElementById('projectModalOverlay');
+export const projectModalTitle = document.getElementById('projectModalTitle');
+export const projectForm = document.getElementById('projectForm');
+export const projectName = document.getElementById('projectName');
+export const projectDescription = document.getElementById('projectDescription');
+export const projectUsersContainer = document.getElementById('projectUsersContainer');
+export const cancelProjectBtn = document.getElementById('cancelProjectBtn');
+export const submitProjectBtn = document.getElementById('submitProjectBtn');
 
 // Modal xác nhận
 export const confirmationModalOverlay = document.getElementById('confirmationModalOverlay');
@@ -74,6 +106,7 @@ export const completedAtSection = document.getElementById('completedAtSection');
 export const detailModalFooter = document.getElementById('detailModalFooter');
 
 // Lọc
+export const projectFilter = document.getElementById('projectFilter');
 export const assigneeFilter = document.getElementById('assigneeFilter');
 export const statusFilterDropdown = document.getElementById('statusFilter');
 export const statusDropdownList = document.getElementById('statusDropdownList');

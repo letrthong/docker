@@ -1,6 +1,7 @@
 from flask import Flask, send_from_directory, request, jsonify
 import os
 import json
+import uuid
 
 app = Flask(__name__, static_folder="static")
 
@@ -8,6 +9,7 @@ app = Flask(__name__, static_folder="static")
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 USERS_FILE = os.path.join(DATA_DIR, 'users.json')
 TASKS_FILE = os.path.join(DATA_DIR, 'tasks.json')
+PROJECTS_FILE = os.path.join(DATA_DIR, 'projects.json')
 
 def init_db():
     """Khởi tạo thư mục và file dữ liệu mặc định nếu chưa tồn tại"""
@@ -22,6 +24,10 @@ def init_db():
             
     if not os.path.exists(TASKS_FILE):
         with open(TASKS_FILE, 'w', encoding='utf-8') as f:
+            json.dump([], f, ensure_ascii=False, indent=4)
+            
+    if not os.path.exists(PROJECTS_FILE):
+        with open(PROJECTS_FILE, 'w', encoding='utf-8') as f:
             json.dump([], f, ensure_ascii=False, indent=4)
 
 def read_json(filepath):
@@ -106,9 +112,41 @@ def update_user(useruid):
             # Cập nhật trạng thái disabled
             if 'disabled' in updated_data:
                 users[i]['disabled'] = updated_data['disabled']
+            if 'password' in updated_data:
+                users[i]['password'] = updated_data['password']
+            if 'permission' in updated_data:
+                users[i]['permission'] = updated_data['permission']
             write_json(USERS_FILE, users)
             return jsonify({"message": "User updated successfully", "user": users[i]})
     return jsonify({"error": "User not found"}), 404
+
+@app.route("/api/projects", methods=["GET"])
+def get_projects():
+    return jsonify(read_json(PROJECTS_FILE))
+
+@app.route("/api/projects", methods=["POST"])
+def create_project():
+    new_project = request.json
+    projects = read_json(PROJECTS_FILE)
+    
+    new_project['id'] = str(uuid.uuid4().hex)
+    if 'users' not in new_project:
+        new_project['users'] = []
+        
+    projects.append(new_project)
+    write_json(PROJECTS_FILE, projects)
+    return jsonify({"message": "Tạo dự án thành công", "project": new_project}), 201
+
+@app.route("/api/projects/<project_id>", methods=["PUT"])
+def update_project(project_id):
+    updated_data = request.json
+    projects = read_json(PROJECTS_FILE)
+    for i, project in enumerate(projects):
+        if project['id'] == project_id:
+            projects[i].update(updated_data)
+            write_json(PROJECTS_FILE, projects)
+            return jsonify({"message": "Cập nhật dự án thành công", "project": projects[i]})
+    return jsonify({"error": "Không tìm thấy dự án"}), 404
 
 @app.route("/api/tasks", methods=["GET"])
 def get_tasks():

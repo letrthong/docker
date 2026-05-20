@@ -83,6 +83,28 @@ export async function updateUserAPI(useruid, userData) {
     });
 }
 
+// --- 3. API DỰ ÁN (PROJECTS) ---
+
+export async function fetchProjectsAPI() {
+    return await apiFetch('/projects');
+}
+
+export async function createProjectAPI(projectData) {
+    return await apiFetch('/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(projectData)
+    });
+}
+
+export async function updateProjectAPI(projectId, projectData) {
+    return await apiFetch(`/projects/${projectId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(projectData)
+    });
+}
+
 // --- 2. API CÔNG VIỆC (TASKS) ---
 
 export async function fetchTasksAPI() {

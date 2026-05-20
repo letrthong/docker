@@ -1,27 +1,32 @@
 import { getUserIdInfo, getUserlist } from './user.js';
 import { getTasks, getTaskById, fetchAndLoadTasks, addTaskData, updateTaskData, removeTaskData } from './task.js';
-import { loginAPI, createUserAPI, updateUserAPI } from './api.js';
+import { loginAPI, fetchProjectsAPI } from './api.js';
 import {
     loginScreen, kanbanBoard, loginForm, loginUsername, loginPassword, logoutBtn, loggedInUserDisplay,
-    addUserBtn, userModalOverlay, addUserForm, newUsername, newUserPassword, newUserRole, cancelUserBtn,
+    addUserBtn,
     userProfileContainer, userProfileBtn, userInfoDropdown, dropdownUsername, dropdownRole,
-    manageUsersDropdownItem, openManageUsersBtn, manageUsersModalOverlay, closeManageUsersBtn, userListTableBody,
+    manageUsersDropdownItem, manageProjectsDropdownItem,
     totalTasksCount, todoColumn, inprogressColumn, blockedColumn, reviewColumn, doneColumn,
     openModalBtn, taskModalOverlay, addTaskForm, taskTitleInput, taskAssigneeSelect,
-    checklistContainer, addChecklistItemBtn, cancelBtn, modalTitle, submitBtn,
+    taskProjectSelect, checklistContainer, addChecklistItemBtn, cancelBtn, modalTitle, submitBtn,
     confirmationModalOverlay, confirmTitle, confirmMessage, confirmActionBtn, cancelConfirmBtn,
     detailModalOverlay, detailTitle, detailOwner, detailAssignee, detailCreatedAt,
     detailCompletedAt, detailChecklistItems, closeDetailModalBtn, completedAtSection, detailModalFooter,
-    assigneeFilter, statusFilterDropdown, statusDropdownList, statusDropdownButton,
+    projectFilter, assigneeFilter, statusFilterDropdown, statusDropdownList, statusDropdownButton,
     showMessage, dateFormatter, getAssigneeColor
 } from './ui.js';
+import { initAuth } from './auth.js';
+import { initAdmin } from './admin.js';
 
-let user_info;
-let userPermission;
-let currentUserId;
-let currentUsername;
+export let user_info;
+export let userPermission;
+export let currentUserId;
+export let currentUsername;
 
-let user_list = [];
+export let user_list = [];
+export let project_list = [];
+export const setUserList = (list) => { user_list = list; };
+export const setProjectList = (list) => { project_list = list; };
 
 let draggedItemId = null;
 let editingTaskId = null;
@@ -36,8 +41,9 @@ function updateTotalTaskCount() {
 // Cập nhật giao diện sau khi thay đổi dữ liệu
 function refreshUI() {
     populateAssigneeFilter();
+    populateProjectFilter();
     updateTotalTaskCount();
-    renderTasks(assigneeFilter.value, selectedStatuses);
+    renderTasks(assigneeFilter.value, selectedStatuses, projectFilter.value);
 }
 
 // Tải dữ liệu từ backend
@@ -53,7 +59,7 @@ async function loadTasks() {
 }
 
 // Tạo và hiển thị các thẻ công việc
-function renderTasks(assigneeFilterValue = 'all', statusFilterValues = ['all']) {
+function renderTasks(assigneeFilterValue = 'all', statusFilterValues = ['all'], projectFilterValue = 'all') {
     // Xóa nội dung cũ trong các cột
     todoColumn.innerHTML = '';
     inprogressColumn.innerHTML = '';
@@ -63,10 +69,28 @@ function renderTasks(assigneeFilterValue = 'all', statusFilterValues = ['all']) 
 
     // Lọc công việc
     const filteredTasks = getTasks().filter(task => {
+        // Nếu không phải owner, cô lập hoàn toàn dữ liệu
+        if (userPermission !== 'owner') {
+            // Luôn nhìn thấy công việc do chính mình tạo hoặc được phân công (Dù ở trong hay ngoài dự án)
+            if (task.ownerId === currentUsername || task.assignee === currentUsername) {
+                // Cho phép hiển thị
+            } else if (!task.projectId || task.projectId === 'all' || task.projectId === '') {
+                // Ẩn toàn bộ công việc không thuộc dự án nào (trừ khi nó thuộc về mình như trên)
+                return false;
+            } else {
+                // Ẩn công việc thuộc dự án mà mình không phải thành viên
+                const project = project_list.find(p => p.id === task.projectId);
+                if (!project || !project.users || !project.users.includes(currentUserId)) {
+                    return false;
+                }
+            }
+        }
+
         const normalizedAssignee = task.assignee ? task.assignee.toLowerCase().trim() : '';
         const assigneeMatch = (assigneeFilterValue === 'all' || normalizedAssignee === assigneeFilterValue);
         const statusMatch = (statusFilterValues.includes('all') || statusFilterValues.includes(task.status));
-        return assigneeMatch && statusMatch;
+        const projectMatch = (projectFilterValue === 'all' || task.projectId === projectFilterValue);
+        return assigneeMatch && statusMatch && projectMatch;
     });
 
     // Hiển thị các task đã lọc
@@ -86,20 +110,62 @@ function renderTasks(assigneeFilterValue = 'all', statusFilterValues = ['all']) 
     });
 }
 
+// Thêm các tùy chọn dự án vào bộ lọc
+export function populateProjectFilter() {
+    if (!projectFilter) return;
+    const currentFilterValue = projectFilter.value;
+    projectFilter.innerHTML = '<option value="all">Tất cả dự án</option>';
+
+    // Lọc dự án: Owner thấy toàn bộ, người dùng bình thường chỉ thấy dự án mình tham gia
+    const visibleProjects = userPermission === 'owner' 
+        ? project_list 
+        : project_list.filter(p => p.users && p.users.includes(currentUserId));
+
+    visibleProjects.forEach((project) => {
+        const option = document.createElement('option');
+        option.value = project.id;
+        option.textContent = project.name;
+        projectFilter.appendChild(option);
+    });
+
+    // Nếu giá trị đã chọn trước đó vẫn còn trong danh sách, giữ nguyên
+    if (Array.from(projectFilter.options).some(opt => opt.value === currentFilterValue)) {
+        projectFilter.value = currentFilterValue;
+    } else {
+        projectFilter.value = 'all';
+    }
+}
+
 // Thêm các tùy chọn người thực hiện vào bộ lọc
-function populateAssigneeFilter() {
+export function populateAssigneeFilter() {
     const currentFilterValue = assigneeFilter.value;
     assigneeFilter.innerHTML = '<option value="all">Tất cả</option>';
 
-    user_list.forEach((user) => {
+    // Bỏ qua những user đã bị vô hiệu hóa
+    let usersToDisplay = user_list.filter(u => !u.disabled);
+    if (projectFilter && projectFilter.value !== 'all') {
+        const project = project_list.find(p => p.id === projectFilter.value);
+        if (project && project.users) {
+            // Chỉ hiển thị user thuộc dự án
+            usersToDisplay = usersToDisplay.filter(u => project.users.includes(u.useruid));
+        } else {
+            usersToDisplay = [];
+        }
+    }
+
+    usersToDisplay.forEach((user) => {
         const option = document.createElement('option');
         option.value = user.username.toLowerCase().trim();
         option.textContent = user.username;
         assigneeFilter.appendChild(option);
     });
 
-    // Đặt lại giá trị bộ lọc đã chọn trước đó
-    assigneeFilter.value = currentFilterValue;
+    // Đặt lại giá trị bộ lọc đã chọn trước đó nếu giá trị đó vẫn còn trong danh sách
+    if (Array.from(assigneeFilter.options).some(opt => opt.value === currentFilterValue)) {
+        assigneeFilter.value = currentFilterValue;
+    } else {
+        assigneeFilter.value = 'all';
+    }
 }
 
 // Tạo một thẻ công việc và xử lý kéo thả
@@ -200,6 +266,16 @@ function createTaskCard(task) {
     title.className = "font-bold flex-1 pr-16";
 
     card.appendChild(actionsContainer);
+    
+    if (task.projectId) {
+        const project = project_list.find(p => p.id === task.projectId);
+        if (project) {
+            const projectTag = document.createElement('div');
+            projectTag.className = "text-xs font-semibold text-purple-600 bg-purple-100 rounded-md px-2 py-1 mb-2 inline-block";
+            projectTag.textContent = project.name;
+            card.appendChild(projectTag);
+        }
+    }
     card.appendChild(title);
     // --- Kết thúc cập nhật ---
 
@@ -508,6 +584,7 @@ async function cloneTask(taskId) {
         const newTask = {
             id: crypto.randomUUID(),
             title: originalTask.title,
+            projectId: originalTask.projectId || null,
             assignee: originalTask.assignee,
             // Tạo bản sao sâu của checklist để không ảnh hưởng đến bản gốc
             items: JSON.parse(JSON.stringify(originalTask.items)),
@@ -522,34 +599,79 @@ async function cloneTask(taskId) {
     }
 }
 
+// Hàm để điền danh sách dự án vào select box
+function populateProjectSelect(selectedProject = '') {
+    taskProjectSelect.innerHTML = '<option value="">-- Chọn dự án (Không bắt buộc) --</option>';
+    
+    // Lọc dự án: Owner thấy toàn bộ, người dùng bình thường chỉ thấy dự án mình tham gia
+    const visibleProjects = userPermission === 'owner' 
+        ? project_list 
+        : project_list.filter(p => p.users && p.users.includes(currentUserId));
+
+    visibleProjects.forEach(project => {
+        const option = document.createElement('option');
+        option.value = project.id;
+        option.textContent = project.name;
+        taskProjectSelect.appendChild(option);
+    });
+
+    if (selectedProject) {
+        let option = Array.from(taskProjectSelect.options).find(opt => opt.value === selectedProject);
+        if (!option) {
+            const originalProject = project_list.find(p => p.id === selectedProject);
+            option = document.createElement('option');
+            option.value = selectedProject;
+            option.textContent = originalProject ? `${originalProject.name} (Ngoài dự án)` : `${selectedProject} (Dự án đã xóa)`;
+            taskProjectSelect.appendChild(option);
+        }
+        taskProjectSelect.value = selectedProject;
+    }
+}
+
 // Hàm để điền danh sách người dùng vào select box
-function populateAssigneeSelect(selectedAssignee = '') {
+function populateAssigneeSelect(selectedAssignee = '', projectId = '') {
     taskAssigneeSelect.innerHTML = '';
 
-    // Vai trò Owner chỉ có thể gán task cho chính mình
-    if (userPermission === 'owner') {
-        const option = document.createElement('option');
-        option.value = currentUsername;
-        option.textContent = currentUsername;
-        taskAssigneeSelect.appendChild(option);
-    } else if (userPermission === 'edit' || userPermission === 'create') {
-        // Vai trò Edit và Creator có thể gán cho bất kỳ ai
-        user_list.forEach(user => {
+    // Bỏ qua những user đã bị vô hiệu hóa
+    let usersToDisplay = user_list.filter(u => !u.disabled);
+    if (projectId) {
+        const project = project_list.find(p => p.id === projectId);
+        if (project && project.users) {
+            // Chỉ lấy những user nằm trong project
+            usersToDisplay = usersToDisplay.filter(u => project.users.includes(u.useruid));
+        } else {
+            usersToDisplay = [];
+        }
+    }
+
+    // Quản lý (Owner), Người tạo (Create), Chỉnh sửa (Edit) đều có thể gán cho bất kỳ ai trong dự án
+    usersToDisplay.forEach(user => {
             const option = document.createElement('option');
             option.value = user.username;
             option.textContent = user.username;
             taskAssigneeSelect.appendChild(option);
-        });
-    }
+    });
 
     if (selectedAssignee) {
-        const option = Array.from(taskAssigneeSelect.options).find(opt => opt.value === selectedAssignee);
-        if (option) {
-            option.selected = true;
+        let option = Array.from(taskAssigneeSelect.options).find(opt => opt.value === selectedAssignee);
+        if (!option) {
+            // Nếu user cũ không còn trong dự án, vẫn giữ lại để không bị mất data khi ấn Sửa
+            option = document.createElement('option');
+            option.value = selectedAssignee;
+            option.textContent = `${selectedAssignee} (Ngoài dự án/Đã khóa)`;
+            taskAssigneeSelect.appendChild(option);
         }
+        option.selected = true;
     } else {
          taskAssigneeSelect.value = currentUsername;
     }
+}
+
+// Cập nhật danh sách người thực hiện khi thay đổi Dự án trong Form
+if (taskProjectSelect) {
+    taskProjectSelect.addEventListener('change', (e) => {
+        populateAssigneeSelect(taskAssigneeSelect.value, e.target.value);
+    });
 }
 
 // Mở modal để thêm công việc mới
@@ -561,7 +683,8 @@ openModalBtn.addEventListener('click', () => {
         addTaskForm.reset();
         checklistContainer.innerHTML = '';
         addChecklistItem();
-        populateAssigneeSelect();
+        populateProjectSelect();
+        populateAssigneeSelect('', taskProjectSelect.value);
         taskModalOverlay.classList.add('show');
     } else {
         showMessage("Bạn không có quyền tạo công việc mới.", true);
@@ -585,7 +708,8 @@ function openEditModal(taskId) {
 
     if (task) {
         taskTitleInput.value = task.title;
-        populateAssigneeSelect(task.assignee);
+        populateProjectSelect(task.projectId);
+        populateAssigneeSelect(task.assignee, task.projectId);
         checklistContainer.innerHTML = '';
 
         if (task.items && task.items.length > 0) {
@@ -665,6 +789,7 @@ addTaskForm.addEventListener('submit', async (e) => {
     }
 
     const title = taskTitleInput.value.trim();
+    const projectId = taskProjectSelect.value;
     const assignee = taskAssigneeSelect.value.trim();
     const items = Array.from(checklistContainer.querySelectorAll('input')).map(input => ({
         text: input.value.trim(),
@@ -679,6 +804,7 @@ addTaskForm.addEventListener('submit', async (e) => {
         // Chế độ chỉnh sửa
         if (task) {
             task.title = title;
+            task.projectId = projectId || null;
             task.assignee = assignee;
             task.items = items;
         }
@@ -687,6 +813,7 @@ addTaskForm.addEventListener('submit', async (e) => {
         const newTask = {
             id: crypto.randomUUID(),
             title: title,
+            projectId: projectId || null,
             assignee: assignee,
             items: items,
             status: 'todo',
@@ -796,10 +923,18 @@ dropZones.forEach(zone => {
     });
 });
 
+// Thêm sự kiện thay đổi cho bộ lọc dự án
+if (projectFilter) {
+    projectFilter.addEventListener('change', (e) => {
+        populateAssigneeFilter(); // Cập nhật lại dropdown người thực hiện khi đổi Project
+        renderTasks(assigneeFilter.value, selectedStatuses, e.target.value);
+    });
+}
+
 // Thêm sự kiện thay đổi cho bộ lọc người thực hiện
 assigneeFilter.addEventListener('change', (e) => {
     const selectedAssignee = e.target.value;
-    renderTasks(selectedAssignee, selectedStatuses);
+    renderTasks(selectedAssignee, selectedStatuses, projectFilter.value);
 });
 
 // Xử lý bộ lọc trạng thái đa lựa chọn
@@ -869,7 +1004,7 @@ statusDropdownList.querySelectorAll('input').forEach(input => {
             }
         }
         
-        renderTasks(assigneeFilter.value, selectedStatuses);
+        renderTasks(assigneeFilter.value, selectedStatuses, projectFilter.value);
     });
 });
 
@@ -913,113 +1048,12 @@ function updateButtonStates() {
     }
 }
 
-// --- Logic Thêm Người Dùng ---
-if (addUserBtn) {
-    addUserBtn.addEventListener('click', () => {
-        userModalOverlay.classList.add('show');
-    });
-}
-
-if (cancelUserBtn) {
-    cancelUserBtn.addEventListener('click', () => {
-        userModalOverlay.classList.remove('show');
-        addUserForm.reset();
-    });
-}
-
-if (addUserForm) {
-    addUserForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const userData = {
-            username: newUsername.value.trim(),
-            password: newUserPassword.value.trim(),
-            permission: newUserRole.value
-        };
-        
-        const response = await createUserAPI(userData);
-        if (response) {
-            showMessage("Đã tạo người dùng thành công!");
-            userModalOverlay.classList.remove('show');
-            addUserForm.reset();
-            
-            // Cập nhật lại danh sách người dùng vào bộ lọc gán việc
-            user_list = await getUserlist();
-            populateAssigneeFilter();
-        }
-    });
-}
-
-// --- Logic Quản lý User ---
-if (openManageUsersBtn) {
-    openManageUsersBtn.addEventListener('click', async () => {
-        userInfoDropdown.classList.add('hidden');
-        userInfoDropdown.classList.remove('flex');
-        await renderManageUsersTable();
-        manageUsersModalOverlay.classList.add('show');
-    });
-}
-
-if (closeManageUsersBtn) {
-    closeManageUsersBtn.addEventListener('click', () => {
-        manageUsersModalOverlay.classList.remove('show');
-    });
-}
-
-async function renderManageUsersTable() {
-    if (!userListTableBody) return;
-    user_list = await getUserlist(); // Cập nhật danh sách mới nhất
-    userListTableBody.innerHTML = '';
-    
-    user_list.forEach(user => {
-        const tr = document.createElement('tr');
-        tr.className = "border-b hover:bg-gray-50 transition-colors";
-        
-        const isOwner = user.permission === 'owner';
-        const isDisabled = user.disabled === true;
-        const statusText = isDisabled ? '<span class="text-red-600 font-semibold">Vô hiệu hóa</span>' : '<span class="text-green-600 font-semibold">Hoạt động</span>';
-        
-        // Vai trò
-        const roleMap = {
-            'create': 'Người tạo (Create)',
-            'edit': 'Chỉnh sửa (Edit)',
-            'view': 'Chỉ xem (View)',
-            'owner': 'Quản lý (Owner)'
-        };
-        const roleText = roleMap[user.permission] || user.permission;
-
-        tr.innerHTML = `
-            <td class="py-3 px-4 text-sm text-gray-800 font-medium">${user.username}</td>
-            <td class="py-3 px-4 text-sm text-gray-600">${roleText}</td>
-            <td class="py-3 px-4 text-sm">${statusText}</td>
-            <td class="py-3 px-4 text-center">
-                ${!isOwner ? `
-                    <button class="toggle-user-status-btn text-xs font-semibold py-1 px-3 rounded-lg transition-colors ${isDisabled ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}" data-uid="${user.useruid}" data-disabled="${isDisabled}">
-                        ${isDisabled ? 'Kích hoạt' : 'Vô hiệu hóa'}
-                    </button>
-                ` : '<span class="text-xs text-gray-400 font-medium">Không thể sửa</span>'}
-            </td>
-        `;
-        userListTableBody.appendChild(tr);
-    });
-
-    // Thêm event listener cho các nút toggle
-    document.querySelectorAll('.toggle-user-status-btn').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-            const uid = e.target.getAttribute('data-uid');
-            const currentlyDisabled = e.target.getAttribute('data-disabled') === 'true';
-            
-            const response = await updateUserAPI(uid, { disabled: !currentlyDisabled });
-            if (response) {
-                showMessage(!currentlyDisabled ? "Đã vô hiệu hóa tài khoản!" : "Đã kích hoạt lại tài khoản!");
-                await renderManageUsersTable(); // Render lại bảng để cập nhật trạng thái
-            }
-        });
-    });
-}
+// Khởi tạo các module con
+initAuth();
+initAdmin();
 
 // Hàm gom lại chức năng khởi tạo Kanban sau khi Đăng nhập
-async function initKanban() {
+export async function initKanban() {
     user_info = await getUserIdInfo();
     userPermission = user_info.permission;
     currentUserId = user_info.useruid;
@@ -1038,17 +1072,22 @@ async function initKanban() {
         dropdownRole.textContent = roleMap[userPermission] || (userPermission ? userPermission.toUpperCase() : 'Không rõ');
     }
     
-    // Hiển thị nút Quản lý User nếu là Owner
+    // Hiển thị nút Quản lý User và Dự án nếu là Owner
     if (manageUsersDropdownItem) {
         if (userPermission === 'owner') {
             manageUsersDropdownItem.classList.remove('hidden');
+            if (manageProjectsDropdownItem) manageProjectsDropdownItem.classList.remove('hidden');
         } else {
             manageUsersDropdownItem.classList.add('hidden');
+            if (manageProjectsDropdownItem) manageProjectsDropdownItem.classList.add('hidden');
         }
     }
 
     // Tải danh sách user từ backend 1 lần duy nhất lúc khởi động
     user_list = await getUserlist();
+
+    // Tải danh sách dự án từ backend
+    project_list = await fetchProjectsAPI();
 
     await loadTasks();
     updateButtonStates();
@@ -1067,28 +1106,3 @@ window.onload = async function() {
         loginScreen.classList.add('flex');
     }
 };
-
-// Xử lý sự kiện gửi Form Đăng nhập
-loginForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const username = loginUsername.value.trim();
-    const password = loginPassword.value.trim();
-
-    const response = await loginAPI(username, password);
-    if (response && response.token) {
-        localStorage.setItem('kanban_token', response.token);
-        loginForm.reset();
-        loginScreen.classList.add('hidden');
-        loginScreen.classList.remove('flex');
-        await initKanban();
-        showMessage(response.message || "Đăng nhập thành công!");
-    }
-});
-
-// Xử lý sự kiện đăng xuất
-if (logoutBtn) {
-    logoutBtn.addEventListener('click', () => {
-        localStorage.removeItem('kanban_token');
-        window.location.reload(); // Tải lại trang web để xóa toàn bộ trạng thái RAM
-    });
-}
