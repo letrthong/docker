@@ -50,6 +50,28 @@ export function getProjectPermission(projectId) {
     return 'view';
 }
 
+// Hàm hỗ trợ hiển thị Sprint kèm thời gian
+export function getSprintDisplayText(sprint) {
+    if (!sprint) return null;
+    let text = sprint.isCurrent ? `${sprint.name} ⭐` : sprint.name;
+    const formatDate = (d) => {
+        if (!d) return '';
+        const parts = d.split('-');
+        return parts.length === 3 ? `${parts[2]}/${parts[1]}` : d; // Chuyển YYYY-MM-DD thành DD/MM
+    };
+    const start = formatDate(sprint.startDate);
+    const end = formatDate(sprint.endDate);
+    
+    if (start && end) {
+        text += ` (${start} - ${end})`;
+    } else if (start) {
+        text += ` (Từ ${start})`;
+    } else if (end) {
+        text += ` (Đến ${end})`;
+    }
+    return text;
+}
+
 // Cập nhật tổng số công việc
 function updateTotalTaskCount() {
     totalTasksCount.textContent = getTasks().length;
@@ -58,9 +80,12 @@ function updateTotalTaskCount() {
 // Cập nhật giao diện sau khi thay đổi dữ liệu
 function refreshUI() {
     populateProjectFilter();
+    populateSprintFilter();
     populateAssigneeFilter();
     updateTotalTaskCount();
-    renderTasks(assigneeFilter.value, selectedStatuses, projectFilter.value);
+    const sprintFilterEl = document.getElementById('sprintFilter');
+    const sfValue = sprintFilterEl ? sprintFilterEl.value : 'all';
+    renderTasks(assigneeFilter.value, selectedStatuses, projectFilter.value, sfValue);
 }
 
 // Tải dữ liệu từ backend
@@ -76,7 +101,7 @@ async function loadTasks() {
 }
 
 // Tạo và hiển thị các thẻ công việc
-function renderTasks(assigneeFilterValue = 'all', statusFilterValues = ['all'], projectFilterValue = 'none') {
+function renderTasks(assigneeFilterValue = 'all', statusFilterValues = ['all'], projectFilterValue = 'none', sprintFilterValue = 'all') {
     // Xóa nội dung cũ trong các cột
     todoColumn.innerHTML = '';
     inprogressColumn.innerHTML = '';
@@ -107,7 +132,8 @@ function renderTasks(assigneeFilterValue = 'all', statusFilterValues = ['all'], 
         const assigneeMatch = (assigneeFilterValue === 'all' || normalizedAssignee === assigneeFilterValue);
         const statusMatch = (statusFilterValues.includes('all') || statusFilterValues.includes(task.status));
         const projectMatch = (task.projectId === projectFilterValue) || (!task.projectId && projectFilterValue === 'none');
-        return assigneeMatch && statusMatch && projectMatch;
+        const sprintMatch = (sprintFilterValue === 'all') || (task.sprintIds && task.sprintIds.includes(sprintFilterValue));
+        return assigneeMatch && statusMatch && projectMatch && sprintMatch;
     });
 
     // Hiển thị các task đã lọc
@@ -158,6 +184,43 @@ export function populateProjectFilter() {
         projectFilter.value = currentFilterValue;
     } else if (projectFilter.options.length > 0) {
         projectFilter.value = projectFilter.options[0].value;
+    }
+}
+
+// Thêm các tùy chọn Sprint vào bộ lọc
+export function populateSprintFilter(resetToCurrent = false) {
+    const sprintFilter = document.getElementById('sprintFilter');
+    if (!sprintFilter) return;
+    
+    const isInitialized = sprintFilter.dataset.initialized === 'true';
+    const currentFilterValue = sprintFilter.value;
+    
+    sprintFilter.innerHTML = '<option value="all">Tất cả</option>';
+
+    let currentSprintId = 'all';
+
+    if (projectFilter && projectFilter.value && projectFilter.value !== 'none') {
+        const project = project_list.find(p => p.id === projectFilter.value);
+        if (project && project.sprints) {
+            const currentSp = project.sprints.find(s => s.isCurrent);
+            if (currentSp) currentSprintId = currentSp.id;
+
+            project.sprints.forEach((sprint) => {
+                const option = document.createElement('option');
+                option.value = sprint.id;
+                option.textContent = getSprintDisplayText(sprint);
+                sprintFilter.appendChild(option);
+            });
+        }
+    }
+
+    if (resetToCurrent || !isInitialized) {
+        sprintFilter.value = currentSprintId;
+        sprintFilter.dataset.initialized = 'true';
+    } else if (Array.from(sprintFilter.options).some(opt => opt.value === currentFilterValue)) {
+        sprintFilter.value = currentFilterValue;
+    } else {
+        sprintFilter.value = currentSprintId;
     }
 }
 
@@ -305,6 +368,21 @@ function createTaskCard(task) {
             projectTag.className = "text-xs font-semibold text-purple-600 bg-purple-100 rounded-md px-2 py-1 mb-2 inline-block";
             projectTag.textContent = project.name;
             card.appendChild(projectTag);
+
+            // Hiển thị các Sprints được gắn với công việc này
+            if (task.sprintIds && task.sprintIds.length > 0 && project.sprints) {
+                const sprintNames = task.sprintIds.map(id => {
+                    const s = project.sprints.find(sp => sp.id === id);
+                    return getSprintDisplayText(s);
+                }).filter(Boolean);
+                
+                if (sprintNames.length > 0) {
+                    const sprintsTag = document.createElement('div');
+                    sprintsTag.className = "text-xs font-semibold text-blue-600 bg-blue-100 rounded-md px-2 py-1 mb-2 inline-block ml-1";
+                    sprintsTag.textContent = "Sprints: " + sprintNames.join(', ');
+                    card.appendChild(sprintsTag);
+                }
+            }
         }
     }
     card.appendChild(title);
@@ -523,6 +601,25 @@ function showTaskDetails(task) {
         detailAssignee.textContent = 'Không có';
     }
 
+    // Hiển thị danh sách Sprints trong modal chi tiết
+    const detailSprints = document.getElementById('detailSprints');
+    if (detailSprints) {
+        detailSprints.classList.add('hidden');
+        if (task.sprintIds && task.sprintIds.length > 0 && task.projectId) {
+            const project = project_list.find(p => p.id === task.projectId);
+            if (project && project.sprints) {
+                const sprintNames = task.sprintIds.map(id => {
+                    const s = project.sprints.find(sp => sp.id === id);
+                    return getSprintDisplayText(s);
+                }).filter(Boolean);
+                if (sprintNames.length > 0) {
+                    detailSprints.textContent = sprintNames.join(', ');
+                    detailSprints.classList.remove('hidden');
+                }
+            }
+        }
+    }
+
     detailCreatedAt.textContent = dateFormatter.format(new Date(task.createdAt));
 
     if (task.completedAt) {
@@ -623,6 +720,7 @@ async function cloneTask(taskId) {
             title: originalTask.title,
             projectId: originalTask.projectId || null,
             assignee: originalTask.assignee,
+            sprintIds: originalTask.sprintIds ? [...originalTask.sprintIds] : [],
             // Tạo bản sao sâu của checklist để không ảnh hưởng đến bản gốc
             items: JSON.parse(JSON.stringify(originalTask.items)),
             status: originalTask.status,
@@ -708,10 +806,44 @@ function populateAssigneeSelect(selectedAssignee = '', projectId = '') {
     }
 }
 
+// Hàm để điền danh sách sprint vào vùng chọn đa dạng (multiselect) của task
+function populateSprintSelect(selectedSprints = [], projectId = '') {
+    const taskSprintsContainer = document.getElementById('taskSprintsContainer');
+    const sprintsWrapper = document.getElementById('sprintsWrapper');
+    if (!taskSprintsContainer || !sprintsWrapper) return;
+
+    taskSprintsContainer.innerHTML = '';
+    if (!projectId) {
+        sprintsWrapper.classList.add('hidden');
+        return;
+    }
+
+    const project = project_list.find(p => p.id === projectId);
+    if (project && project.sprints && project.sprints.length > 0) {
+        sprintsWrapper.classList.remove('hidden');
+        project.sprints.forEach(sprint => {
+            const label = document.createElement('label');
+            label.className = 'flex items-center gap-2 text-gray-700 cursor-pointer p-1 hover:bg-gray-100 rounded';
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.value = sprint.id;
+            cb.className = 'form-checkbox h-4 w-4 text-blue-600 rounded';
+            if (selectedSprints.includes(sprint.id)) cb.checked = true;
+            
+            label.appendChild(cb);
+            label.appendChild(document.createTextNode(getSprintDisplayText(sprint)));
+            taskSprintsContainer.appendChild(label);
+        });
+    } else {
+        sprintsWrapper.classList.add('hidden');
+    }
+}
+
 // Cập nhật danh sách người thực hiện khi thay đổi Dự án trong Form
 if (taskProjectSelect) {
     taskProjectSelect.addEventListener('change', (e) => {
         populateAssigneeSelect(taskAssigneeSelect.value, e.target.value);
+        populateSprintSelect([], e.target.value); // Reset danh sách chọn sprints
     });
 }
 
@@ -745,6 +877,7 @@ openModalBtn.addEventListener('click', () => {
         const defaultProject = projectFilter && projectFilter.value !== 'none' ? projectFilter.value : '';
         populateProjectSelect(defaultProject);
         populateAssigneeSelect('', taskProjectSelect.value);
+        populateSprintSelect([], taskProjectSelect.value);
         taskModalOverlay.classList.add('show');
     } else {
         showMessage("Bạn không có quyền tạo công việc mới trong dự án này.", true);
@@ -775,6 +908,7 @@ function openEditModal(taskId) {
         taskTitleInput.value = task.title;
         populateProjectSelect(task.projectId);
         populateAssigneeSelect(task.assignee, task.projectId);
+        populateSprintSelect(task.sprintIds || [], task.projectId);
         checklistContainer.innerHTML = '';
 
         if (task.items && task.items.length > 0) {
@@ -867,6 +1001,15 @@ addTaskForm.addEventListener('submit', async (e) => {
         completed: false
     })).filter(item => item.text !== '');
 
+    // Lấy danh sách ID các Sprint đã được chọn
+    const sprintIds = [];
+    const taskSprintsContainer = document.getElementById('taskSprintsContainer');
+    if (taskSprintsContainer) {
+        taskSprintsContainer.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => {
+            sprintIds.push(cb.value);
+        });
+    }
+
     if (!title) {
         return;
     }
@@ -878,6 +1021,7 @@ addTaskForm.addEventListener('submit', async (e) => {
             task.projectId = projectId || null;
             task.assignee = assignee;
             task.items = items;
+            task.sprintIds = sprintIds;
         }
     } else {
         // Chế độ thêm mới
@@ -886,6 +1030,7 @@ addTaskForm.addEventListener('submit', async (e) => {
             title: title,
             projectId: projectId || null,
             assignee: assignee,
+            sprintIds: sprintIds,
             items: items,
             status: 'todo',
             createdAt: new Date().toISOString(), // Lưu ngày tạo
@@ -998,16 +1143,29 @@ dropZones.forEach(zone => {
 // Thêm sự kiện thay đổi cho bộ lọc dự án
 if (projectFilter) {
     projectFilter.addEventListener('change', (e) => {
+        populateSprintFilter(true); // Cập nhật lại dropdown sprint khi đổi Project và reset về Hiện tại
         populateAssigneeFilter(); // Cập nhật lại dropdown người thực hiện khi đổi Project
         updateButtonStates();
-        renderTasks(assigneeFilter.value, selectedStatuses, e.target.value);
+        const sprintFilterEl = document.getElementById('sprintFilter');
+        const sfValue = sprintFilterEl ? sprintFilterEl.value : 'all';
+        renderTasks(assigneeFilter.value, selectedStatuses, e.target.value, sfValue);
+    });
+}
+
+// Thêm sự kiện thay đổi cho bộ lọc sprint
+const sprintFilterEl = document.getElementById('sprintFilter');
+if (sprintFilterEl) {
+    sprintFilterEl.addEventListener('change', (e) => {
+        renderTasks(assigneeFilter.value, selectedStatuses, projectFilter.value, e.target.value);
     });
 }
 
 // Thêm sự kiện thay đổi cho bộ lọc người thực hiện
 assigneeFilter.addEventListener('change', (e) => {
     const selectedAssignee = e.target.value;
-    renderTasks(selectedAssignee, selectedStatuses, projectFilter.value);
+    const sfEl = document.getElementById('sprintFilter');
+    const sfValue = sfEl ? sfEl.value : 'all';
+    renderTasks(selectedAssignee, selectedStatuses, projectFilter.value, sfValue);
 });
 
 // Xử lý bộ lọc trạng thái đa lựa chọn
@@ -1077,7 +1235,9 @@ statusDropdownList.querySelectorAll('input').forEach(input => {
             }
         }
         
-        renderTasks(assigneeFilter.value, selectedStatuses, projectFilter.value);
+        const sprintFilterEl = document.getElementById('sprintFilter');
+        const sfValue = sprintFilterEl ? sprintFilterEl.value : 'all';
+        renderTasks(assigneeFilter.value, selectedStatuses, projectFilter.value, sfValue);
     });
 });
 
@@ -1191,3 +1351,69 @@ window.onload = async function() {
         loginScreen.classList.add('flex');
     }
 };
+
+// --- XỬ LÝ SPRINT CHO DỰ ÁN (UI hỗ trợ Modal Dự Án) ---
+const addProjectSprintBtn = document.getElementById('addProjectSprintBtn');
+const projectSprintsContainer = document.getElementById('projectSprintsContainer');
+
+export function addProjectSprintUI(sprint = null) {
+    if (!projectSprintsContainer) return;
+    const sprintId = sprint ? sprint.id : crypto.randomUUID();
+    const sprintName = sprint ? sprint.name : '';
+    const sprintStart = sprint && sprint.startDate ? sprint.startDate : '';
+    const sprintEnd = sprint && sprint.endDate ? sprint.endDate : '';
+    const isCurrent = sprint && sprint.isCurrent ? true : false;
+    
+    const sprintDiv = document.createElement('div');
+    sprintDiv.className = 'flex flex-wrap items-center gap-2 sprint-item p-2 bg-white border border-gray-200 rounded-lg';
+    sprintDiv.dataset.id = sprintId;
+    
+    const inputName = document.createElement('input');
+    inputName.type = 'text';
+    inputName.value = sprintName;
+    inputName.placeholder = 'Tên Sprint (VD: Sprint 1)';
+    inputName.className = 'flex-1 p-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 sprint-name-input min-w-[150px]';
+
+    const inputStart = document.createElement('input');
+    inputStart.type = 'date';
+    inputStart.value = sprintStart;
+    inputStart.title = 'Ngày bắt đầu';
+    inputStart.className = 'p-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 sprint-start-input text-sm text-gray-600 cursor-pointer';
+
+    const inputEnd = document.createElement('input');
+    inputEnd.type = 'date';
+    inputEnd.value = sprintEnd;
+    inputEnd.title = 'Ngày kết thúc';
+    inputEnd.className = 'p-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 sprint-end-input text-sm text-gray-600 cursor-pointer';
+    
+    const inputCurrentContainer = document.createElement('label');
+    inputCurrentContainer.className = 'flex items-center gap-1 text-sm text-gray-700 cursor-pointer mx-1';
+    
+    const inputCurrent = document.createElement('input');
+    inputCurrent.type = 'radio';
+    inputCurrent.name = 'currentSprintRadio'; // Giúp chỉ chọn 1 sprint hiện tại trong 1 form
+    inputCurrent.value = sprintId;
+    inputCurrent.title = 'Đặt làm Sprint hiện tại';
+    inputCurrent.className = 'sprint-current-radio form-radio h-4 w-4 text-purple-600 rounded cursor-pointer';
+    if (isCurrent) inputCurrent.checked = true;
+    
+    inputCurrentContainer.appendChild(inputCurrent);
+    inputCurrentContainer.appendChild(document.createTextNode('Hiện tại'));
+
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.innerHTML = '<i class="fas fa-trash-alt text-red-500 hover:text-red-700"></i>';
+    removeBtn.className = 'p-2 rounded-full hover:bg-gray-200 ml-auto';
+    removeBtn.onclick = () => sprintDiv.remove();
+    
+    sprintDiv.appendChild(inputName);
+    sprintDiv.appendChild(inputStart);
+    sprintDiv.appendChild(inputEnd);
+    sprintDiv.appendChild(inputCurrentContainer);
+    sprintDiv.appendChild(removeBtn);
+    projectSprintsContainer.appendChild(sprintDiv);
+}
+
+if (addProjectSprintBtn) {
+    addProjectSprintBtn.addEventListener('click', () => addProjectSprintUI());
+}

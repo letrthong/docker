@@ -46,6 +46,7 @@ Tất cả các API endpoints sẽ bắt đầu với: `http://localhost:5000/ap
   "id": "string (UUID)",
   "title": "string",
   "assignee": "string (username)",
+  "sprintIds": ["string (sprint_id 1)", "string (sprint_id 2)"],
   "items": [
     {"text": "string", "completed": "boolean"}
   ],

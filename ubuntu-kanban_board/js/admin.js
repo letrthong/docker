@@ -9,7 +9,9 @@ import {
 } from './ui.js';
 import { 
     user_list, project_list, setUserList, setProjectList, 
-    populateProjectFilter, populateAssigneeFilter 
+    populateProjectFilter, populateAssigneeFilter,
+    populateSprintFilter,
+    addProjectSprintUI
 } from './main.js';
 
 let editingUserUid = null;
@@ -25,8 +27,10 @@ export function initAdmin() {
             newUsername.value = user.username;
             newUsername.disabled = true;
             newUsername.classList.add('bg-gray-200', 'cursor-not-allowed');
-            newUserPassword.placeholder = "Mật khẩu (để trống nếu không đổi)";
-            newUserPassword.required = false;
+            if (newUserPassword) {
+                newUserPassword.placeholder = "Mật khẩu (để trống nếu không đổi)";
+                newUserPassword.required = false;
+            }
         } else {
             editingUserUid = null;
             userModalTitle.textContent = "Thêm Người Dùng Mới";
@@ -34,8 +38,10 @@ export function initAdmin() {
             addUserForm.reset();
             newUsername.disabled = false;
             newUsername.classList.remove('bg-gray-200', 'cursor-not-allowed');
-            newUserPassword.placeholder = "Mật khẩu";
-            newUserPassword.required = true;
+            if (newUserPassword) {
+                newUserPassword.placeholder = "Mật khẩu";
+                newUserPassword.required = true;
+            }
         }
         userModalOverlay.classList.add('show');
     }
@@ -264,6 +270,12 @@ export function initAdmin() {
             });
         });
 
+        const projectSprintsContainer = document.getElementById('projectSprintsContainer');
+        if (projectSprintsContainer) projectSprintsContainer.innerHTML = '';
+        if (project && project.sprints) {
+            project.sprints.forEach(sprint => addProjectSprintUI(sprint));
+        }
+
         if (project) {
             editingProjectId = project.id;
             projectModalTitle.textContent = "Chỉnh sửa Dự án";
@@ -299,10 +311,21 @@ export function initAdmin() {
                 });
             });
 
+            const sprints = [];
+            document.querySelectorAll('#projectSprintsContainer .sprint-item').forEach(item => {
+                const id = item.dataset.id;
+                const name = item.querySelector('.sprint-name-input').value.trim();
+                const startDate = item.querySelector('.sprint-start-input').value;
+                const endDate = item.querySelector('.sprint-end-input').value;
+                const isCurrent = item.querySelector('.sprint-current-radio').checked;
+                if (name) sprints.push({ id, name, startDate, endDate, isCurrent });
+            });
+
             const projectData = {
                 name: projectName.value.trim(),
                 description: projectDescription.value.trim(),
-                users: selectedUsers
+                users: selectedUsers,
+                sprints: sprints
             };
             
             if (editingProjectId) {
@@ -312,6 +335,7 @@ export function initAdmin() {
                     projectModalOverlay.classList.remove('show');
                     await renderManageProjectsTable();
                     populateProjectFilter();
+                    populateSprintFilter();
                     populateAssigneeFilter(); 
                 }
             } else {
@@ -321,6 +345,7 @@ export function initAdmin() {
                     projectModalOverlay.classList.remove('show');
                     await renderManageProjectsTable();
                     populateProjectFilter();
+                    populateSprintFilter();
                 }
             }
         });
