@@ -92,3 +92,6 @@ Tất cả các API endpoints sẽ bắt đầu với: `http://localhost:5000/ap
   ```
 ### sprints trong dự án
 1 dụ án sẽ có nhiều sprints và lúc tạo task lựa chọn multiselect sprints do thực tế 1 task có thể làm trong nhiều sprints
+
+
+docker cp -fv telua_python_point:/app/dist/index.html ./dist/index.html
