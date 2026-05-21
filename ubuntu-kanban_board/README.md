@@ -99,3 +99,5 @@ docker cp -fv telua_python_point:/app/dist/index.html ./dist/index.html
 
 js/components: Chứa các component nhỏ, tái sử dụng được (nút, modal, form, card, ...).
 js/pages: Chứa các component cấp trang (mỗi file đại diện cho một trang lớn, ví dụ: KanbanBoard.jsx, LoginPage.jsx).
+
+# Cài đặt Jest cho unit test
