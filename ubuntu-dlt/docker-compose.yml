@@ -9,6 +9,7 @@ services:
       dockerfile: Dockerfile
     ports:
       - "2223:22" # SSH access: host 2223 -> container 22
+      - "3490:3490" # dlt-viewer
     stdin_open: true
     tty: true
      
