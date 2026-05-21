@@ -5,7 +5,7 @@
 docker compose down
 
 # Khởi động lại docker
-docker compose up -d --build
+docker compose up -d  
 
 
 mkdir -p out
