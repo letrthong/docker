@@ -2,14 +2,14 @@ from flask import Blueprint, request, jsonify
 import os
 import json
 import uuid
-from config import DATA_DIR, USERS_FILE, TASKS_FILE, PROJECTS_FILE
+from config import CONFIG_DIR, USERS_FILE, TASKS_FILE, PROJECTS_FILE
 
 # Tạo một Blueprint. Tiền tố '/api/v1/kanban' sẽ được gán khi đăng ký trong file app.py
 kanban_api = Blueprint('kanban_api', __name__)
 
 def init_kanban_db():
     """Khởi tạo thư mục và file dữ liệu mặc định nếu chưa tồn tại"""
-    os.makedirs(DATA_DIR, exist_ok=True)
+    os.makedirs(CONFIG_DIR, exist_ok=True)
     
     if not os.path.exists(USERS_FILE):
         default_users = [

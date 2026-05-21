@@ -14,5 +14,4 @@ USERS_FILE = os.path.join(CONFIG_DIR, 'users.json')
 TASKS_FILE = os.path.join(CONFIG_DIR, 'tasks.json')
 PROJECTS_FILE = os.path.join(CONFIG_DIR, 'projects.json')
 
-os.makedirs(BASE_DIR, exist_ok=True)
-os.makedirs(CONFIG_DIR, exist_ok=True)
+ 
