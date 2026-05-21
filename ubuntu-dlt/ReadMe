@@ -44,6 +44,6 @@ Connect via:
 ## Rebuild container
 	docker compose down
 	docker compose up --build -d
-
+## netstat -tulnp
 
  
