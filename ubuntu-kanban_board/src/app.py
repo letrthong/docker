@@ -7,8 +7,8 @@ app = Flask(__name__, static_folder="static")
 # Gọi hàm khởi tạo dữ liệu từ blueprint
 init_kanban_db()
 
-# Đăng ký blueprint với tiền tố /api
-app.register_blueprint(kanban_api, url_prefix='/api')
+# Đăng ký blueprint với tiền tố /api/v1/kanban
+app.register_blueprint(kanban_api, url_prefix='/api/v1/kanban')
 
 # --- MIDDLEWARE ---
 

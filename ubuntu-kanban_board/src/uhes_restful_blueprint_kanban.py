@@ -3,7 +3,7 @@ import os
 import json
 import uuid
 
-# Tạo một Blueprint. Tiền tố '/api' sẽ được gán khi đăng ký trong file app.py
+# Tạo một Blueprint. Tiền tố '/api/v1/kanban' sẽ được gán khi đăng ký trong file app.py
 kanban_api = Blueprint('kanban_api', __name__)
 
 # --- THIẾT LẬP LƯU TRỮ DỮ LIỆU (JSON FILES) ---

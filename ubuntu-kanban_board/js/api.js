@@ -3,7 +3,7 @@
 
 import { showMessage, showLoading, hideLoading } from './ui.js';
 
-const API_BASE_URL = '/api'; // Đổi theo route của Flask
+const API_BASE_URL = '/api/v1/kanban'; // Đổi theo route của Flask
 
 // Hàm helper dùng chung để gọi fetch và xử lý lỗi
 async function apiFetch(endpoint, options = {}) {

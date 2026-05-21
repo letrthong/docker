@@ -3,7 +3,7 @@
 Tài liệu này định nghĩa các Interface (API) cần được triển khai trên backend Python Flask (`src/app.py`) để giao tiếp với Frontend.
 
 ## Base URL
-Tất cả các API endpoints sẽ bắt đầu với: `http://localhost:5000/api`
+Tất cả các API endpoints sẽ bắt đầu với: `http://localhost:5000/api/v1/kanban`
 
 ---
 
