@@ -1,0 +1,9 @@
+
+##  docker exec -it ubuntu_grafana_loki bash
+
+## netstat -tulnp
+
+## docker rm -f ubuntu_grafana_loki
+
+
+## http://localhost:3100/ready

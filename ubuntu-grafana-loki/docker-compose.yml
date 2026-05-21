@@ -1,0 +1,15 @@
+version: '3.9'
+
+services:
+  ubuntu_node:
+    image: ubuntu_grafana_loki
+    container_name: ubuntu_grafana_loki
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3100:3100" # Mở cổng kết nối từ ngoài máy thật vào Loki
+    command: -config.file=/etc/loki/local-config.yaml
+    stdin_open: true
+    tty: true
+    restart: unless-stopped

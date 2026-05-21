@@ -1,0 +1,7 @@
+
+##  docker exec -it ubuntu_grafana bash
+
+## netstat -tulnp
+  port 3000
+  
+## docker rm -f ubuntu_grafana
