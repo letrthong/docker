@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y \
 # Cài đặt Google Test (gtest)
 RUN apt-get update && apt-get install -y libgtest-dev
 RUN cd /usr/src/gtest && cmake . && make && cp lib/*.a /usr/lib
-
+RUN  apt-get install -y  net-tools
 WORKDIR /opt/myapp
 COPY src/example4.c /opt/myapp
 COPY src/CMakeLists.txt /opt/myapp
