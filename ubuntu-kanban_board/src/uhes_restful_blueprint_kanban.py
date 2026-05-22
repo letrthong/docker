@@ -2,29 +2,31 @@ from flask import Blueprint, request, jsonify
 import os
 import json
 import uuid
-from config import CONFIG_DIR, USERS_FILE, TASKS_FILE, PROJECTS_FILE
+import jwt
+import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
+from config import CONFIG_DIR
 
 # Tạo một Blueprint. Tiền tố '/api/v1/kanban' sẽ được gán khi đăng ký trong file app.py
 kanban_api = Blueprint('kanban_api', __name__)
 
+USERS_DIR = os.path.join(CONFIG_DIR, 'users')
+PROJECTS_DIR = os.path.join(CONFIG_DIR, 'projects')
+TASKS_DIR = os.path.join(CONFIG_DIR, 'tasks')
+
+SECRET_KEY = "kanban-super-secret-key" # Trong thực tế, bạn nên lấy từ biến môi trường (os.environ)
+
 def init_kanban_db():
     """Khởi tạo thư mục và file dữ liệu mặc định nếu chưa tồn tại"""
     os.makedirs(CONFIG_DIR, exist_ok=True)
+    os.makedirs(USERS_DIR, exist_ok=True)
+    os.makedirs(PROJECTS_DIR, exist_ok=True)
+    os.makedirs(TASKS_DIR, exist_ok=True)
     
-    if not os.path.exists(USERS_FILE):
-        default_users = [
-            {"useruid": "1", "username": "admin", "permission": "owner", "password": "admin"}
-        ]
-        with open(USERS_FILE, 'w', encoding='utf-8') as f:
-            json.dump(default_users, f, ensure_ascii=False, indent=4)
-            
-    if not os.path.exists(TASKS_FILE):
-        with open(TASKS_FILE, 'w', encoding='utf-8') as f:
-            json.dump([], f, ensure_ascii=False, indent=4)
-            
-    if not os.path.exists(PROJECTS_FILE):
-        with open(PROJECTS_FILE, 'w', encoding='utf-8') as f:
-            json.dump([], f, ensure_ascii=False, indent=4)
+    if not os.listdir(USERS_DIR):
+        hashed_pw = generate_password_hash("admin")
+        default_user = {"useruid": "1", "username": "admin", "permission": "owner", "password": hashed_pw}
+        write_json(os.path.join(USERS_DIR, "1.json"), default_user)
 
 def read_json(filepath):
     with open(filepath, 'r', encoding='utf-8') as f:
@@ -34,6 +36,15 @@ def write_json(filepath, data):
     with open(filepath, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
 
+def get_all_users():
+    users = []
+    if os.path.exists(USERS_DIR):
+        for filename in os.listdir(USERS_DIR):
+            if filename.endswith('.json'):
+                filepath = os.path.join(USERS_DIR, filename)
+                users.append(read_json(filepath))
+    return users
+
 # --- RESTful API ROUTES ---
 
 @kanban_api.route("/users/login", methods=["POST"])
@@ -41,42 +52,66 @@ def login():
     data = request.json
     username = data.get("username")
     password = data.get("password")
-    users = read_json(USERS_FILE)
+    users = get_all_users()
     
-    # Kiểm tra login, nếu DB cũ không có password thì mặc định là 'password123'
-    user = next((u for u in users if u['username'] == username and u.get('password', 'password123') == password), None)
+    user = next((u for u in users if u['username'] == username), None)
     if user:
         if user.get('disabled'):
             return jsonify({"error": "Tài khoản của bạn đã bị vô hiệu hóa"}), 403
-        return jsonify({
-            "message": "Đăng nhập thành công",
-            "token": username,
-            "user": user
-        })
+            
+        stored_password = user.get('password', 'password123')
+        
+        # Hỗ trợ tương thích ngược: Kiểm tra cả mật khẩu đã hash và chưa hash (cũ)
+        is_valid = False
+        if stored_password.startswith('pbkdf2:') or stored_password.startswith('scrypt:'):
+            is_valid = check_password_hash(stored_password, password)
+        else:
+            is_valid = (stored_password == password)
+            
+        if is_valid:
+            # Tạo JWT Token có hạn 7 ngày
+            payload = {
+                'useruid': user['useruid'],
+                'username': user['username'],
+                'exp': datetime.datetime.utcnow() + datetime.timedelta(days=7)
+            }
+            token = jwt.encode(payload, SECRET_KEY, algorithm='HS256')
+            
+            return jsonify({
+                "message": "Đăng nhập thành công",
+                "token": token,
+                "user": user
+            })
+            
     return jsonify({"error": "Tên đăng nhập hoặc mật khẩu không chính xác"}), 401
 
 @kanban_api.route("/users/me", methods=["GET"])
 def get_current_user():
-    users = read_json(USERS_FILE)
     # Lấy token từ header Authorization
     token = request.headers.get("Authorization", "").replace("Bearer ", "")
-    if token:
-        me = next((u for u in users if u['username'] == token), None)
+    if not token:
+        return jsonify({"error": "Bạn chưa đăng nhập"}), 401
+        
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
+        users = get_all_users()
+        me = next((u for u in users if u['useruid'] == payload['useruid']), None)
         if me:
             return jsonify(me)
-            
-    # Tạm thời giả định người dùng hiện tại là 'alice' nếu không có token
-    me = next((u for u in users if u['username'] == 'alice'), users[0])
-    return jsonify(me)
+        return jsonify({"error": "Không tìm thấy người dùng"}), 404
+    except jwt.ExpiredSignatureError:
+        return jsonify({"error": "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại"}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({"error": "Token không hợp lệ"}), 401
 
 @kanban_api.route("/users", methods=["GET"])
 def get_users():
-    return jsonify(read_json(USERS_FILE))
+    return jsonify(get_all_users())
 
 @kanban_api.route("/users", methods=["POST"])
 def create_user():
     new_user = request.json
-    users = read_json(USERS_FILE)
+    users = get_all_users()
     
     # Kiểm tra xem username đã tồn tại chưa
     if any(u['username'] == new_user.get('username') for u in users):
@@ -86,83 +121,106 @@ def create_user():
     new_uid = str(max([int(u['useruid']) for u in users if str(u.get('useruid', '')).isdigit()] + [0]) + 1)
     new_user['useruid'] = new_uid
     
-    users.append(new_user)
-    write_json(USERS_FILE, users)
+    # Mã hóa mật khẩu trước khi lưu
+    if 'password' in new_user:
+        new_user['password'] = generate_password_hash(new_user['password'])
+        
+    filepath = os.path.join(USERS_DIR, f"{new_uid}.json")
+    write_json(filepath, new_user)
     return jsonify({"message": "Tạo người dùng thành công", "user": new_user}), 201
 
 @kanban_api.route("/users/<useruid>", methods=["PUT"])
 def update_user(useruid):
     updated_data = request.json
-    users = read_json(USERS_FILE)
-    for i, user in enumerate(users):
-        if user['useruid'] == useruid:
-            # Cập nhật trạng thái disabled
-            if 'disabled' in updated_data:
-                users[i]['disabled'] = updated_data['disabled']
-            if 'password' in updated_data:
-                users[i]['password'] = updated_data['password']
-            if 'permission' in updated_data:
-                users[i]['permission'] = updated_data['permission']
-            write_json(USERS_FILE, users)
-            return jsonify({"message": "User updated successfully", "user": users[i]})
-    return jsonify({"error": "User not found"}), 404
+    filepath = os.path.join(USERS_DIR, f"{useruid}.json")
+    
+    if not os.path.exists(filepath):
+        return jsonify({"error": "User not found"}), 404
+        
+    user = read_json(filepath)
+    if 'disabled' in updated_data:
+        user['disabled'] = updated_data['disabled']
+    if 'password' in updated_data:
+        user['password'] = generate_password_hash(updated_data['password'])
+    if 'permission' in updated_data:
+        user['permission'] = updated_data['permission']
+        
+    write_json(filepath, user)
+    return jsonify({"message": "User updated successfully", "user": user})
 
 @kanban_api.route("/projects", methods=["GET"])
 def get_projects():
-    return jsonify(read_json(PROJECTS_FILE))
+    projects = []
+    if os.path.exists(PROJECTS_DIR):
+        for filename in os.listdir(PROJECTS_DIR):
+            if filename.endswith('.json'):
+                filepath = os.path.join(PROJECTS_DIR, filename)
+                projects.append(read_json(filepath))
+    return jsonify(projects)
 
 @kanban_api.route("/projects", methods=["POST"])
 def create_project():
     new_project = request.json
-    projects = read_json(PROJECTS_FILE)
     
     new_project['id'] = str(uuid.uuid4().hex)
     if 'users' not in new_project:
         new_project['users'] = []
         
-    projects.append(new_project)
-    write_json(PROJECTS_FILE, projects)
+    filepath = os.path.join(PROJECTS_DIR, f"{new_project['id']}.json")
+    write_json(filepath, new_project)
     return jsonify({"message": "Tạo dự án thành công", "project": new_project}), 201
 
 @kanban_api.route("/projects/<project_id>", methods=["PUT"])
 def update_project(project_id):
     updated_data = request.json
-    projects = read_json(PROJECTS_FILE)
-    for i, project in enumerate(projects):
-        if project['id'] == project_id:
-            projects[i].update(updated_data)
-            write_json(PROJECTS_FILE, projects)
-            return jsonify({"message": "Cập nhật dự án thành công", "project": projects[i]})
-    return jsonify({"error": "Không tìm thấy dự án"}), 404
+    filepath = os.path.join(PROJECTS_DIR, f"{project_id}.json")
+    
+    if not os.path.exists(filepath):
+        return jsonify({"error": "Không tìm thấy dự án"}), 404
+        
+    project = read_json(filepath)
+    project.update(updated_data)
+    write_json(filepath, project)
+    return jsonify({"message": "Cập nhật dự án thành công", "project": project})
 
 @kanban_api.route("/tasks", methods=["GET"])
 def get_tasks():
-    return jsonify(read_json(TASKS_FILE))
+    tasks = []
+    if os.path.exists(TASKS_DIR):
+        for filename in os.listdir(TASKS_DIR):
+            if filename.endswith('.json'):
+                filepath = os.path.join(TASKS_DIR, filename)
+                tasks.append(read_json(filepath))
+    return jsonify(tasks)
 
 @kanban_api.route("/tasks", methods=["POST"])
 def create_task():
     new_task = request.json
-    tasks = read_json(TASKS_FILE)
-    tasks.append(new_task)
-    write_json(TASKS_FILE, tasks)
+    
+    if 'id' not in new_task:
+        new_task['id'] = str(uuid.uuid4().hex)
+        
+    filepath = os.path.join(TASKS_DIR, f"{new_task['id']}.json")
+    write_json(filepath, new_task)
     return jsonify({"message": "Task created successfully", "task": new_task}), 201
 
 @kanban_api.route("/tasks/<task_id>", methods=["PUT", "PATCH"])
 def update_task(task_id):
     updated_data = request.json
-    tasks = read_json(TASKS_FILE)
-    for i, task in enumerate(tasks):
-        if task['id'] == task_id:
-            tasks[i].update(updated_data)
-            write_json(TASKS_FILE, tasks)
-            return jsonify({"message": "Task updated successfully", "task": tasks[i]})
-    return jsonify({"error": "Task not found"}), 404
+    filepath = os.path.join(TASKS_DIR, f"{task_id}.json")
+    
+    if not os.path.exists(filepath):
+        return jsonify({"error": "Task not found"}), 404
+        
+    task = read_json(filepath)
+    task.update(updated_data)
+    write_json(filepath, task)
+    return jsonify({"message": "Task updated successfully", "task": task})
 
 @kanban_api.route("/tasks/<task_id>", methods=["DELETE"])
 def delete_task(task_id):
-    tasks = read_json(TASKS_FILE)
-    new_tasks = [t for t in tasks if t['id'] != task_id]
-    if len(tasks) == len(new_tasks):
-        return jsonify({"error": "Task not found"}), 404
-    write_json(TASKS_FILE, new_tasks)
-    return jsonify({"message": "Task deleted successfully"})
+    filepath = os.path.join(TASKS_DIR, f"{task_id}.json")
+    if os.path.exists(filepath):
+        os.remove(filepath)
+        return jsonify({"message": "Task deleted successfully"})
+    return jsonify({"error": "Task not found"}), 404

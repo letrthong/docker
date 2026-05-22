@@ -1,0 +1,6 @@
+{
+    "useruid": "1",
+    "username": "admin",
+    "permission": "owner",
+    "password": "pbkdf2:sha256:260000$KOBfGYJ1uYKDXcI6$aa45306efb8df3bc68cd60894facd766047d3107bd33beec1612d5becc2fcf3a"
+}

@@ -21,6 +21,15 @@ async function apiFetch(endpoint, options = {}) {
         
         // Nếu mã lỗi HTTP trả về khác nhóm 2xx (ví dụ: 404, 500, ...)
         if (!response.ok) {
+            // Xử lý tự động đăng xuất nếu Token hết hạn hoặc không hợp lệ (401)
+            if (response.status === 401) {
+                localStorage.removeItem('kanban_token');
+                localStorage.removeItem('last_activity');
+                showMessage("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", true);
+                setTimeout(() => window.location.reload(), 2000);
+                throw new Error("Unauthorized");
+            }
+
             let errorMessage = `HTTP ${response.status} - ${response.statusText}`;
             try {
                 const errorData = await response.json();

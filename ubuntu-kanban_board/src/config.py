@@ -10,8 +10,4 @@ import copy
 BASE_DIR =  "/app/config/"
 CONFIG_DIR = os.path.join(BASE_DIR, 'kanban')
 
-USERS_FILE = os.path.join(CONFIG_DIR, 'users.json')
-TASKS_FILE = os.path.join(CONFIG_DIR, 'tasks.json')
-PROJECTS_FILE = os.path.join(CONFIG_DIR, 'projects.json')
-
  

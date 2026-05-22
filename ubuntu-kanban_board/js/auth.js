@@ -4,7 +4,7 @@ import {
     openChangePasswordBtn, changePasswordModalOverlay, changePasswordForm, newPasswordInput, confirmPasswordInput,
     cancelChangePasswordBtn, userInfoDropdown, showMessage
 } from './ui.js';
-import { initKanban, currentUserId } from './main.js';
+import { initKanban, currentUserId, resetActivityTimer } from './main.js';
 
 export function initAuth() {
     // Xử lý sự kiện gửi Form Đăng nhập
@@ -17,6 +17,7 @@ export function initAuth() {
             const response = await loginAPI(username, password);
             if (response && response.token) {
                 localStorage.setItem('kanban_token', response.token);
+                resetActivityTimer();
                 loginForm.reset();
                 loginScreen.classList.add('hidden');
                 loginScreen.classList.remove('flex');

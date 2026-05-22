@@ -1295,6 +1295,49 @@ function updateButtonStates() {
     }
 }
 
+// --- Quản lý phiên đăng nhập (Session Timeout do Inactivity) ---
+const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 phút
+
+export function resetActivityTimer() {
+    localStorage.setItem('last_activity', Date.now().toString());
+}
+
+function checkSessionInactivity() {
+    const token = localStorage.getItem('kanban_token');
+    if (!token) return; // Chưa đăng nhập thì bỏ qua
+
+    const lastActivity = localStorage.getItem('last_activity');
+    if (lastActivity) {
+        const elapsed = Date.now() - parseInt(lastActivity, 10);
+        if (elapsed > SESSION_TIMEOUT_MS) {
+            // Đã quá 30 phút không hoạt động -> Xóa session và tải lại trang
+            localStorage.removeItem('kanban_token');
+            localStorage.removeItem('last_activity');
+            showMessage("Phiên đăng nhập đã hết hạn do bạn không hoạt động trong 30 phút. Vui lòng đăng nhập lại.", true);
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        }
+    }
+}
+
+// Kiểm tra timeout mỗi phút
+setInterval(checkSessionInactivity, 60000);
+
+// Cập nhật thời gian hoạt động cuối cùng khi người dùng tương tác (tối ưu hóa debounce 2s)
+let activityTimeout = null;
+['click', 'mousemove', 'keydown', 'scroll', 'touchstart'].forEach(event => {
+    document.addEventListener(event, () => {
+        if (!activityTimeout) {
+            activityTimeout = setTimeout(() => {
+                resetActivityTimer();
+                activityTimeout = null;
+            }, 2000); // Tối đa 2 giây mới ghi vào local storage 1 lần để tránh giật lag
+        }
+    }, { passive: true });
+});
+// --- Kết thúc Quản lý phiên ---
+
 // Khởi tạo các module con
 initAuth();
 initAdmin();
@@ -1345,6 +1388,9 @@ export async function initKanban() {
 window.onload = async function() {
     const token = localStorage.getItem('kanban_token');
     if (token) {
+        resetActivityTimer(); // Cập nhật lại thời gian hoạt động khi tải hoặc refresh trang
+        loginScreen.classList.add('hidden');
+        loginScreen.classList.remove('flex');
         await initKanban();
     } else {
         loginScreen.classList.remove('hidden');
