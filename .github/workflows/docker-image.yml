@@ -24,3 +24,16 @@ jobs:
       - name: Build the Docker image
         run: |
           docker build -t kanban-board:latest -f ubuntu-kanban_board/Dockerfile ubuntu-kanban_board
+
+      - name: Run container
+        run: |
+          docker run -d --name kanban_temp kanban-board:latest
+
+      - name: Copy index.html from container
+        run: |
+          mkdir -p ubuntu-kanban_board/dist
+          docker cp kanban_temp:/app/dist/index.html ubuntu-kanban_board/dist/index.html
+
+      - name: Stop and remove container
+        run: |
+          docker rm -f kanban_temp
