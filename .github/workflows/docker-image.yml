@@ -1,6 +1,5 @@
-name: Docker Image CI
 
-      name: Docker Image CI
+name: Docker Image CI
       - name: Upload index.html as artifact
         uses: actions/upload-artifact@v4
         with:
