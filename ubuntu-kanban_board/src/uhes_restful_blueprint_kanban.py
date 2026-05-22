@@ -24,7 +24,7 @@ def init_kanban_db():
     os.makedirs(TASKS_DIR, exist_ok=True)
     
     if not os.listdir(USERS_DIR):
-        admin_id = str(uuid.uuid4().hex)
+        admin_id = str(uuid.uuid4().hex) 
         hashed_pw = generate_password_hash("admin")
         default_user = {"useruid": admin_id, "username": "admin", "permission": "owner", "password": hashed_pw}
         write_json(os.path.join(USERS_DIR, f"{admin_id}.json"), default_user)
@@ -53,6 +53,7 @@ def login():
     data = request.json
     username = data.get("username")
     password = data.get("password")
+    print(f"[Kanban API] Login attempt for username: {username}")
     users = get_all_users()
     
     user = next((u for u in users if u['username'] == username), None)
@@ -78,12 +79,18 @@ def login():
             }
             token = jwt.encode(payload, SECRET_KEY, algorithm='HS256')
             
+            if isinstance(token, bytes):
+                token = token.decode('utf-8')
+                
+            print(f"[Kanban API] Login successful for username: {username}")
+            
             return jsonify({
                 "message": "Đăng nhập thành công",
                 "token": token,
                 "user": user
             })
             
+    print(f"[Kanban API] Login failed for username: {username} (Invalid credentials)")
     return jsonify({"error": "Tên đăng nhập hoặc mật khẩu không chính xác"}), 401
 
 @kanban_api.route("/users/me", methods=["GET"])
