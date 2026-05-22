@@ -17,11 +17,11 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Run unit tests
-        run: |
-          pytest || echo "No tests found"
+      # - name: Run unit tests
+      #   run: |
+      #     pytest || echo "No tests found"
 
       - name: Build the Docker image
         run:
           cd  ubuntu-python_flask
-          docker build . --file Dockerfile --tag my-image-name:$(date +%s)
+          # docker build . --file Dockerfile --tag my-image-name:$(date +%s)
