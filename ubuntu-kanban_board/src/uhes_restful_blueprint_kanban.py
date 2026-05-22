@@ -99,7 +99,7 @@ def get_current_user():
         me = next((u for u in users if u['useruid'] == payload['useruid']), None)
         if me:
             return jsonify(me)
-        return jsonify({"error": "Không tìm thấy người dùng"}), 404
+        return jsonify({"error": "Không tìm thấy người dùng, vui lòng đăng nhập lại"}), 401
     except jwt.ExpiredSignatureError:
         return jsonify({"error": "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại"}), 401
     except jwt.InvalidTokenError:
