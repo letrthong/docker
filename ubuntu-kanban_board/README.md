@@ -112,3 +112,5 @@ js/pages: Chứa các component cấp trang (mỗi file đại diện cho một 
 - Tags
 - Notes
 - Block reason
+-  Story Points
+-  Project Scope: 
