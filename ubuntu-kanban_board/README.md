@@ -115,3 +115,10 @@ js/pages: Chứa các component cấp trang (mỗi file đại diện cho một 
 -  Story Points
 -  Project Scope: 
 ### IBM  Jira
+
+README.md
+ARCHITECTURE.md
+CONTRIBUTING.md
+API.md
+WORKFLOW.md
+TASK_MODEL.md
