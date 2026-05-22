@@ -23,5 +23,5 @@ jobs:
 
       - name: Build the Docker image
         run:
-          cd  ubuntu-python_flask
+          cd ubuntu-kanban_board
           # docker build . --file Dockerfile --tag my-image-name:$(date +%s)
