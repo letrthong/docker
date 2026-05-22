@@ -1,6 +1,6 @@
 https://docs.docker.com/get-started/part2/#apppy
 
-How to install on Debian 
+How to install on Debian  
   https://docs.docker.com/install/linux/docker-ce/debian/
   
   https://docs.docker.com/engine/install/ubuntu/
