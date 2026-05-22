@@ -23,5 +23,4 @@ jobs:
 
       - name: Build the Docker image
         run:
-          cd ubuntu-kanban_board
-          # docker build . --file Dockerfile --tag my-image-name:$(date +%s)
+          docker build -t kanban-board:latest -f ubuntu-kanban_board/Dockerfile .
