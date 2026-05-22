@@ -23,6 +23,7 @@ export const taskStoryPointsSelect = document.getElementById('taskStoryPointsSel
 export const checklistContainer = document.getElementById('checklistContainer');
 export const addChecklistItemBtn = document.getElementById('addChecklistItemBtn');
 export const cancelBtn = document.getElementById('cancelBtn');
+export const closeTaskModalIconBtn = document.getElementById('closeTaskModalIconBtn');
 export const modalTitle = document.getElementById('modalTitle');
 export const submitBtn = document.getElementById('submitBtn');
 
@@ -104,6 +105,8 @@ export const cancelConfirmBtn = document.getElementById('cancelConfirmBtn');
 
 // Modal chi tiết
 export const detailModalOverlay = document.getElementById('detailModalOverlay');
+export const detailHeaderContainer = document.getElementById('detailHeaderContainer');
+export const detailStatusBadge = document.getElementById('detailStatusBadge');
 export const detailTitle = document.getElementById('detailTitle');
 export const detailOwner = document.getElementById('detailOwner');
 export const detailAssignee = document.getElementById('detailAssignee');
@@ -127,6 +130,7 @@ export const commentImageInput = document.getElementById('commentImageInput');
 export const commentImagePreviewContainer = document.getElementById('commentImagePreviewContainer');
 export const commentImagePreview = document.getElementById('commentImagePreview');
 export const removeCommentImageBtn = document.getElementById('removeCommentImageBtn');
+export const closeDetailModalIconBtn = document.getElementById('closeDetailModalIconBtn');
 export const closeDetailModalBtn = document.getElementById('closeDetailModalBtn');
 export const completedAtSection = document.getElementById('completedAtSection');
 export const detailModalFooter = document.getElementById('detailModalFooter');

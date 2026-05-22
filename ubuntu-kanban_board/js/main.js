@@ -8,11 +8,11 @@ import {
     manageUsersDropdownItem, manageProjectsDropdownItem,
     totalTasksCount, todoColumn, inprogressColumn, blockedColumn, reviewColumn, doneColumn,
     openModalBtn, taskModalOverlay, addTaskForm, taskTitleInput, taskDescriptionInput, taskAssigneeSelect,
-    taskProjectSelect, taskPrioritySelect, taskStoryPointsSelect, checklistContainer, addChecklistItemBtn, cancelBtn, modalTitle, submitBtn,
+    taskProjectSelect, taskPrioritySelect, taskStoryPointsSelect, checklistContainer, addChecklistItemBtn, cancelBtn, closeTaskModalIconBtn, modalTitle, submitBtn,
     confirmationModalOverlay, confirmTitle, confirmMessage, confirmActionBtn, cancelConfirmBtn,
-    detailModalOverlay, detailTitle, detailDescription, detailDescriptionSection, detailOwner, detailAssignee, detailPriority, detailStoryPoints, detailCreatedAt,
+    detailModalOverlay, detailHeaderContainer, detailStatusBadge, detailTitle, detailDescription, detailDescriptionSection, detailOwner, detailAssignee, detailPriority, detailStoryPoints, detailCreatedAt,
     detailCompletedAt, detailChecklistItems, detailCommentsList, newCommentInput, addCommentBtn, closeDetailModalBtn, completedAtSection, detailModalFooter,
-    commentImageBtn, commentImageInput, commentImagePreviewContainer, commentImagePreview, removeCommentImageBtn, tabCommentsBtn, tabHistoryBtn, detailHistorySection, detailHistoryList, detailCommentsSection,
+    commentImageBtn, commentImageInput, commentImagePreviewContainer, commentImagePreview, removeCommentImageBtn, closeDetailModalIconBtn, tabCommentsBtn, tabHistoryBtn, detailHistorySection, detailHistoryList, detailCommentsSection,
     projectFilter, assigneeFilter, statusFilterDropdown, statusDropdownList, statusDropdownButton,
     showMessage, dateFormatter, getAssigneeColor, trashDropdownItem
 } from './ui.js';
@@ -647,6 +647,37 @@ function showTaskDetails(task) {
     detailTitle.style.color = getAssigneeColor(task.assignee);
     detailTitle.textContent = task.title;
 
+    // Hiển thị trạng thái bằng badge và viền
+    if (detailHeaderContainer && detailStatusBadge) {
+        // Reset class
+        detailHeaderContainer.className = "flex justify-between items-start gap-4 mb-4 pb-4 border-b-4 mt-2 pt-1";
+        detailStatusBadge.className = "text-sm font-semibold px-3 py-1 rounded-full whitespace-nowrap";
+        
+        let statusText = '';
+        if (task.status === 'todo') {
+            statusText = 'Việc cần làm';
+            detailHeaderContainer.classList.add('border-gray-300');
+            detailStatusBadge.classList.add('bg-gray-200', 'text-gray-700');
+        } else if (task.status === 'in-progress') {
+            statusText = 'Đang tiến hành';
+            detailHeaderContainer.classList.add('border-blue-300');
+            detailStatusBadge.classList.add('bg-blue-100', 'text-blue-700');
+        } else if (task.status === 'blocked') {
+            statusText = 'Bị khóa';
+            detailHeaderContainer.classList.add('border-red-300');
+            detailStatusBadge.classList.add('bg-red-100', 'text-red-700');
+        } else if (task.status === 'review') {
+            statusText = 'Đánh giá';
+            detailHeaderContainer.classList.add('border-yellow-300');
+            detailStatusBadge.classList.add('bg-yellow-100', 'text-yellow-700');
+        } else if (task.status === 'done') {
+            statusText = 'Hoàn thành';
+            detailHeaderContainer.classList.add('border-green-300');
+            detailStatusBadge.classList.add('bg-green-100', 'text-green-700');
+        }
+        detailStatusBadge.textContent = statusText;
+    }
+
     // Thêm người tạo
     detailOwner.textContent = task.ownerId || 'Không có';
 
@@ -812,7 +843,6 @@ function renderComments(task) {
             
             detailCommentsList.appendChild(commentDiv);
         });
-        detailCommentsList.scrollTop = detailCommentsList.scrollHeight;
     } else {
         detailCommentsList.innerHTML = '<p class="text-sm text-gray-500 italic">Chưa có bình luận nào.</p>';
     }
@@ -916,6 +946,18 @@ closeDetailModalBtn.addEventListener('click', () => {
         commentImagePreview.src = '';
     }
 });
+
+if (closeDetailModalIconBtn) {
+    closeDetailModalIconBtn.addEventListener('click', () => {
+        detailModalOverlay.classList.remove('show');
+        viewingTaskId = null;
+        pendingCommentImage = null;
+        if (commentImagePreviewContainer) {
+            commentImagePreviewContainer.classList.add('hidden');
+            commentImagePreview.src = '';
+        }
+    });
+}
 
 // Xử lý chuyển tab Bình luận và Lịch sử
 if (tabCommentsBtn && tabHistoryBtn) {
@@ -1258,6 +1300,14 @@ cancelBtn.addEventListener('click', () => {
     addTaskForm.reset();
     checklistContainer.innerHTML = '';
 });
+
+if (closeTaskModalIconBtn) {
+    closeTaskModalIconBtn.addEventListener('click', () => {
+        taskModalOverlay.classList.remove('show');
+        addTaskForm.reset();
+        checklistContainer.innerHTML = '';
+    });
+}
 
 // Đóng modal xác nhận
 cancelConfirmBtn.addEventListener('click', () => {

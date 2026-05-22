@@ -59,12 +59,28 @@
             border-radius: 1rem;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
             width: 90%;
-            max-width: 500px;
+            max-width: 600px;
             transform: scale(0.9);
             transition: transform 0.3s ease-in-out;
+            max-height: 90vh;
+            overflow-y: auto;
         }
         .modal-overlay.show .modal-content {
             transform: scale(1);
+        }
+        /* Tùy chỉnh thanh cuộn cho Modal */
+        .modal-content::-webkit-scrollbar {
+            width: 6px;
+        }
+        .modal-content::-webkit-scrollbar-track {
+            background: transparent; 
+        }
+        .modal-content::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 10px;
+        }
+        .modal-content::-webkit-scrollbar-thumb:hover {
+            background-color: #94a3b8;
         }
         .card.locked, .card.non-draggable {
             cursor: not-allowed;
@@ -293,7 +309,12 @@
     <!-- Cửa sổ Popup (Modal) để thêm/chỉnh sửa công việc -->
     <div id="taskModalOverlay" class="modal-overlay">
         <div class="modal-content">
-            <h2 id="modalTitle" class="text-2xl font-bold text-gray-800 mb-4">Thêm Công Việc Mới</h2>
+            <div class="flex justify-between items-start mb-4 mt-4 pt-2">
+                <h2 id="modalTitle" class="text-2xl font-bold text-gray-800">Thêm Công Việc Mới</h2>
+                <button type="button" id="closeTaskModalIconBtn" class="text-gray-400 hover:text-gray-600 focus:outline-none p-1 rounded-full hover:bg-gray-100 transition-colors">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
             <form id="addTaskForm" class="flex flex-col gap-4">
                 <div class="flex flex-col gap-2">
                     <label for="taskTitleInput" class="text-gray-600 font-semibold">Tiêu đề công việc:</label>
@@ -378,7 +399,15 @@
     <!-- Cửa sổ Popup (Modal) để xem chi tiết công việc -->
     <div id="detailModalOverlay" class="modal-overlay">
         <div class="modal-content">
-            <h2 id="detailTitle" class="text-2xl font-bold mb-4"></h2>
+            <div id="detailHeaderContainer" class="flex justify-between items-start gap-4 mb-4 pb-4 border-b-4 mt-2 pt-1">
+                <h2 id="detailTitle" class="text-2xl font-bold"></h2>
+                <div class="flex items-center gap-2">
+                    <span id="detailStatusBadge" class="text-sm font-semibold px-3 py-1 rounded-full whitespace-nowrap"></span>
+                    <button type="button" id="closeDetailModalIconBtn" class="text-gray-400 hover:text-gray-600 focus:outline-none p-1 rounded-full hover:bg-gray-100 transition-colors">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
             <div class="flex flex-col gap-2 text-gray-700 mb-4">
                 <p class="font-semibold flex items-center gap-2"><i class="fas fa-user-tag mr-2 text-gray-500"></i>Người tạo: <span id="detailOwner"></span></p>
                 <p class="font-semibold flex items-center gap-2"><i class="fas fa-user mr-2 text-gray-500"></i>Người thực hiện: <span id="detailAssignee" class="flex items-center gap-2"></span></p>
@@ -406,7 +435,7 @@
                 </div>
                 
                 <div id="detailCommentsSection">
-                    <div id="detailCommentsList" class="flex flex-col gap-3 mb-4 max-h-60 overflow-y-auto pr-2">
+                    <div id="detailCommentsList" class="flex flex-col gap-3 mb-4">
                         <!-- Các bình luận sẽ được thêm vào đây -->
                     </div>
                     <div class="flex gap-2 relative">
@@ -422,7 +451,7 @@
                 </div>
 
                 <div id="detailHistorySection" class="hidden">
-                    <div id="detailHistoryList" class="flex flex-col gap-3 max-h-60 overflow-y-auto pr-2">
+                    <div id="detailHistoryList" class="flex flex-col gap-3">
                         <!-- Các lịch sử hoạt động sẽ được thêm vào đây -->
                     </div>
                 </div>
