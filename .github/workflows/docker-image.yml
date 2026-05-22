@@ -22,5 +22,5 @@ jobs:
       #     pytest || echo "No tests found"
 
       - name: Build the Docker image
-        run:
-          docker build -t kanban-board:latest -f ubuntu-kanban_board/Dockerfile .
+        run: |
+          docker build -t kanban-board:latest -f ubuntu-kanban_board/Dockerfile ubuntu-kanban_board
