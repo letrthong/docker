@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
@@ -250,7 +250,7 @@
 
         <!-- Cột "To Do" -->
         <div class="bg-gray-200 p-4 md:p-6 rounded-2xl shadow-xl flex flex-col">
-            <h2 class="text-xl font-bold text-gray-800 mb-4">Việc cần làm</h2>
+            <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center justify-between"><span>Việc cần làm</span> <span id="todo-sp-total" class="text-sm font-semibold text-gray-600 bg-white px-2 py-1 rounded-lg shadow-sm hidden"></span></h2>
             <div id="todo-column" class="drop-zone flex-1 flex flex-col gap-4">
                 <!-- Thẻ công việc sẽ được thêm vào đây bằng JavaScript -->
             </div>
@@ -258,7 +258,7 @@
 
         <!-- Cột "In Progress" -->
         <div class="bg-blue-200 p-4 md:p-6 rounded-2xl shadow-xl flex flex-col">
-            <h2 class="text-xl font-bold text-blue-800 mb-4">Đang tiến hành</h2>
+            <h2 class="text-xl font-bold text-blue-800 mb-4 flex items-center justify-between"><span>Đang tiến hành</span> <span id="inprogress-sp-total" class="text-sm font-semibold text-blue-600 bg-white px-2 py-1 rounded-lg shadow-sm hidden"></span></h2>
             <div id="inprogress-column" class="drop-zone flex-1 flex flex-col gap-4">
                 <!-- Thẻ công việc sẽ được thêm vào đây bằng JavaScript -->
             </div>
@@ -266,7 +266,7 @@
 
         <!-- Cột "Blocked" -->
         <div class="bg-red-200 p-4 md:p-6 rounded-2xl shadow-xl flex flex-col">
-            <h2 class="text-xl font-bold text-red-800 mb-4">Bị khóa</h2>
+            <h2 class="text-xl font-bold text-red-800 mb-4 flex items-center justify-between"><span>Bị khóa</span> <span id="blocked-sp-total" class="text-sm font-semibold text-red-600 bg-white px-2 py-1 rounded-lg shadow-sm hidden"></span></h2>
             <div id="blocked-column" class="drop-zone flex-1 flex flex-col gap-4">
                 <!-- Thẻ công việc sẽ được thêm vào đây bằng JavaScript -->
             </div>
@@ -274,7 +274,7 @@
 
         <!-- Cột "Review" -->
         <div class="bg-yellow-50 p-4 md:p-6 rounded-2xl shadow-xl flex flex-col">
-            <h2 class="text-xl font-bold text-yellow-800 mb-4">Đánh giá</h2>
+            <h2 class="text-xl font-bold text-yellow-800 mb-4 flex items-center justify-between"><span>Đánh giá</span> <span id="review-sp-total" class="text-sm font-semibold text-yellow-600 bg-white px-2 py-1 rounded-lg shadow-sm hidden"></span></h2>
             <div id="review-column" class="drop-zone flex-1 flex flex-col gap-4">
                 <!-- Thẻ công việc sẽ được thêm vào đây bằng JavaScript -->
             </div>
@@ -282,7 +282,7 @@
 
         <!-- Cột "Done" -->
         <div class="bg-green-200 p-4 md:p-6 rounded-2xl shadow-xl flex flex-col">
-            <h2 class="text-xl font-bold text-green-800 mb-4">Hoàn thành</h2>
+            <h2 class="text-xl font-bold text-green-800 mb-4 flex items-center justify-between"><span>Hoàn thành</span> <span id="done-sp-total" class="text-sm font-semibold text-green-600 bg-white px-2 py-1 rounded-lg shadow-sm hidden"></span></h2>
             <div id="done-column" class="drop-zone flex-1 flex flex-col gap-4">
                 <!-- Thẻ công việc sẽ được thêm vào đây bằng JavaScript -->
             </div>
@@ -300,6 +300,11 @@
                     <input type="text" id="taskTitleInput" placeholder="Tiêu đề công việc..." required class="p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
                 
+                <div class="flex flex-col gap-2">
+                    <label for="taskDescriptionInput" class="text-gray-600 font-semibold">Mô tả công việc:</label>
+                    <textarea id="taskDescriptionInput" placeholder="Mô tả chi tiết công việc..." class="p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500" rows="3"></textarea>
+                </div>
+
                 <div class="flex flex-col gap-2">
                     <label for="taskProjectSelect" class="text-gray-600 font-semibold">Dự án:</label>
                     <select id="taskProjectSelect" required class="p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -382,11 +387,45 @@
                 <p class="text-sm text-gray-500" id="completedAtSection"><i class="fas fa-calendar-check mr-2"></i>Ngày hoàn thành: <span id="detailCompletedAt"></span></p>
             </div>
 
+            <div id="detailDescriptionSection" class="mt-4 mb-4 hidden">
+                <h3 class="font-semibold text-gray-800 mb-2">Mô tả:</h3>
+                <p id="detailDescription" class="text-gray-700 whitespace-pre-wrap"></p>
+            </div>
+
             <div id="detailChecklist" class="mt-4">
                 <h3 class="font-semibold text-gray-800 mb-2">Checklist:</h3>
                 <ul id="detailChecklistItems" class="list-none space-y-2">
                     <!-- Các mục checklist sẽ được thêm vào đây -->
                 </ul>
+            </div>
+
+            <div class="mt-6 border-t border-gray-200 pt-4">
+                <div class="flex gap-4 border-b border-gray-200 mb-4">
+                    <button id="tabCommentsBtn" type="button" class="pb-2 font-semibold text-blue-600 border-b-2 border-blue-600 focus:outline-none transition-colors">Bình luận</button>
+                    <button id="tabHistoryBtn" type="button" class="pb-2 font-semibold text-gray-500 hover:text-gray-800 border-b-2 border-transparent focus:outline-none transition-colors">Lịch sử</button>
+                </div>
+                
+                <div id="detailCommentsSection">
+                    <div id="detailCommentsList" class="flex flex-col gap-3 mb-4 max-h-60 overflow-y-auto pr-2">
+                        <!-- Các bình luận sẽ được thêm vào đây -->
+                    </div>
+                    <div class="flex gap-2 relative">
+                        <input type="text" id="newCommentInput" placeholder="Viết bình luận..." class="flex-1 p-2 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                        <button type="button" id="commentImageBtn" class="bg-gray-200 text-gray-600 font-semibold py-2 px-3 rounded-xl hover:bg-gray-300 transition" title="Đính kèm ảnh"><i class="fas fa-image"></i></button>
+                        <input type="file" id="commentImageInput" accept="image/*" class="hidden">
+                        <button type="button" id="addCommentBtn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-xl hover:bg-blue-700 transition">Gửi</button>
+                    </div>
+                    <div id="commentImagePreviewContainer" class="mt-2 hidden flex items-center gap-2">
+                        <img id="commentImagePreview" class="h-16 w-auto rounded border object-contain bg-gray-50" />
+                        <button type="button" id="removeCommentImageBtn" class="text-red-500 hover:text-red-700 p-1 rounded-full"><i class="fas fa-times-circle text-lg"></i></button>
+                    </div>
+                </div>
+
+                <div id="detailHistorySection" class="hidden">
+                    <div id="detailHistoryList" class="flex flex-col gap-3 max-h-60 overflow-y-auto pr-2">
+                        <!-- Các lịch sử hoạt động sẽ được thêm vào đây -->
+                    </div>
+                </div>
             </div>
 
             <div class="flex justify-end mt-6" id="detailModalFooter">

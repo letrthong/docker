@@ -7,11 +7,12 @@ import {
     userProfileContainer, userProfileBtn, userInfoDropdown, dropdownUsername, dropdownRole,
     manageUsersDropdownItem, manageProjectsDropdownItem,
     totalTasksCount, todoColumn, inprogressColumn, blockedColumn, reviewColumn, doneColumn,
-    openModalBtn, taskModalOverlay, addTaskForm, taskTitleInput, taskAssigneeSelect,
-    taskProjectSelect, checklistContainer, addChecklistItemBtn, cancelBtn, modalTitle, submitBtn,
+    openModalBtn, taskModalOverlay, addTaskForm, taskTitleInput, taskDescriptionInput, taskAssigneeSelect,
+    taskProjectSelect, taskPrioritySelect, taskStoryPointsSelect, checklistContainer, addChecklistItemBtn, cancelBtn, modalTitle, submitBtn,
     confirmationModalOverlay, confirmTitle, confirmMessage, confirmActionBtn, cancelConfirmBtn,
-    detailModalOverlay, detailTitle, detailOwner, detailAssignee, detailCreatedAt,
-    detailCompletedAt, detailChecklistItems, closeDetailModalBtn, completedAtSection, detailModalFooter,
+    detailModalOverlay, detailTitle, detailDescription, detailDescriptionSection, detailOwner, detailAssignee, detailPriority, detailStoryPoints, detailCreatedAt,
+    detailCompletedAt, detailChecklistItems, detailCommentsList, newCommentInput, addCommentBtn, closeDetailModalBtn, completedAtSection, detailModalFooter,
+    commentImageBtn, commentImageInput, commentImagePreviewContainer, commentImagePreview, removeCommentImageBtn, tabCommentsBtn, tabHistoryBtn, detailHistorySection, detailHistoryList, detailCommentsSection,
     projectFilter, assigneeFilter, statusFilterDropdown, statusDropdownList, statusDropdownButton,
     showMessage, dateFormatter, getAssigneeColor, trashDropdownItem
 } from './ui.js';
@@ -30,6 +31,7 @@ export const setProjectList = (list) => { project_list = list; };
 
 let draggedItemId = null;
 let editingTaskId = null;
+let viewingTaskId = null;
 let actionToConfirm = { id: null, type: null, itemIndex: null }; // Để xử lý cả xóa và nhân bản, và chỉ mục mục checklist
 let selectedStatuses = ['all']; // Mặc định hiển thị tất cả
 
@@ -109,6 +111,12 @@ function renderTasks(assigneeFilterValue = 'all', statusFilterValues = ['all'], 
     reviewColumn.innerHTML = '';
     doneColumn.innerHTML = '';
 
+    let todoSP = 0;
+    let inprogressSP = 0;
+    let blockedSP = 0;
+    let reviewSP = 0;
+    let doneSP = 0;
+
     // Lọc công việc
     const filteredTasks = getTasks().filter(task => {
         // Nếu không phải owner, cô lập hoàn toàn dữ liệu
@@ -139,18 +147,43 @@ function renderTasks(assigneeFilterValue = 'all', statusFilterValues = ['all'], 
     // Hiển thị các task đã lọc
     filteredTasks.forEach(task => {
         const card = createTaskCard(task);
+        const sp = parseInt(task.storyPoints) || 0;
+        
         if (task.status === 'todo') {
             todoColumn.appendChild(card);
+            todoSP += sp;
         } else if (task.status === 'in-progress') {
             inprogressColumn.appendChild(card);
+            inprogressSP += sp;
         } else if (task.status === 'blocked') {
             blockedColumn.appendChild(card);
+            blockedSP += sp;
         } else if (task.status === 'review') {
             reviewColumn.appendChild(card);
+            reviewSP += sp;
         } else if (task.status === 'done') {
             doneColumn.appendChild(card);
+            doneSP += sp;
         }
     });
+
+    const updateSP = (id, total) => {
+        const el = document.getElementById(id);
+        if (el) {
+            if (total > 0) {
+                el.innerHTML = `<i class="fas fa-star text-yellow-500 mr-1"></i>${total}`;
+                el.classList.remove('hidden');
+            } else {
+                el.classList.add('hidden');
+            }
+        }
+    };
+
+    updateSP('todo-sp-total', todoSP);
+    updateSP('inprogress-sp-total', inprogressSP);
+    updateSP('blocked-sp-total', blockedSP);
+    updateSP('review-sp-total', reviewSP);
+    updateSP('done-sp-total', doneSP);
 }
 
 // Thêm các tùy chọn dự án vào bộ lọc
@@ -385,6 +418,33 @@ function createTaskCard(task) {
             }
         }
     }
+
+    if (task.priority || task.storyPoints || (task.comments && task.comments.length > 0)) {
+        const extraTags = document.createElement('div');
+        extraTags.className = "flex gap-2 mb-2";
+        if (task.priority) {
+            const priorityMap = { 'low': 'Thấp', 'medium': 'Trung bình', 'high': 'Cao' };
+            const priorityColor = task.priority === 'high' ? 'text-red-600 bg-red-100' : (task.priority === 'medium' ? 'text-yellow-600 bg-yellow-100' : 'text-green-600 bg-green-100');
+            const pTag = document.createElement('div');
+            pTag.className = `text-xs font-semibold rounded-md px-2 py-1 inline-block ${priorityColor}`;
+            pTag.textContent = priorityMap[task.priority] || task.priority;
+            extraTags.appendChild(pTag);
+        }
+        if (task.storyPoints) {
+            const spTag = document.createElement('div');
+            spTag.className = "text-xs font-semibold text-gray-600 bg-gray-200 rounded-md px-2 py-1 inline-block";
+            spTag.innerHTML = `<i class="fas fa-star text-yellow-500 mr-1"></i>${task.storyPoints}`;
+            extraTags.appendChild(spTag);
+        }
+        if (task.comments && task.comments.length > 0) {
+            const commentTag = document.createElement('div');
+            commentTag.className = "text-xs font-semibold text-gray-600 bg-gray-200 rounded-md px-2 py-1 inline-block";
+            commentTag.innerHTML = `<i class="fas fa-comment text-blue-500 mr-1"></i>${task.comments.length}`;
+            extraTags.appendChild(commentTag);
+        }
+        card.appendChild(extraTags);
+    }
+
     card.appendChild(title);
     // --- Kết thúc cập nhật ---
 
@@ -601,6 +661,23 @@ function showTaskDetails(task) {
         detailAssignee.textContent = 'Không có';
     }
 
+    if (detailDescription && detailDescriptionSection) {
+        if (task.description) {
+            detailDescription.textContent = task.description;
+            detailDescriptionSection.classList.remove('hidden');
+        } else {
+            detailDescriptionSection.classList.add('hidden');
+        }
+    }
+
+    const priorityMap = { 'low': 'Thấp', 'medium': 'Trung bình', 'high': 'Cao' };
+    if (detailPriority) {
+        detailPriority.textContent = task.priority ? (priorityMap[task.priority] || task.priority) : 'Không có';
+    }
+    if (detailStoryPoints) {
+        detailStoryPoints.textContent = task.storyPoints || 'Không có';
+    }
+
     // Hiển thị danh sách Sprints trong modal chi tiết
     const detailSprints = document.getElementById('detailSprints');
     if (detailSprints) {
@@ -661,6 +738,12 @@ function showTaskDetails(task) {
         detailChecklistItems.innerHTML = `<li class="text-gray-500">Không có checklist</li>`;
     }
 
+    viewingTaskId = task.id;
+    renderComments(task);
+    renderHistory(task);
+    
+    if (tabCommentsBtn) tabCommentsBtn.click();
+
     // Xóa nút hành động cũ trong footer
     const existingActionButtons = detailModalFooter.querySelectorAll('.dynamic-action-btn');
     existingActionButtons.forEach(btn => btn.remove());
@@ -686,11 +769,242 @@ function showTaskDetails(task) {
     detailModalOverlay.classList.add('show');
 }
 
+function renderComments(task) {
+    if (!detailCommentsList) return;
+    detailCommentsList.innerHTML = '';
+    if (task.comments && task.comments.length > 0) {
+        task.comments.forEach(comment => {
+            const commentDiv = document.createElement('div');
+            commentDiv.className = 'bg-gray-50 p-3 rounded-xl border border-gray-100';
+            
+            const header = document.createElement('div');
+            header.className = 'flex justify-between items-center mb-1';
+            
+            const authorSpan = document.createElement('span');
+            authorSpan.className = 'font-semibold text-sm text-gray-800 flex items-center gap-2';
+            const colorDot = document.createElement('div');
+            colorDot.className = "w-2 h-2 rounded-full";
+            colorDot.style.backgroundColor = getAssigneeColor(comment.author);
+            authorSpan.appendChild(colorDot);
+            authorSpan.appendChild(document.createTextNode(comment.author));
+            
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'text-xs text-gray-500';
+            timeSpan.textContent = dateFormatter.format(new Date(comment.createdAt));
+            
+            header.appendChild(authorSpan);
+            header.appendChild(timeSpan);
+            
+            const textP = document.createElement('p');
+            textP.className = 'text-sm text-gray-700 whitespace-pre-wrap mt-1';
+            textP.textContent = comment.text;
+            
+            commentDiv.appendChild(header);
+            if (comment.text) commentDiv.appendChild(textP);
+            
+            if (comment.image) {
+                const img = document.createElement('img');
+                img.src = comment.image;
+                img.className = 'mt-2 rounded-lg max-h-48 object-contain border border-gray-200 cursor-pointer hover:opacity-90';
+                img.onclick = () => window.open().document.write(`<img src="${comment.image}" style="max-width:100%; max-height:100%;">`);
+                commentDiv.appendChild(img);
+            }
+            
+            detailCommentsList.appendChild(commentDiv);
+        });
+        detailCommentsList.scrollTop = detailCommentsList.scrollHeight;
+    } else {
+        detailCommentsList.innerHTML = '<p class="text-sm text-gray-500 italic">Chưa có bình luận nào.</p>';
+    }
+}
+
+function renderHistory(task) {
+    if (!detailHistoryList) return;
+    detailHistoryList.innerHTML = '';
+    
+    if (task.history && task.history.length > 0) {
+        const sortedHistory = [...task.history].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        
+        sortedHistory.forEach(item => {
+            const historyDiv = document.createElement('div');
+            historyDiv.className = 'flex items-start gap-3 p-2 bg-gray-50 rounded-xl border border-gray-100';
+            
+            const iconDiv = document.createElement('div');
+            iconDiv.className = 'mt-1 text-gray-400';
+            if (item.action === 'created') iconDiv.innerHTML = '<i class="fas fa-plus-circle text-green-500"></i>';
+            else if (item.action === 'status_change') iconDiv.innerHTML = '<i class="fas fa-exchange-alt text-blue-500"></i>';
+            else if (item.action === 'edited') iconDiv.innerHTML = '<i class="fas fa-pen text-yellow-500"></i>';
+            else if (item.action === 'commented') iconDiv.innerHTML = '<i class="fas fa-comment text-blue-500"></i>';
+            else iconDiv.innerHTML = '<i class="fas fa-history"></i>';
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'flex-1';
+            
+            const headerP = document.createElement('p');
+            headerP.className = 'text-sm text-gray-800';
+            headerP.innerHTML = `<span class="font-semibold">${item.actor}</span> ${item.details}`;
+            
+            const timeP = document.createElement('p');
+            timeP.className = 'text-xs text-gray-500 mt-1';
+            timeP.textContent = dateFormatter.format(new Date(item.timestamp));
+            
+            contentDiv.appendChild(headerP);
+            contentDiv.appendChild(timeP);
+            historyDiv.appendChild(iconDiv);
+            historyDiv.appendChild(contentDiv);
+            
+            detailHistoryList.appendChild(historyDiv);
+        });
+    } else {
+        detailHistoryList.innerHTML = '<p class="text-sm text-gray-500 italic">Chưa có lịch sử hoạt động.</p>';
+    }
+}
+
+let pendingCommentImage = null;
+
+if (commentImageBtn && commentImageInput) {
+    commentImageBtn.addEventListener('click', () => {
+        commentImageInput.click();
+    });
+    
+    commentImageInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    // Chuyển đổi ảnh sang chuẩn WebP để nén tối ưu, chất lượng 80%
+                    const webpData = canvas.toDataURL('image/webp', 0.8);
+                    pendingCommentImage = webpData;
+                    
+                    if (commentImagePreviewContainer && commentImagePreview) {
+                        commentImagePreview.src = webpData;
+                        commentImagePreviewContainer.classList.remove('hidden');
+                    }
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+        commentImageInput.value = '';
+    });
+}
+
+if (removeCommentImageBtn) {
+    removeCommentImageBtn.addEventListener('click', () => {
+        pendingCommentImage = null;
+        if (commentImagePreviewContainer) {
+            commentImagePreviewContainer.classList.add('hidden');
+            commentImagePreview.src = '';
+        }
+    });
+}
+
 // Đóng popup chi tiết công việc
 closeDetailModalBtn.addEventListener('click', () => {
     detailModalOverlay.classList.remove('show');
+    viewingTaskId = null;
+    pendingCommentImage = null;
+    if (commentImagePreviewContainer) {
+        commentImagePreviewContainer.classList.add('hidden');
+        commentImagePreview.src = '';
+    }
 });
 
+// Xử lý chuyển tab Bình luận và Lịch sử
+if (tabCommentsBtn && tabHistoryBtn) {
+    tabCommentsBtn.addEventListener('click', () => {
+        tabCommentsBtn.classList.add('text-blue-600', 'border-blue-600');
+        tabCommentsBtn.classList.remove('text-gray-500', 'border-transparent');
+        tabHistoryBtn.classList.add('text-gray-500', 'border-transparent');
+        tabHistoryBtn.classList.remove('text-blue-600', 'border-blue-600');
+        if (detailCommentsSection) detailCommentsSection.classList.remove('hidden');
+        if (detailHistorySection) detailHistorySection.classList.add('hidden');
+    });
+    tabHistoryBtn.addEventListener('click', () => {
+        tabHistoryBtn.classList.add('text-blue-600', 'border-blue-600');
+        tabHistoryBtn.classList.remove('text-gray-500', 'border-transparent');
+        tabCommentsBtn.classList.add('text-gray-500', 'border-transparent');
+        tabCommentsBtn.classList.remove('text-blue-600', 'border-blue-600');
+        if (detailHistorySection) detailHistorySection.classList.remove('hidden');
+        if (detailCommentsSection) detailCommentsSection.classList.add('hidden');
+    });
+}
+
+if (addCommentBtn) {
+    addCommentBtn.addEventListener('click', async () => {
+        if (!viewingTaskId) return;
+        const text = newCommentInput.value.trim();
+        if (!text && !pendingCommentImage) return;
+        
+        const task = getTaskById(viewingTaskId);
+        if (!task) return;
+        
+        const projPerm = getProjectPermission(task.projectId);
+        const isOwnerOrAssignee = (task.ownerId === currentUsername || task.assignee === currentUsername);
+        const canComment = (projPerm === 'edit' || projPerm === 'create' || projPerm === 'owner' || isOwnerOrAssignee);
+        
+        if (!canComment) {
+            showMessage("Bạn không có quyền bình luận trong công việc này.", true);
+            return;
+        }
+
+        if (!task.comments) {
+            task.comments = [];
+        }
+        
+        const newComment = {
+            id: crypto.randomUUID(),
+            text: text,
+            author: currentUsername,
+            createdAt: new Date().toISOString()
+        };
+        
+        if (pendingCommentImage) {
+            newComment.image = pendingCommentImage;
+        }
+        
+        if (!task.history) task.history = [];
+        task.history.push({
+            id: crypto.randomUUID(),
+            action: 'commented',
+            actor: currentUsername,
+            timestamp: new Date().toISOString(),
+            details: 'đã thêm một bình luận mới.'
+        });
+        
+        task.comments.push(newComment);
+        
+        addCommentBtn.disabled = true;
+        await updateTaskData(task.id, task);
+        addCommentBtn.disabled = false;
+        
+        newCommentInput.value = '';
+        pendingCommentImage = null;
+        if (commentImagePreviewContainer) {
+            commentImagePreviewContainer.classList.add('hidden');
+            commentImagePreview.src = '';
+        }
+        renderComments(task);
+        renderHistory(task);
+        refreshUI();
+    });
+}
+
+if (newCommentInput) {
+    newCommentInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            addCommentBtn.click();
+        }
+    });
+}
 
 // Xóa một công việc
 async function deleteTask(taskId) {
@@ -718,9 +1032,13 @@ async function cloneTask(taskId) {
         const newTask = {
             id: crypto.randomUUID(),
             title: originalTask.title,
+            description: originalTask.description || '',
             projectId: originalTask.projectId || null,
             assignee: originalTask.assignee,
+            priority: originalTask.priority || 'medium',
+            storyPoints: originalTask.storyPoints || '',
             sprintIds: originalTask.sprintIds ? [...originalTask.sprintIds] : [],
+            comments: [],
             // Tạo bản sao sâu của checklist để không ảnh hưởng đến bản gốc
             items: JSON.parse(JSON.stringify(originalTask.items)),
             status: originalTask.status,
@@ -729,6 +1047,13 @@ async function cloneTask(taskId) {
             locked: originalTask.locked || false,
             ownerId: currentUsername // Thêm ownerId khi tạo task mới
         };
+        newTask.history = [{
+            id: crypto.randomUUID(),
+            action: 'created',
+            actor: currentUsername,
+            timestamp: new Date().toISOString(),
+            details: `đã nhân bản công việc từ '${originalTask.title}'.`
+        }];
         await addTaskData(newTask);
         refreshUI();
     }
@@ -871,6 +1196,7 @@ openModalBtn.addEventListener('click', () => {
         modalTitle.textContent = "Thêm Công Việc Mới";
         submitBtn.textContent = "Thêm Công Việc";
         addTaskForm.reset();
+        if (taskDescriptionInput) taskDescriptionInput.value = '';
         checklistContainer.innerHTML = '';
         addChecklistItem();
         
@@ -878,6 +1204,8 @@ openModalBtn.addEventListener('click', () => {
         populateProjectSelect(defaultProject);
         populateAssigneeSelect('', taskProjectSelect.value);
         populateSprintSelect([], taskProjectSelect.value);
+        if (taskPrioritySelect) taskPrioritySelect.value = 'medium';
+        if (taskStoryPointsSelect) taskStoryPointsSelect.value = '';
         taskModalOverlay.classList.add('show');
     } else {
         showMessage("Bạn không có quyền tạo công việc mới trong dự án này.", true);
@@ -906,9 +1234,12 @@ function openEditModal(taskId) {
 
     if (task) {
         taskTitleInput.value = task.title;
+        if (taskDescriptionInput) taskDescriptionInput.value = task.description || '';
         populateProjectSelect(task.projectId);
         populateAssigneeSelect(task.assignee, task.projectId);
         populateSprintSelect(task.sprintIds || [], task.projectId);
+            if (taskPrioritySelect) taskPrioritySelect.value = task.priority || 'medium';
+            if (taskStoryPointsSelect) taskStoryPointsSelect.value = task.storyPoints || '';
         checklistContainer.innerHTML = '';
 
         if (task.items && task.items.length > 0) {
@@ -988,8 +1319,11 @@ addTaskForm.addEventListener('submit', async (e) => {
     }
 
     const title = taskTitleInput.value.trim();
+    const description = taskDescriptionInput ? taskDescriptionInput.value.trim() : '';
     const projectId = taskProjectSelect.value;
     const assignee = taskAssigneeSelect.value.trim();
+    const priority = taskPrioritySelect ? taskPrioritySelect.value : 'medium';
+    const storyPoints = taskStoryPointsSelect ? taskStoryPointsSelect.value : '';
     
     if (!projectId) {
         showMessage("Vui lòng chọn một dự án cho công việc này.", true);
@@ -1018,26 +1352,48 @@ addTaskForm.addEventListener('submit', async (e) => {
         // Chế độ chỉnh sửa
         if (task) {
             task.title = title;
+            task.description = description;
             task.projectId = projectId || null;
             task.assignee = assignee;
+            task.priority = priority;
+            task.storyPoints = storyPoints;
             task.items = items;
             task.sprintIds = sprintIds;
+            if (!task.history) task.history = [];
+            task.history.push({
+                id: crypto.randomUUID(),
+                action: 'edited',
+                actor: currentUsername,
+                timestamp: new Date().toISOString(),
+                details: 'đã cập nhật thông tin công việc.'
+            });
         }
     } else {
         // Chế độ thêm mới
         const newTask = {
             id: crypto.randomUUID(),
             title: title,
+            description: description,
             projectId: projectId || null,
             assignee: assignee,
+            priority: priority,
+            storyPoints: storyPoints,
             sprintIds: sprintIds,
             items: items,
+            comments: [],
             status: 'todo',
             createdAt: new Date().toISOString(), // Lưu ngày tạo
             completedAt: null,
             locked: false,
             ownerId: currentUsername // Thêm ownerId khi tạo task mới
         };
+        newTask.history = [{
+            id: crypto.randomUUID(),
+            action: 'created',
+            actor: currentUsername,
+            timestamp: new Date().toISOString(),
+            details: 'đã tạo công việc này.'
+        }];
         await addTaskData(newTask);
     }
     refreshUI();
@@ -1074,7 +1430,24 @@ async function updateTaskStatus(taskId, newStatus) {
             return;
         }
 
+        const statusMapReverse = {
+            'todo': 'Việc cần làm',
+            'in-progress': 'Đang tiến hành',
+            'blocked': 'Bị khóa',
+            'review': 'Đánh giá',
+            'done': 'Hoàn thành'
+        };
+
         task.status = newStatus;
+        
+        if (!task.history) task.history = [];
+        task.history.push({
+            id: crypto.randomUUID(),
+            action: 'status_change',
+            actor: currentUsername,
+            timestamp: new Date().toISOString(),
+            details: `đã chuyển trạng thái từ <strong>${statusMapReverse[oldStatus]}</strong> sang <strong>${statusMapReverse[newStatus]}</strong>.`
+        });
 
         await updateTaskData(taskId, task);
         refreshUI();
@@ -1095,6 +1468,16 @@ async function rejectTask(taskId) {
         task.status = 'todo';
         task.completedAt = null; // Xóa ngày hoàn thành
         task.locked = false; // Mở khóa task
+        
+        if (!task.history) task.history = [];
+        task.history.push({
+            id: crypto.randomUUID(),
+            action: 'status_change',
+            actor: currentUsername,
+            timestamp: new Date().toISOString(),
+            details: `đã từ chối công việc và chuyển về <strong>Việc cần làm</strong>.`
+        });
+        
         await updateTaskData(taskId, task);
         refreshUI();
         detailModalOverlay.classList.remove('show');
@@ -1115,6 +1498,16 @@ async function acceptTask(taskId) {
         task.status = 'done';
         task.completedAt = new Date().toISOString();
         task.locked = true; // Khóa task khi đã hoàn thành
+        
+        if (!task.history) task.history = [];
+        task.history.push({
+            id: crypto.randomUUID(),
+            action: 'status_change',
+            actor: currentUsername,
+            timestamp: new Date().toISOString(),
+            details: `đã chấp nhận công việc và chuyển sang <strong>Hoàn thành</strong>.`
+        });
+        
         await updateTaskData(taskId, task);
         refreshUI();
         detailModalOverlay.classList.remove('show');
