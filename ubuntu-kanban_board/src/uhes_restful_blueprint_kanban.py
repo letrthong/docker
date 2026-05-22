@@ -167,7 +167,7 @@ def get_projects():
                     projects.append(project)
                 else:
                     if project.get('status', 'active') != 'deleted':
-                    projects.append(project)
+                        projects.append(project)
     return jsonify(projects)
 
 @kanban_api.route("/projects", methods=["POST"])
