@@ -1,10 +1,4 @@
-
 name: Docker Image CI
-      - name: Upload index.html as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: index-html
-          path: ubuntu-kanban_board/dist/index.html
 
 on:
   push:
@@ -41,5 +35,12 @@ jobs:
           docker cp kanban_temp:/app/dist/index.html ubuntu-kanban_board/dist/index.html
 
       - name: Stop and remove container
+        if: always()
         run: |
           docker rm -f kanban_temp
+
+      - name: Upload index.html as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: index-html
+          path: ubuntu-kanban_board/dist/index.html
