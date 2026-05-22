@@ -13,7 +13,7 @@ import {
     detailModalOverlay, detailTitle, detailOwner, detailAssignee, detailCreatedAt,
     detailCompletedAt, detailChecklistItems, closeDetailModalBtn, completedAtSection, detailModalFooter,
     projectFilter, assigneeFilter, statusFilterDropdown, statusDropdownList, statusDropdownButton,
-    showMessage, dateFormatter, getAssigneeColor
+    showMessage, dateFormatter, getAssigneeColor, trashDropdownItem
 } from './ui.js';
 import { initAuth } from './auth.js';
 import { initAdmin } from './admin.js';
@@ -1365,9 +1365,11 @@ export async function initKanban() {
         if (userPermission === 'owner') {
             manageUsersDropdownItem.classList.remove('hidden');
             if (manageProjectsDropdownItem) manageProjectsDropdownItem.classList.remove('hidden');
+            if (trashDropdownItem) trashDropdownItem.classList.remove('hidden');
         } else {
             manageUsersDropdownItem.classList.add('hidden');
             if (manageProjectsDropdownItem) manageProjectsDropdownItem.classList.add('hidden');
+            if (trashDropdownItem) trashDropdownItem.classList.add('hidden');
         }
     }
 

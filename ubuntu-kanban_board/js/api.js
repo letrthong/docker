@@ -114,6 +114,18 @@ export async function updateProjectAPI(projectId, projectData) {
     });
 }
 
+export async function fetchDeletedProjectsAPI() {
+    return await apiFetch('/projects?status=deleted');
+}
+
+export async function restoreProjectAPI(projectId) {
+    return await apiFetch(`/projects/${projectId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'active' }) // Khôi phục trạng thái thành active
+    });
+}
+
 // --- 2. API CÔNG VIỆC (TASKS) ---
 
 export async function fetchTasksAPI() {

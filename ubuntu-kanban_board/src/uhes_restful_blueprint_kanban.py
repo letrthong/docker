@@ -24,9 +24,10 @@ def init_kanban_db():
     os.makedirs(TASKS_DIR, exist_ok=True)
     
     if not os.listdir(USERS_DIR):
+        admin_id = str(uuid.uuid4().hex)
         hashed_pw = generate_password_hash("admin")
-        default_user = {"useruid": "1", "username": "admin", "permission": "owner", "password": hashed_pw}
-        write_json(os.path.join(USERS_DIR, "1.json"), default_user)
+        default_user = {"useruid": admin_id, "username": "admin", "permission": "owner", "password": hashed_pw}
+        write_json(os.path.join(USERS_DIR, f"{admin_id}.json"), default_user)
 
 def read_json(filepath):
     with open(filepath, 'r', encoding='utf-8') as f:
@@ -117,8 +118,8 @@ def create_user():
     if any(u['username'] == new_user.get('username') for u in users):
         return jsonify({"error": "Tên đăng nhập đã tồn tại"}), 400
         
-    # Tạo ID mới
-    new_uid = str(max([int(u['useruid']) for u in users if str(u.get('useruid', '')).isdigit()] + [0]) + 1)
+    # Tạo ID mới bằng UUID
+    new_uid = str(uuid.uuid4().hex)
     new_user['useruid'] = new_uid
     
     # Mã hóa mật khẩu trước khi lưu
@@ -150,12 +151,23 @@ def update_user(useruid):
 
 @kanban_api.route("/projects", methods=["GET"])
 def get_projects():
+    status_filter = request.args.get('status', 'active')
     projects = []
     if os.path.exists(PROJECTS_DIR):
         for filename in os.listdir(PROJECTS_DIR):
             if filename.endswith('.json'):
                 filepath = os.path.join(PROJECTS_DIR, filename)
-                projects.append(read_json(filepath))
+                project = read_json(filepath)
+                
+                # Lọc theo trạng thái xóa mềm
+                if status_filter == 'deleted':
+                    if project.get('status') == 'deleted':
+                        projects.append(project)
+                elif status_filter == 'all':
+                    projects.append(project)
+                else:
+                    if project.get('status', 'active') != 'deleted':
+                    projects.append(project)
     return jsonify(projects)
 
 @kanban_api.route("/projects", methods=["POST"])
@@ -163,6 +175,7 @@ def create_project():
     new_project = request.json
     
     new_project['id'] = str(uuid.uuid4().hex)
+    new_project['status'] = 'active'
     if 'users' not in new_project:
         new_project['users'] = []
         
@@ -182,6 +195,19 @@ def update_project(project_id):
     project.update(updated_data)
     write_json(filepath, project)
     return jsonify({"message": "Cập nhật dự án thành công", "project": project})
+
+@kanban_api.route("/projects/<project_id>", methods=["DELETE"])
+def delete_project(project_id):
+    filepath = os.path.join(PROJECTS_DIR, f"{project_id}.json")
+    
+    if not os.path.exists(filepath):
+        return jsonify({"error": "Không tìm thấy dự án"}), 404
+        
+    project = read_json(filepath)
+    # Thay vì xóa file vật lý, đổi trạng thái thành deleted
+    project['status'] = 'deleted'
+    write_json(filepath, project)
+    return jsonify({"message": "Đã xóa dự án thành công (chuyển vào thùng rác)"})
 
 @kanban_api.route("/tasks", methods=["GET"])
 def get_tasks():

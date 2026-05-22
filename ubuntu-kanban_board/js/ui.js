@@ -55,6 +55,13 @@ export const openManageProjectsBtn = document.getElementById('openManageProjects
 export const changePasswordDropdownItem = document.getElementById('changePasswordDropdownItem');
 export const openChangePasswordBtn = document.getElementById('openChangePasswordBtn');
 
+// Thùng Rác
+export const trashDropdownItem = document.getElementById('trashDropdownItem');
+export const openTrashBtn = document.getElementById('openTrashBtn');
+export const trashModalOverlay = document.getElementById('trashModalOverlay');
+export const closeTrashBtn = document.getElementById('closeTrashBtn');
+export const trashListTableBody = document.getElementById('trashListTableBody');
+
 // Đổi Mật Khẩu Modal
 export const changePasswordModalOverlay = document.getElementById('changePasswordModalOverlay');
 export const changePasswordForm = document.getElementById('changePasswordForm');

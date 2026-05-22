@@ -1,11 +1,12 @@
-import { createUserAPI, updateUserAPI, fetchProjectsAPI, createProjectAPI, updateProjectAPI } from './api.js';
+import { createUserAPI, updateUserAPI, fetchProjectsAPI, createProjectAPI, updateProjectAPI, fetchDeletedProjectsAPI, restoreProjectAPI } from './api.js';
 import { getUserlist } from './user.js';
 import {
     addUserBtn, userModalOverlay, addUserForm, newUsername, newUserPassword, cancelUserBtn, userModalTitle, submitUserBtn,
     openManageUsersBtn, manageUsersModalOverlay, closeManageUsersBtn, userListTableBody, openAddUserFromManageBtn,
     openManageProjectsBtn, manageProjectsModalOverlay, closeManageProjectsBtn, projectListTableBody, openAddProjectBtn,
     projectModalOverlay, projectModalTitle, projectForm, projectName, projectDescription, projectUsersContainer, cancelProjectBtn, submitProjectBtn,
-    userInfoDropdown, showMessage
+    userInfoDropdown, showMessage,
+    trashModalOverlay, openTrashBtn, closeTrashBtn, trashListTableBody
 } from './ui.js';
 import { 
     user_list, project_list, setUserList, setProjectList, 
@@ -348,6 +349,67 @@ export function initAdmin() {
                     populateSprintFilter();
                 }
             }
+        });
+    }
+
+    // --- Logic Thùng Rác (Trash) ---
+    if (openTrashBtn) {
+        openTrashBtn.addEventListener('click', async () => {
+            userInfoDropdown.classList.add('hidden');
+            userInfoDropdown.classList.remove('flex');
+            await renderTrashTable();
+            trashModalOverlay.classList.add('show');
+        });
+    }
+
+    if (closeTrashBtn) {
+        closeTrashBtn.addEventListener('click', () => {
+            trashModalOverlay.classList.remove('show');
+        });
+    }
+
+    async function renderTrashTable() {
+        if (!trashListTableBody) return;
+        const deletedProjects = await fetchDeletedProjectsAPI();
+        trashListTableBody.innerHTML = '';
+
+        if (deletedProjects.length === 0) {
+            trashListTableBody.innerHTML = `<tr><td colspan="3" class="py-4 text-center text-gray-500">Thùng rác trống</td></tr>`;
+            return;
+        }
+
+        deletedProjects.forEach(project => {
+            const tr = document.createElement('tr');
+            tr.className = "border-b hover:bg-gray-50 transition-colors";
+            tr.innerHTML = `
+                <td class="py-3 px-4 text-sm text-gray-800 font-medium">${project.name}</td>
+                <td class="py-3 px-4 text-sm text-gray-600 truncate max-w-xs">${project.description || ''}</td>
+                <td class="py-3 px-4 text-center">
+                    <button class="restore-project-btn text-xs font-semibold py-1 px-3 rounded-lg transition-colors bg-green-100 text-green-700 hover:bg-green-200" data-id="${project.id}">
+                        <i class="fas fa-undo mr-1"></i>Khôi phục
+                    </button>
+                </td>
+            `;
+            trashListTableBody.appendChild(tr);
+        });
+
+        document.querySelectorAll('.restore-project-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const projectId = e.currentTarget.getAttribute('data-id');
+                const response = await restoreProjectAPI(projectId);
+                if (response) {
+                    showMessage("Đã khôi phục dự án thành công!");
+                    
+                    // Cập nhật lại UI Thùng rác
+                    await renderTrashTable();
+                    
+                    // Cập nhật lại UI chính
+                    const newProjects = await fetchProjectsAPI();
+                    setProjectList(newProjects);
+                    populateProjectFilter();
+                    populateSprintFilter();
+                }
+            });
         });
     }
 }
