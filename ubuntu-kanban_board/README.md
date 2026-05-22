@@ -102,3 +102,13 @@ js/components: Chứa các component nhỏ, tái sử dụng được (nút, mod
 js/pages: Chứa các component cấp trang (mỗi file đại diện cho một trang lớn, ví dụ: KanbanBoard.jsx, LoginPage.jsx).
 
 # Cài đặt Jest cho unit test
+
+###  Detail
+- Assignee
+- Priority
+- Status
+- Sprint
+- Description
+- Tags
+- Notes
+- Block reason
