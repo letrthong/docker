@@ -10,6 +10,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Tải Font Awesome để sử dụng các biểu tượng -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <!-- Tải Quill CSS để hiển thị khung soạn thảo phong phú -->
+    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
     <style>
         /* Sử dụng phông chữ Inter cho toàn bộ trang */
         body {
@@ -139,6 +141,30 @@
         }
         .multiselect-dropdown .dropdown-list-item input[type="checkbox"] {
             margin-right: 0.5rem;
+        }
+        /* Ghi đè CSS Quill để đồng bộ giao diện Tailwind của dự án */
+        .ql-toolbar.ql-snow {
+            border-top-left-radius: 0.75rem;
+            border-top-right-radius: 0.75rem;
+            border-color: #d1d5db;
+            font-family: 'Inter', sans-serif;
+        }
+        .ql-container.ql-snow {
+            border-bottom-left-radius: 0.75rem;
+            border-bottom-right-radius: 0.75rem;
+            border-color: #d1d5db;
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+        }
+        /* Thêm viền cho bảng trong Quill Editor để dễ nhìn hơn */
+        .ql-editor table {
+            border-collapse: collapse;
+            width: 100%;
+            table-layout: fixed;
+        }
+        .ql-editor td, .ql-editor th {
+            border: 1px solid #d1d5db;
+            padding: 0.5rem;
         }
     </style>
 </head>
@@ -324,8 +350,9 @@
                             <input type="text" id="taskTitleInput" placeholder="Tiêu đề công việc..." required class="p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
                         </div>
                         <div class="flex flex-col gap-2">
-                            <label for="taskDescriptionInput" class="text-gray-600 font-semibold">Mô tả công việc:</label>
-                            <textarea id="taskDescriptionInput" placeholder="Mô tả chi tiết công việc..." class="p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500" rows="5"></textarea>
+                            <label class="text-gray-600 font-semibold">Mô tả công việc:</label>
+                            <div id="editor-container" class="bg-white"></div>
+                            <input type="hidden" id="taskDescriptionInput">
                         </div>
                         <div class="flex flex-col gap-2">
                             <label class="text-gray-600 font-semibold">Checklist:</label>
@@ -425,7 +452,7 @@
 
             <div id="detailDescriptionSection" class="mt-4 mb-4 hidden">
                 <h3 class="font-semibold text-gray-800 mb-2">Mô tả:</h3>
-                <p id="detailDescription" class="text-gray-700 whitespace-pre-wrap"></p>
+                <div id="detailDescription" class="text-gray-700 ql-editor border border-gray-200 bg-gray-50 rounded-xl !p-4"></div>
             </div>
 
             <div id="detailChecklist" class="mt-4">
@@ -614,6 +641,8 @@
         <p class="text-white mt-4 font-semibold text-lg">Đang xử lý...</p>
     </div>
 
+    <!-- Tải Quill JS -->
+    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
     <!-- Tải logic JS từ file bên ngoài -->
     <script type="module" src="./js/main.js"></script>
 </body>

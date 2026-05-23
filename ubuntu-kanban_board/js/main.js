@@ -35,6 +35,118 @@ let viewingTaskId = null;
 let actionToConfirm = { id: null, type: null, itemIndex: null }; // Để xử lý cả xóa và nhân bản, và chỉ mục mục checklist
 let selectedStatuses = ['all']; // Mặc định hiển thị tất cả
 
+// Khởi tạo Quill Editor
+let quill;
+if (document.getElementById('editor-container')) {
+    quill = new Quill('#editor-container', {
+        theme: 'snow',
+        placeholder: 'Mô tả chi tiết công việc...',
+        modules: {
+            table: true, // Kích hoạt module bảng tích hợp của Quill
+            toolbar: {
+                container: [
+                    [{ 'size': ['small', false, 'large', 'huge'] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{ 'color': [] }, { 'background': [] }],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }, { 'align': [] }],
+                    ['link', 'image', 'table'], // Thêm nút table
+                    ['table-insert-row', 'table-delete-row', 'table-insert-column', 'table-delete-column'],
+                    ['clean']
+                ],
+                handlers: {
+                    table: function() {
+                        // Mặc định tạo ngay một bảng gồm 2 dòng và 2 cột khi bấm nút
+                        this.quill.getModule('table').insertTable(2, 2);
+                    },
+                    'table-insert-row': function() {
+                        this.quill.getModule('table').insertRowBelow();
+                    },
+                    'table-insert-column': function() {
+                        this.quill.getModule('table').insertColumnRight();
+                    },
+                    'table-delete-row': function() {
+                        this.quill.getModule('table').deleteRow();
+                    },
+                    'table-delete-column': function() {
+                        this.quill.getModule('table').deleteColumn();
+                    },
+                    image: function() {
+                        const input = document.createElement('input');
+                        input.setAttribute('type', 'file');
+                        input.setAttribute('accept', 'image/*');
+                        input.click();
+
+                        input.onchange = () => {
+                            const file = input.files[0];
+                            if (file && file.type.startsWith('image/')) {
+                                const reader = new FileReader();
+                                reader.onload = (event) => {
+                                    const img = new Image();
+                                    img.onload = () => {
+                                        let width = img.width;
+                                        let height = img.height;
+                                        const MAX_DIMENSION = 1200;
+                                        
+                                        if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+                                            if (width > height) {
+                                                height = Math.round(height * (MAX_DIMENSION / width));
+                                                width = MAX_DIMENSION;
+                                            } else {
+                                                width = Math.round(width * (MAX_DIMENSION / height));
+                                                height = MAX_DIMENSION;
+                                            }
+                                        }
+
+                                        const canvas = document.createElement('canvas');
+                                        canvas.width = width;
+                                        canvas.height = height;
+                                        const ctx = canvas.getContext('2d');
+                                        ctx.drawImage(img, 0, 0, width, height);
+                                        
+                                        // Chuyển đổi ảnh sang chuẩn WebP để nén tối ưu, chất lượng 80%
+                                        const webpData = canvas.toDataURL('image/webp', 0.8);
+                                        
+                                        const range = quill.getSelection(true);
+                                        quill.insertEmbed(range.index, 'image', webpData);
+                                        quill.setSelection(range.index + 1);
+                                    };
+                                    img.src = event.target.result;
+                                };
+                                reader.readAsDataURL(file);
+                            }
+                        };
+                    }
+                }
+            }
+        }
+    });
+    
+    quill.on('text-change', function() {
+        if (taskDescriptionInput) {
+            taskDescriptionInput.value = quill.root.innerHTML === '<p><br></p>' ? '' : quill.root.innerHTML;
+        }
+    });
+
+    // Bổ sung icon cho nút Table bằng FontAwesome (Do Quill 1.3 không có sẵn SVG cho bảng)
+    const tableBtn = document.querySelector('.ql-table');
+    if (tableBtn) {
+        tableBtn.innerHTML = '<i class="fas fa-table" style="color: #444; font-size: 15px;"></i>';
+    }
+
+    // Bổ sung giao diện cho các nút thao tác bảng (Thêm/Xóa dòng, cột)
+    const insertRowBtn = document.querySelector('.ql-table-insert-row');
+    if (insertRowBtn) { insertRowBtn.innerHTML = '<span class="font-bold text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-gray-700" title="Thêm dòng phía dưới">+ dòng</span>'; insertRowBtn.style.width = 'auto'; insertRowBtn.style.padding = '0 2px'; }
+    
+    const deleteRowBtn = document.querySelector('.ql-table-delete-row');
+    if (deleteRowBtn) { deleteRowBtn.innerHTML = '<span class="font-bold text-xs bg-red-50 hover:bg-red-100 px-2 py-1 rounded text-red-600" title="Xóa dòng hiện tại">- dòng</span>'; deleteRowBtn.style.width = 'auto'; deleteRowBtn.style.padding = '0 2px'; }
+
+    const insertColBtn = document.querySelector('.ql-table-insert-column');
+    if (insertColBtn) { insertColBtn.innerHTML = '<span class="font-bold text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-gray-700" title="Thêm cột bên phải">+ cột</span>'; insertColBtn.style.width = 'auto'; insertColBtn.style.padding = '0 2px'; }
+    
+    const deleteColBtn = document.querySelector('.ql-table-delete-column');
+    if (deleteColBtn) { deleteColBtn.innerHTML = '<span class="font-bold text-xs bg-red-50 hover:bg-red-100 px-2 py-1 rounded text-red-600" title="Xóa cột hiện tại">- cột</span>'; deleteColBtn.style.width = 'auto'; deleteColBtn.style.padding = '0 2px'; }
+}
+
 // Helpers kiểm tra quyền cục bộ
 export function isUserInProject(project, userId) {
     if (!project || !project.users) return false;
@@ -694,7 +806,20 @@ function showTaskDetails(task) {
 
     if (detailDescription && detailDescriptionSection) {
         if (task.description) {
-            detailDescription.textContent = task.description;
+            // Tương thích ngược: Nếu mô tả có chứa thẻ HTML (từ Quill), render HTML. Nếu là text thường, render giữ nguyên pre-wrap
+            if (/<[a-z][\s\S]*>/i.test(task.description)) {
+                detailDescription.innerHTML = task.description;
+                detailDescription.classList.remove('whitespace-pre-wrap');
+                    
+                    // Đảm bảo tất cả các link đều tự động mở tab mới và an toàn
+                    detailDescription.querySelectorAll('a').forEach(link => {
+                        link.setAttribute('target', '_blank');
+                        link.setAttribute('rel', 'noopener noreferrer');
+                    });
+            } else {
+                detailDescription.textContent = task.description;
+                detailDescription.classList.add('whitespace-pre-wrap');
+            }
             detailDescriptionSection.classList.remove('hidden');
         } else {
             detailDescriptionSection.classList.add('hidden');
@@ -1253,6 +1378,7 @@ openModalBtn.addEventListener('click', () => {
         submitBtn.textContent = "Thêm Công Việc";
         addTaskForm.reset();
         if (taskDescriptionInput) taskDescriptionInput.value = '';
+        if (quill) quill.root.innerHTML = '';
         checklistContainer.innerHTML = '';
         addChecklistItem();
         
@@ -1291,6 +1417,14 @@ function openEditModal(taskId) {
     if (task) {
         taskTitleInput.value = task.title;
         if (taskDescriptionInput) taskDescriptionInput.value = task.description || '';
+        if (quill) {
+            // Tương thích ngược khi sửa task cũ có text thuần không có thẻ
+            if (task.description && !/<[a-z][\s\S]*>/i.test(task.description)) {
+                quill.root.innerText = task.description;
+            } else {
+                quill.root.innerHTML = task.description || '';
+            }
+        }
         populateProjectSelect(task.projectId);
         populateAssigneeSelect(task.assignee, task.projectId);
         populateSprintSelect(task.sprintIds || [], task.projectId);
@@ -1462,6 +1596,7 @@ addTaskForm.addEventListener('submit', async (e) => {
     }
     refreshUI();
     addTaskForm.reset();
+    if (quill) quill.root.innerHTML = '';
     checklistContainer.innerHTML = '';
     taskModalOverlay.classList.remove('show');
     editingTaskId = null;

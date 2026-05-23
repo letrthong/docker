@@ -1,0 +1,31 @@
+{
+    "id": "06401802-52a2-4d81-86d8-27f36ae6e6fd",
+    "title": "xxxxxxx",
+    "description": "<p><strong>ssfsg</strong></p><p>0000</p><p>----</p><p>-----</p><p><br></p><p><br></p>",
+    "projectId": "eafdf6ef379b45fe98b2a30c451ad900",
+    "assignee": "admin",
+    "priority": "medium",
+    "storyPoints": "",
+    "sprintIds": [],
+    "items": [
+        {
+            "text": "xx",
+            "completed": false
+        }
+    ],
+    "comments": [],
+    "status": "todo",
+    "createdAt": "2026-05-23T04:29:55.515Z",
+    "completedAt": null,
+    "locked": false,
+    "ownerId": "admin",
+    "history": [
+        {
+            "id": "5dd93b8a-5105-4863-b3a0-a05ea42bed7c",
+            "action": "created",
+            "actor": "admin",
+            "timestamp": "2026-05-23T04:29:55.515Z",
+            "details": "đã tạo công việc này."
+        }
+    ]
+}
