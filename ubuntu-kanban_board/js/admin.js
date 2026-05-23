@@ -6,7 +6,7 @@ import {
     userInfoDropdown, showMessage
 } from './ui.js';
 import { user_list, setUserList } from './state.js';
-import { populateAssigneeFilter } from './main.js';
+import { populateAssigneeFilter, hideTextOnMobile } from './main.js';
 
 let editingUserUid = null;
 let editingProjectId = null;
@@ -103,6 +103,8 @@ export function initAdmin() {
     }
 
     async function renderManageUsersTable() {
+        hideTextOnMobile(openAddUserFromManageBtn);
+        
         if (!userListTableBody) return;
         const newList = await getUserlist(); // Cập nhật danh sách mới nhất
         setUserList(newList);
@@ -129,10 +131,10 @@ export function initAdmin() {
                 <td class="py-3 px-4 text-center">
                     ${!isOwner ? `
                         <button class="edit-user-btn text-xs font-semibold py-1 px-3 rounded-lg transition-colors bg-blue-100 text-blue-700 hover:bg-blue-200 mr-2" data-uid="${user.useruid}" data-username="${user.username}" data-role="${user.permission}">
-                            <i class="fas fa-pen mr-1"></i>Sửa
+                            <i class="fas fa-pen sm:mr-1"></i><span class="hidden sm:inline">Sửa</span>
                         </button>
                         <button class="toggle-user-status-btn text-xs font-semibold py-1 px-3 rounded-lg transition-colors ${isDisabled ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}" data-uid="${user.useruid}" data-disabled="${isDisabled}">
-                            ${isDisabled ? 'Kích hoạt' : 'Vô hiệu hóa'}
+                            <i class="fas ${isDisabled ? 'fa-check' : 'fa-ban'} sm:mr-1"></i><span class="hidden sm:inline">${isDisabled ? 'Kích hoạt' : 'Vô hiệu hóa'}</span>
                         </button>
                     ` : '<span class="text-xs text-gray-400 font-medium">Không thể sửa</span>'}
                 </td>

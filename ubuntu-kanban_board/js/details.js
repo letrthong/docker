@@ -59,6 +59,7 @@ export async function showTaskDetails(summaryTask, silent = false) {
     currentDetailedTask = task;
     detailTitle.style.color = getAssigneeColor(task.assignee);
     detailTitle.textContent = task.title;
+    detailTitle.classList.add('break-words', 'whitespace-normal');
 
     if (detailHeaderContainer && detailStatusBadge) {
         detailHeaderContainer.className = "flex justify-between items-start gap-4 mb-4 pb-4 border-b-4 mt-2 pt-1";
@@ -107,13 +108,17 @@ export async function showTaskDetails(summaryTask, silent = false) {
             if (/<[a-z][\s\S]*>/i.test(task.description)) {
                 detailDescription.innerHTML = task.description;
                 detailDescription.classList.remove('whitespace-pre-wrap');
-                    detailDescription.querySelectorAll('a').forEach(link => {
-                        link.setAttribute('target', '_blank');
-                        link.setAttribute('rel', 'noopener noreferrer');
-                    });
+                detailDescription.classList.add('break-words', 'overflow-x-auto', 'max-w-full');
+                detailDescription.querySelectorAll('a').forEach(link => {
+                    link.setAttribute('target', '_blank');
+                    link.setAttribute('rel', 'noopener noreferrer');
+                });
+                detailDescription.querySelectorAll('img').forEach(img => {
+                    img.classList.add('max-w-full', 'h-auto');
+                });
             } else {
                 detailDescription.textContent = task.description;
-                detailDescription.classList.add('whitespace-pre-wrap');
+                detailDescription.classList.add('whitespace-pre-wrap', 'break-words');
             }
             detailDescriptionSection.classList.remove('hidden');
         } else {
@@ -137,6 +142,7 @@ export async function showTaskDetails(summaryTask, silent = false) {
                 }).filter(Boolean);
                 if (sprintNames.length > 0) {
                     detailSprints.textContent = sprintNames.join(', ');
+                    detailSprints.classList.add('break-words');
                     detailSprints.classList.remove('hidden');
                 }
             }
@@ -156,7 +162,7 @@ export async function showTaskDetails(summaryTask, silent = false) {
     if (task.items && task.items.length > 0) {
         task.items.forEach((item, index) => {
             const listItem = document.createElement('li');
-            listItem.className = `flex items-center gap-2 text-gray-700 ${item.completed ? 'line-through text-gray-500' : ''}`;
+            listItem.className = `flex items-start gap-2 text-gray-700 ${item.completed ? 'line-through text-gray-500' : ''}`;
 
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
@@ -167,10 +173,11 @@ export async function showTaskDetails(summaryTask, silent = false) {
             const canEditCheckbox = (projPerm === 'edit' || projPerm === 'create' || projPerm === 'owner' || isOwnerOrAssignee);
 
             checkbox.disabled = !canEditCheckbox || task.locked;
-            checkbox.className = 'form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer';
+            checkbox.className = 'form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer mt-1 flex-shrink-0';
             checkbox.onchange = () => updateChecklistItem(task.id, index, checkbox.checked);
 
             const textSpan = document.createElement('span');
+            textSpan.className = 'break-words flex-1 min-w-0';
             textSpan.textContent = item.text;
 
             listItem.appendChild(checkbox);
@@ -246,7 +253,7 @@ function renderComments(task, clearAll = true) {
             header.appendChild(timeSpan);
             
             const textP = document.createElement('p');
-            textP.className = 'text-sm text-gray-700 whitespace-pre-wrap mt-1';
+            textP.className = 'text-sm text-gray-700 whitespace-pre-wrap mt-1 break-words min-w-0';
             textP.textContent = comment.text;
             
             commentDiv.appendChild(header);
@@ -276,7 +283,7 @@ function renderComments(task, clearAll = true) {
                     editContainer.className = 'edit-comment-container mt-2';
                     
                     const textarea = document.createElement('textarea');
-                    textarea.className = 'w-full p-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none';
+                    textarea.className = 'w-full p-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none break-words min-w-0';
                     textarea.rows = 3;
                     textarea.value = comment.text;
                     
@@ -368,7 +375,7 @@ function renderHistory(task, clearAll = true) {
             const contentDiv = document.createElement('div');
             contentDiv.className = 'flex-1';
             const headerP = document.createElement('p');
-            headerP.className = 'text-sm text-gray-800';
+            headerP.className = 'text-sm text-gray-800 break-words min-w-0';
             headerP.innerHTML = `<span class="font-semibold">${item.actor}</span> ${item.details}`;
             const timeP = document.createElement('p');
             timeP.className = 'text-xs text-gray-500 mt-1';

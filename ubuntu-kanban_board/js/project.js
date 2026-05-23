@@ -7,7 +7,7 @@ import {
     trashModalOverlay, openTrashBtn, closeTrashBtn, trashListTableBody
 } from './ui.js';
 import { user_list, project_list, setUserList, setProjectList } from './state.js';
-import { populateProjectFilter, populateAssigneeFilter, populateSprintFilter } from './main.js';
+import { populateProjectFilter, populateAssigneeFilter, populateSprintFilter, hideTextOnMobile } from './main.js';
 
 let editingProjectId = null;
 const addProjectSprintBtn = document.getElementById('addProjectSprintBtn');
@@ -85,6 +85,8 @@ export function initProject() {
     if (closeManageProjectsBtn) closeManageProjectsBtn.addEventListener('click', () => manageProjectsModalOverlay.classList.remove('show'));
 
     async function renderManageProjectsTable() {
+        hideTextOnMobile(openAddProjectBtn);
+        
         if (!projectListTableBody) return;
         setProjectList(await fetchProjectsAPI());
         setUserList(await getUserlist());
@@ -105,7 +107,7 @@ export function initProject() {
                 <td class="py-3 px-4 text-sm text-gray-600" title="${memberNames}">${memberCount} thành viên</td>
                 <td class="py-3 px-4 text-center">
                     <button class="edit-project-btn text-xs font-semibold py-1 px-3 rounded-lg transition-colors bg-blue-100 text-blue-700 hover:bg-blue-200" data-id="${project.id}">
-                        <i class="fas fa-pen mr-1"></i>Sửa / Thêm User
+                        <i class="fas fa-pen sm:mr-1"></i><span class="hidden sm:inline">Sửa / Thêm User</span>
                     </button>
                 </td>
             `;
@@ -187,7 +189,7 @@ export function initProject() {
         trashListTableBody.innerHTML = deletedProjects.length === 0 ? `<tr><td colspan="3" class="py-4 text-center text-gray-500">Thùng rác trống</td></tr>` : '';
         deletedProjects.forEach(project => {
             const tr = document.createElement('tr'); tr.className = "border-b hover:bg-gray-50 transition-colors";
-            tr.innerHTML = `<td class="py-3 px-4 text-sm text-gray-800 font-medium">${project.name}</td><td class="py-3 px-4 text-sm text-gray-600 truncate max-w-xs">${project.description || ''}</td><td class="py-3 px-4 text-center"><button class="restore-project-btn text-xs font-semibold py-1 px-3 rounded-lg transition-colors bg-green-100 text-green-700 hover:bg-green-200" data-id="${project.id}"><i class="fas fa-undo mr-1"></i>Khôi phục</button></td>`;
+            tr.innerHTML = `<td class="py-3 px-4 text-sm text-gray-800 font-medium">${project.name}</td><td class="py-3 px-4 text-sm text-gray-600 truncate max-w-xs">${project.description || ''}</td><td class="py-3 px-4 text-center"><button class="restore-project-btn text-xs font-semibold py-1 px-3 rounded-lg transition-colors bg-green-100 text-green-700 hover:bg-green-200" data-id="${project.id}"><i class="fas fa-undo sm:mr-1"></i><span class="hidden sm:inline">Khôi phục</span></button></td>`;
             trashListTableBody.appendChild(tr);
         });
         document.querySelectorAll('.restore-project-btn').forEach(btn => btn.addEventListener('click', async (e) => {

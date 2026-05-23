@@ -1373,6 +1373,21 @@ function updateButtonStates() {
 
 initSessionManager();
 
+// Tối ưu giao diện nút bấm trên mobile (chỉ hiện icon)
+export function hideTextOnMobile(button) {
+    if (!button) return;
+    Array.from(button.childNodes).forEach(node => {
+        if (node.nodeType === Node.TEXT_NODE && node.nodeValue.trim() !== '') {
+            const span = document.createElement('span');
+            span.className = 'hidden sm:inline ml-1';
+            span.textContent = node.nodeValue.trim();
+            button.replaceChild(span, node);
+        }
+    });
+}
+hideTextOnMobile(openModalBtn);
+hideTextOnMobile(addUserBtn);
+
 // --- Tính năng Auto-Refresh (Polling) ---
 setInterval(async () => {
     const token = localStorage.getItem('kanban_token');
