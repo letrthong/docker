@@ -15,8 +15,7 @@
             "text": "xxx"
         }
     ],
-    "comments": [],
-    "status": "in-progress",
+    "status": "todo",
     "createdAt": "2026-05-23T04:30:39.680Z",
     "completedAt": null,
     "locked": false,
@@ -30,11 +29,32 @@
             "timestamp": "2026-05-23T04:30:39.680Z"
         },
         {
-            "id": "d74b2e9e-48d4-433f-afda-2eda680d8413",
             "action": "status_change",
             "actor": "admin",
-            "timestamp": "2026-05-23T05:18:26.227Z",
-            "details": "đã chuyển trạng thái từ <strong>Việc cần làm</strong> sang <strong>Đang tiến hành</strong>."
+            "details": "đã chuyển trạng thái từ <strong>Việc cần làm</strong> sang <strong>Đang tiến hành</strong>.",
+            "id": "d74b2e9e-48d4-433f-afda-2eda680d8413",
+            "timestamp": "2026-05-23T05:18:26.227Z"
+        },
+        {
+            "action": "status_change",
+            "actor": "admin",
+            "details": "đã chuyển trạng thái từ <strong>Đang tiến hành</strong> sang <strong>Bị khóa</strong>.",
+            "id": "77bf4ec2-8624-4017-a0e7-4d0775f6f351",
+            "timestamp": "2026-05-23T16:19:36.701Z"
+        },
+        {
+            "action": "status_change",
+            "actor": "admin",
+            "details": "đã chuyển trạng thái từ <strong>Bị khóa</strong> sang <strong>Đánh giá</strong>.",
+            "id": "053f0136-7bf9-4f07-ad25-50c76d523186",
+            "timestamp": "2026-05-23T16:19:38.210Z"
+        },
+        {
+            "id": "70a2aec4-006f-4b79-a8f2-84256bca038c",
+            "action": "status_change",
+            "actor": "admin",
+            "timestamp": "2026-05-23T16:19:39.720Z",
+            "details": "đã chuyển trạng thái từ <strong>Đánh giá</strong> sang <strong>Việc cần làm</strong>."
         }
     ]
 }

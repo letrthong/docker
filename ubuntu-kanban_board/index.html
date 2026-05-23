@@ -720,9 +720,9 @@
     <div id="message-box" class="message-box"></div>
     
     <!-- Loading Overlay -->
-    <div id="loadingOverlay" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-[10000] hidden flex-col justify-center items-center">
+    <div id="loadingOverlay" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-[10000] flex flex-col justify-center items-center transition-opacity duration-300 opacity-0 pointer-events-none">
         <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500"></div>
-        <p class="text-white mt-4 font-semibold text-lg">Đang xử lý...</p>
+        <p class="text-white mt-4 font-semibold text-lg animate-pulse">Đang xử lý...</p>
     </div>
 
     <!-- Tải Quill JS -->

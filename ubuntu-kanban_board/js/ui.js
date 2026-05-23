@@ -180,8 +180,8 @@ let activeRequests = 0;
 export function showLoading() {
     activeRequests++;
     if (activeRequests === 1 && loadingOverlay) {
-        loadingOverlay.classList.remove('hidden');
-        loadingOverlay.classList.add('flex');
+        loadingOverlay.classList.remove('opacity-0', 'pointer-events-none');
+        loadingOverlay.classList.add('opacity-100', 'pointer-events-auto');
     }
 }
 
@@ -189,8 +189,8 @@ export function hideLoading() {
     activeRequests--;
     if (activeRequests <= 0 && loadingOverlay) {
         activeRequests = 0;
-        loadingOverlay.classList.remove('flex');
-        loadingOverlay.classList.add('hidden');
+        loadingOverlay.classList.remove('opacity-100', 'pointer-events-auto');
+        loadingOverlay.classList.add('opacity-0', 'pointer-events-none');
     }
 }
 

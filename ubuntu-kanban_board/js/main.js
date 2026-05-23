@@ -13,7 +13,8 @@ import {
     detailModalOverlay,
     projectFilter, assigneeFilter, statusFilterDropdown, statusDropdownList, statusDropdownButton,
     showMessage, dateFormatter, getAssigneeColor, trashDropdownItem,
-    settingsDropdownItem, openSettingsBtn, settingsModalOverlay, closeSettingsBtn, showFilterBarCheckbox, filterBarContainer
+    settingsDropdownItem, openSettingsBtn, settingsModalOverlay, closeSettingsBtn, showFilterBarCheckbox, filterBarContainer,
+    showLoading, hideLoading
 } from './ui.js';
 import { initAuth } from './auth.js';
 import { initAdmin } from './admin.js';
@@ -471,7 +472,8 @@ function createTaskCard(task) {
     
     const canDrag = (projPerm === 'edit' || projPerm === 'create' || projPerm === 'owner' || isOwnerOrAssignee);
 
-    const isDraggable = canDrag && !task.locked;
+    const isTaskCompleted = task.status === 'done' || task.locked;
+    const isDraggable = canDrag && !isTaskCompleted;
     card.draggable = isDraggable; // Quyền 'view' không thể kéo thả
     if (!isDraggable) {
         card.classList.add('non-draggable');
@@ -503,27 +505,42 @@ function createTaskCard(task) {
 
     const canEdit = (projPerm === 'edit' || projPerm === 'create' || projPerm === 'owner' || isOwnerOrAssignee);
 
+    // Nút Sao chép liên kết
+    const copyLinkBtn = document.createElement('button');
+    copyLinkBtn.innerHTML = `<i class="fas fa-link text-green-500 hover:text-green-700 dark:text-green-400 dark:hover:text-green-200"></i>`;
+    copyLinkBtn.title = "Sao chép liên kết";
+    copyLinkBtn.className = `p-1 rounded-full hover:bg-gray-200`;
+    copyLinkBtn.onclick = (e) => {
+        e.stopPropagation();
+        const url = new URL(window.location.origin + window.location.pathname);
+        url.searchParams.set('id', task.id);
+        navigator.clipboard.writeText(url.toString()).then(() => {
+            showMessage("Đã sao chép liên kết công việc!");
+        });
+    };
+    actionsContainer.appendChild(copyLinkBtn);
+
     // Nút Nhân bản
     const cloneBtn = document.createElement('button');
     cloneBtn.innerHTML = `<i class="fas fa-clone text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"></i>`;
     
     const canClone = (projPerm === 'edit' || projPerm === 'create' || projPerm === 'owner');
-    cloneBtn.className = `p-1 rounded-full hover:bg-gray-200 ${!canClone || task.locked ? 'opacity-50 cursor-not-allowed' : ''}`;
-    cloneBtn.disabled = !canClone || task.locked;
+    cloneBtn.className = `p-1 rounded-full hover:bg-gray-200 ${!canClone || isTaskCompleted ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`;
+    cloneBtn.disabled = !canClone || isTaskCompleted;
     cloneBtn.onclick = (e) => {
         e.stopPropagation();
-        if (canClone && !task.locked) showConfirmation(task.id, 'clone');
+        if (canClone && !isTaskCompleted) showConfirmation(task.id, 'clone');
     };
     actionsContainer.appendChild(cloneBtn);
 
     // Nút Chỉnh sửa
     const editBtn = document.createElement('button');
     editBtn.innerHTML = `<i class="fas fa-pen text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-200"></i>`;
-    editBtn.className = `p-1 rounded-full hover:bg-gray-200 ${!canEdit || task.locked ? 'opacity-50 cursor-not-allowed' : ''}`;
-    editBtn.disabled = !canEdit || task.locked;
+    editBtn.className = `p-1 rounded-full hover:bg-gray-200 ${!canEdit || isTaskCompleted ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`;
+    editBtn.disabled = !canEdit || isTaskCompleted;
     editBtn.onclick = async (e) => {
         e.stopPropagation();
-        if (canEdit && !task.locked) {
+        if (canEdit && !isTaskCompleted) {
             if (editBtn.classList.contains('is-loading')) return;
             editBtn.classList.add('is-loading');
             const originalHtml = editBtn.innerHTML;
@@ -543,11 +560,11 @@ function createTaskCard(task) {
     deleteBtn.innerHTML = `<i class="fas fa-trash-alt text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-200"></i>`;
     
     const canDelete = (projPerm === 'create' || projPerm === 'owner');
-    deleteBtn.className = `p-1 rounded-full hover:bg-gray-200 ${!canDelete || task.locked ? 'opacity-50 cursor-not-allowed' : ''}`;
-    deleteBtn.disabled = !canDelete || task.locked;
+    deleteBtn.className = `p-1 rounded-full hover:bg-gray-200 ${!canDelete || isTaskCompleted ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`;
+    deleteBtn.disabled = !canDelete || isTaskCompleted;
     deleteBtn.onclick = (e) => {
         e.stopPropagation();
-        if (canDelete && !task.locked) showConfirmation(task.id, 'delete');
+        if (canDelete && !isTaskCompleted) showConfirmation(task.id, 'delete');
     };
     actionsContainer.appendChild(deleteBtn);
 
@@ -717,7 +734,7 @@ async function deleteChecklistItem(taskId, itemIndex) {
         return;
     }
 
-    if (task && task.items && task.items[itemIndex] && !task.locked) {
+    if (task && task.items && task.items[itemIndex] && !task.locked && task.status !== 'done') {
         task.items.splice(itemIndex, 1);
         await updateTaskData(taskId, task);
         refreshUI();
@@ -1291,8 +1308,8 @@ async function updateTaskStatus(taskId, newStatus) {
         const oldStatus = task.status;
 
         // Nếu task đã bị khóa (hoàn thành), không cho phép di chuyển
-        if (task.locked && newStatus !== oldStatus) {
-            showMessage("Công việc đã hoàn thành và bị khóa, không thể di chuyển.", true);
+        if ((task.locked || oldStatus === 'done') && newStatus !== oldStatus) {
+            showMessage("Công việc đã hoàn thành, không thể thay đổi trạng thái.", true);
             return;
         }
 
@@ -1311,6 +1328,10 @@ async function updateTaskStatus(taskId, newStatus) {
         };
 
         task.status = newStatus;
+        if (newStatus === 'done') {
+            task.locked = true;
+            task.completedAt = new Date().toISOString();
+        }
         
         if (!task.history) task.history = [];
         task.history.push({
@@ -1338,6 +1359,11 @@ async function rejectTask(taskId) {
     }
 
     if (task) {
+        if (task.status === 'done' || task.locked) {
+            showMessage("Công việc đã hoàn thành, không thể thay đổi trạng thái.", true);
+            return;
+        }
+
         task.status = 'todo';
         task.completedAt = null; // Xóa ngày hoàn thành
         task.locked = false; // Mở khóa task
@@ -1790,51 +1816,75 @@ initProject();
 
 // Hàm gom lại chức năng khởi tạo Kanban sau khi Đăng nhập
 export async function initKanban() {
-    const info = await getUserIdInfo();
-    setUserInfo(info);
-
-    initSettings();
-
-    // Hiển thị tên người dùng trên Header
-    if (loggedInUserDisplay) loggedInUserDisplay.textContent = currentUsername;
-    if (dropdownUsername) dropdownUsername.textContent = currentUsername;
-    if (dropdownRole) {
-        const roleMap = {
-            'owner': 'Quản trị hệ thống (Owner)',
-            'user': 'Người dùng'
-        };
-        dropdownRole.textContent = roleMap[userPermission] || (userPermission ? userPermission.toUpperCase() : 'Không rõ');
+    // Hiển thị khung giao diện bảng trống ngay lập tức để tránh hiện tượng màn hình trắng
+    if (kanbanBoard) {
+        kanbanBoard.classList.remove('hidden');
+        kanbanBoard.classList.add('flex');
     }
-    
-    // Hiển thị nút Quản lý User và Dự án nếu là Owner
-    if (manageUsersDropdownItem) {
-        if (userPermission === 'owner') {
-            manageUsersDropdownItem.classList.remove('hidden');
-            if (manageProjectsDropdownItem) manageProjectsDropdownItem.classList.remove('hidden');
-            if (trashDropdownItem) trashDropdownItem.classList.remove('hidden');
-        } else {
-            manageUsersDropdownItem.classList.add('hidden');
-            if (manageProjectsDropdownItem) manageProjectsDropdownItem.classList.add('hidden');
-            if (trashDropdownItem) trashDropdownItem.classList.add('hidden');
+
+    showLoading();
+
+    // Nhường một nhịp (50ms) để trình duyệt kịp vẽ hiệu ứng Loading Overlay trước khi bị API block
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    try {
+        const info = await getUserIdInfo();
+        setUserInfo(info);
+
+        initSettings();
+
+        // Hiển thị tên người dùng trên Header
+        if (loggedInUserDisplay) loggedInUserDisplay.textContent = currentUsername;
+        if (dropdownUsername) dropdownUsername.textContent = currentUsername;
+        if (dropdownRole) {
+            const roleMap = {
+                'owner': 'Quản trị hệ thống (Owner)',
+                'user': 'Người dùng'
+            };
+            dropdownRole.textContent = roleMap[userPermission] || (userPermission ? userPermission.toUpperCase() : 'Không rõ');
         }
+        
+        // Hiển thị nút Quản lý User và Dự án nếu là Owner
+        if (manageUsersDropdownItem) {
+            if (userPermission === 'owner') {
+                manageUsersDropdownItem.classList.remove('hidden');
+                if (manageProjectsDropdownItem) manageProjectsDropdownItem.classList.remove('hidden');
+                if (trashDropdownItem) trashDropdownItem.classList.remove('hidden');
+            } else {
+                manageUsersDropdownItem.classList.add('hidden');
+                if (manageProjectsDropdownItem) manageProjectsDropdownItem.classList.add('hidden');
+                if (trashDropdownItem) trashDropdownItem.classList.add('hidden');
+            }
+        }
+
+        // Tải danh sách user từ backend 1 lần duy nhất lúc khởi động
+        setUserList(await getUserlist());
+
+        // Tải danh sách dự án từ backend
+        setProjectList(await fetchProjectsAPI());
+
+        populateProjectFilter(); // Khởi tạo trước danh sách dự án
+        populateSprintFilter(true);
+        const initialProject = projectFilter && projectFilter.value ? projectFilter.value : null;
+        const initialSprint = document.getElementById('sprintFilter') ? document.getElementById('sprintFilter').value : 'all';
+
+        await loadTasks(initialProject, initialSprint); // Tải dữ liệu cho dự án mặc định
+        updateButtonStates();
+
+        // Mở công việc từ tham số URL nếu có (?id=...)
+        const urlParams = new URLSearchParams(window.location.search);
+        const sharedTaskId = urlParams.get('id');
+        if (sharedTaskId) {
+            try {
+                await showTaskDetails({ id: sharedTaskId }, true);
+            } catch (error) {}
+            
+            // Dọn dẹp URL sau khi xử lý để tránh hiển thị lại khi tải lại trang
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    } finally {
+        hideLoading();
     }
-
-    // Tải danh sách user từ backend 1 lần duy nhất lúc khởi động
-    setUserList(await getUserlist());
-
-    // Tải danh sách dự án từ backend
-    setProjectList(await fetchProjectsAPI());
-
-    populateProjectFilter(); // Khởi tạo trước danh sách dự án
-    populateSprintFilter(true);
-    const initialProject = projectFilter && projectFilter.value ? projectFilter.value : null;
-    const initialSprint = document.getElementById('sprintFilter') ? document.getElementById('sprintFilter').value : 'all';
-
-    await loadTasks(initialProject, initialSprint); // Tải dữ liệu cho dự án mặc định
-    updateButtonStates();
-
-    kanbanBoard.classList.remove('hidden');
-    kanbanBoard.classList.add('flex');
 }
 
 // Kiểm tra trạng thái đăng nhập khi trang được tải

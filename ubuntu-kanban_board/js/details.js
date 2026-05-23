@@ -1,6 +1,6 @@
 import { fetchTaskByIdAPI, uploadFileAPI, addTaskCommentAPI, deleteTaskCommentAPI, updateTaskCommentAPI } from './api.js';
 import { updateTaskData } from './task.js';
-import { userPermission, currentUsername, project_list } from './state.js';
+import { userPermission, currentUsername, project_list, currentUserId } from './state.js';
 import {
     detailModalOverlay, detailHeaderContainer, detailStatusBadge, detailTitle, detailOwner, detailAssignee,
     detailDescription, detailDescriptionSection, detailPriority, detailStoryPoints, detailCreatedAt, detailCompletedAt,
@@ -9,7 +9,7 @@ import {
     commentImagePreview, removeCommentImageBtn, closeDetailModalIconBtn, closeDetailModalBtn, completedAtSection,
     detailModalFooter, showMessage, dateFormatter, getAssigneeColor
 } from './ui.js';
-import { getProjectPermission, getSprintDisplayText, refreshUI, showConfirmation } from './main.js';
+import { getProjectPermission, getSprintDisplayText, refreshUI, showConfirmation, isUserInProject } from './main.js';
 
 let viewingTaskId = null;
 let currentDetailedTask = null;
@@ -42,7 +42,7 @@ async function updateChecklistItem(taskId, itemIndex, completed) {
         showMessage("Bạn không có quyền chỉnh sửa công việc này.", true);
         return;
     }
-    if (task && !task.locked) {
+    if (task && !task.locked && task.status !== 'done') {
         task.items[itemIndex].completed = completed;
         await updateTaskData(taskId, task);
         currentDetailedTask = task;
@@ -51,11 +51,45 @@ async function updateChecklistItem(taskId, itemIndex, completed) {
 }
 
 export async function showTaskDetails(summaryTask, silent = false) {
-    const task = await fetchTaskByIdAPI(summaryTask.id, silent);
+    let task = null;
+    try {
+        task = await fetchTaskByIdAPI(summaryTask.id, silent);
+    } catch (error) {
+        // Bắt lỗi nếu API trả về 404 (Task not found)
+        showMessage("Công việc này không tồn tại hoặc đã bị xóa.", true);
+        return;
+    }
+
     if (!task) {
         showMessage("Không thể tải chi tiết công việc", true);
         return;
     }
+
+    // --- Bắt đầu: Kiểm tra quyền xem công việc ---
+    if (task.projectId && task.projectId !== 'all' && task.projectId !== 'none') {
+        const project = project_list.find(p => p.id === task.projectId);
+        if (!project) {
+            showMessage("Dự án chứa công việc này đã bị xóa hoặc không tồn tại.", true);
+            return;
+        }
+    }
+
+    if (userPermission !== 'owner') {
+        const isOwnerOrAssignee = (task.ownerId === currentUsername || task.assignee === currentUsername);
+        if (!isOwnerOrAssignee) {
+            if (!task.projectId || task.projectId === 'all' || task.projectId === 'none') {
+                showMessage("Bạn không có quyền truy cập công việc này.", true);
+                return;
+            }
+            const project = project_list.find(p => p.id === task.projectId);
+            if (!project || !isUserInProject(project, currentUserId)) {
+                showMessage("Bạn không có quyền truy cập công việc này.", true);
+                return;
+            }
+        }
+    }
+    // --- Kết thúc: Kiểm tra quyền xem công việc ---
+
     currentDetailedTask = task;
     detailTitle.style.color = getAssigneeColor(task.assignee);
     detailTitle.textContent = task.title;
@@ -172,7 +206,7 @@ export async function showTaskDetails(summaryTask, silent = false) {
             const isOwnerOrAssignee = (task.ownerId === currentUsername || task.assignee === currentUsername);
             const canEditCheckbox = (projPerm === 'edit' || projPerm === 'create' || projPerm === 'owner' || isOwnerOrAssignee);
 
-            checkbox.disabled = !canEditCheckbox || task.locked;
+            checkbox.disabled = !canEditCheckbox || task.locked || task.status === 'done';
             checkbox.className = 'form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer mt-1 flex-shrink-0';
             checkbox.onchange = () => updateChecklistItem(task.id, index, checkbox.checked);
 
