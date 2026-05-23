@@ -218,13 +218,43 @@ def delete_project(project_id):
 
 @kanban_api.route("/tasks", methods=["GET"])
 def get_tasks():
+    view_type = request.args.get('view', 'full')
     tasks = []
     if os.path.exists(TASKS_DIR):
         for filename in os.listdir(TASKS_DIR):
             if filename.endswith('.json'):
                 filepath = os.path.join(TASKS_DIR, filename)
-                tasks.append(read_json(filepath))
+                task = read_json(filepath)
+                if view_type == 'summary':
+                    summary_task = {
+                        'id': task.get('id'),
+                        'title': task.get('title'),
+                        'assignee': task.get('assignee'),
+                        'projectId': task.get('projectId'),
+                        'status': task.get('status'),
+                        'priority': task.get('priority'),
+                        'storyPoints': task.get('storyPoints'),
+                        'sprintIds': task.get('sprintIds', []),
+                        'createdAt': task.get('createdAt'),
+                        'completedAt': task.get('completedAt'),
+                        'locked': task.get('locked'),
+                        'ownerId': task.get('ownerId'),
+                        'commentsCount': len(task.get('comments', [])),
+                        'itemsTotal': len(task.get('items', [])),
+                        'itemsCompleted': sum(1 for item in task.get('items', []) if item.get('completed'))
+                    }
+                    tasks.append(summary_task)
+                else:
+                    tasks.append(task)
     return jsonify(tasks)
+
+@kanban_api.route("/tasks/<task_id>", methods=["GET"])
+def get_task(task_id):
+    filepath = os.path.join(TASKS_DIR, f"{task_id}.json")
+    if not os.path.exists(filepath):
+        return jsonify({"error": "Task not found"}), 404
+    task = read_json(filepath)
+    return jsonify(task)
 
 @kanban_api.route("/tasks", methods=["POST"])
 def create_task():
@@ -257,3 +287,30 @@ def delete_task(task_id):
         os.remove(filepath)
         return jsonify({"message": "Task deleted successfully"})
     return jsonify({"error": "Task not found"}), 404
+
+@kanban_api.route("/updates/check", methods=["GET"])
+def check_updates():
+    project_id = request.args.get('projectId')
+    last_sync = request.args.get('lastSync', 0, type=float)
+    current_time = datetime.datetime.now().timestamp()
+    
+    # 1. Kiểm tra sự thay đổi của file dự án
+    if project_id and project_id not in ['none', 'all']:
+        proj_file = os.path.join(PROJECTS_DIR, f"{project_id}.json")
+        if os.path.exists(proj_file):
+            if os.path.getmtime(proj_file) > last_sync:
+                return jsonify({"changed": True, "timestamp": current_time})
+
+    # 2. Kiểm tra sự thay đổi của các file công việc
+    if os.path.exists(TASKS_DIR):
+        # Nếu có file bị thêm hoặc xóa, thư mục TASKS_DIR sẽ thay đổi mtime
+        if os.path.getmtime(TASKS_DIR) > last_sync:
+            return jsonify({"changed": True, "timestamp": current_time})
+            
+        for filename in os.listdir(TASKS_DIR):
+            if filename.endswith('.json'):
+                filepath = os.path.join(TASKS_DIR, filename)
+                if os.path.exists(filepath) and os.path.getmtime(filepath) > last_sync:
+                    return jsonify({"changed": True, "timestamp": current_time})
+                    
+    return jsonify({"changed": False, "timestamp": current_time})

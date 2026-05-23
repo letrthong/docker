@@ -1,6 +1,6 @@
 import { getUserIdInfo, getUserlist } from './user.js';
 import { getTasks, getTaskById, fetchAndLoadTasks, addTaskData, updateTaskData, removeTaskData } from './task.js';
-import { loginAPI, fetchProjectsAPI } from './api.js';
+import { loginAPI, fetchProjectsAPI, fetchTaskByIdAPI, checkUpdatesAPI } from './api.js';
 import {
     loginScreen, kanbanBoard, loginForm, loginUsername, loginPassword, logoutBtn, loggedInUserDisplay,
     addUserBtn,
@@ -34,6 +34,8 @@ let editingTaskId = null;
 let viewingTaskId = null;
 let actionToConfirm = { id: null, type: null, itemIndex: null }; // Để xử lý cả xóa và nhân bản, và chỉ mục mục checklist
 let selectedStatuses = ['all']; // Mặc định hiển thị tất cả
+let currentDetailedTask = null; // Lưu chi tiết công việc hiện đang xem/sửa
+let lastSyncTimestamp = null; // Thời gian cập nhật gần nhất từ server
 
 // Khởi tạo Quill Editor
 let quill;
@@ -203,8 +205,8 @@ function refreshUI() {
 }
 
 // Tải dữ liệu từ backend
-async function loadTasks() {
-    const loadedTasks = await fetchAndLoadTasks();
+async function loadTasks(projectId = null) {
+    const loadedTasks = await fetchAndLoadTasks(projectId);
     // Khôi phục lại màu cho người thực hiện sau khi tải
     loadedTasks.forEach(task => {
         if (task.assignee) {
@@ -212,6 +214,14 @@ async function loadTasks() {
         }
     });
     refreshUI();
+
+    // Đồng bộ thời gian với server để chuẩn bị cho Auto-Refresh
+    try {
+        const res = await checkUpdatesAPI(projectId, 0);
+        if (res && res.timestamp) {
+            lastSyncTimestamp = res.timestamp;
+        }
+    } catch (e) {}
 }
 
 // Tạo và hiển thị các thẻ công việc
@@ -440,8 +450,21 @@ function createTaskCard(task) {
     card.dataset.status = task.status;
 
     // Lắng nghe sự kiện nhấp chuột
-    card.addEventListener('click', () => {
-        showTaskDetails(task);
+    card.addEventListener('click', async () => {
+        if (card.classList.contains('is-loading')) return;
+        card.classList.add('is-loading', 'opacity-75');
+        
+        const spinner = document.createElement('i');
+        spinner.className = 'fas fa-spinner fa-spin text-blue-500 ml-2 loading-spinner';
+        title.appendChild(spinner);
+        
+        try {
+            await showTaskDetails(task, true);
+        } finally {
+            card.classList.remove('is-loading', 'opacity-75');
+            const sp = title.querySelector('.loading-spinner');
+            if (sp) sp.remove();
+        }
     });
 
     // --- Cập nhật: Nút hành động ở hàng riêng trên cùng ---
@@ -468,9 +491,20 @@ function createTaskCard(task) {
     editBtn.innerHTML = `<i class="fas fa-pen text-blue-500 hover:text-blue-700"></i>`;
     editBtn.className = `p-1 rounded-full hover:bg-gray-200 ${!canEdit || task.locked ? 'opacity-50 cursor-not-allowed' : ''}`;
     editBtn.disabled = !canEdit || task.locked;
-    editBtn.onclick = (e) => {
+    editBtn.onclick = async (e) => {
         e.stopPropagation();
-        if (canEdit && !task.locked) openEditModal(task.id);
+        if (canEdit && !task.locked) {
+            if (editBtn.classList.contains('is-loading')) return;
+            editBtn.classList.add('is-loading');
+            const originalHtml = editBtn.innerHTML;
+            editBtn.innerHTML = `<i class="fas fa-spinner fa-spin text-blue-500"></i>`;
+            try {
+                await openEditModal(task.id, true);
+            } finally {
+                editBtn.innerHTML = originalHtml;
+                editBtn.classList.remove('is-loading');
+            }
+        }
     };
     actionsContainer.appendChild(editBtn);
 
@@ -531,7 +565,8 @@ function createTaskCard(task) {
         }
     }
 
-    if (task.priority || task.storyPoints || (task.comments && task.comments.length > 0)) {
+    const count = task.commentsCount !== undefined ? task.commentsCount : (task.comments ? task.comments.length : 0);
+    if (task.priority || task.storyPoints || count > 0) {
         const extraTags = document.createElement('div');
         extraTags.className = "flex gap-2 mb-2";
         if (task.priority) {
@@ -548,10 +583,10 @@ function createTaskCard(task) {
             spTag.innerHTML = `<i class="fas fa-star text-yellow-500 mr-1"></i>${task.storyPoints}`;
             extraTags.appendChild(spTag);
         }
-        if (task.comments && task.comments.length > 0) {
+        if (count > 0) {
             const commentTag = document.createElement('div');
             commentTag.className = "text-xs font-semibold text-gray-600 bg-gray-200 rounded-md px-2 py-1 inline-block";
-            commentTag.innerHTML = `<i class="fas fa-comment text-blue-500 mr-1"></i>${task.comments.length}`;
+            commentTag.innerHTML = `<i class="fas fa-comment text-blue-500 mr-1"></i>${count}`;
             extraTags.appendChild(commentTag);
         }
         card.appendChild(extraTags);
@@ -595,9 +630,9 @@ function createTaskCard(task) {
     card.appendChild(dateDiv);
 
     // Hiển thị thanh tiến trình
-    if (task.items && task.items.length > 0) {
-        const completedItems = task.items.filter(item => item.completed).length;
-        const totalItems = task.items.length;
+    const totalItems = task.itemsTotal !== undefined ? task.itemsTotal : (task.items ? task.items.length : 0);
+    if (totalItems > 0) {
+        const completedItems = task.itemsCompleted !== undefined ? task.itemsCompleted : task.items.filter(item => item.completed).length;
         const progress = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
 
         const progressBarContainer = document.createElement('div');
@@ -636,7 +671,9 @@ function createTaskCard(task) {
 
 // Cập nhật trạng thái của một mục trong checklist
 async function updateChecklistItem(taskId, itemIndex, completed) {
-    const task = getTaskById(taskId);
+    // Lấy dữ liệu mới nhất từ server trước khi thay đổi để tránh ghi đè
+    const task = await fetchTaskByIdAPI(taskId, true);
+    if (!task) return;
     const isOwnerOrAssignee = (task.ownerId === currentUsername || task.assignee === currentUsername);
     const projPerm = getProjectPermission(task ? task.projectId : null);
     const canEdit = (projPerm === 'edit' || projPerm === 'create' || projPerm === 'owner' || isOwnerOrAssignee);
@@ -648,13 +685,16 @@ async function updateChecklistItem(taskId, itemIndex, completed) {
     if (task && !task.locked) {
         task.items[itemIndex].completed = completed;
         await updateTaskData(taskId, task);
+        currentDetailedTask = task;
         refreshUI();
     }
 }
 
 // Xóa một mục trong checklist
 async function deleteChecklistItem(taskId, itemIndex) {
-    const task = getTaskById(taskId);
+    // Lấy dữ liệu mới nhất từ server trước khi thay đổi
+    const task = await fetchTaskByIdAPI(taskId, true);
+    if (!task) return;
     const isOwnerOrAssignee = (task.ownerId === currentUsername || task.assignee === currentUsername);
     const projPerm = getProjectPermission(task ? task.projectId : null);
     const canEdit = (projPerm === 'edit' || projPerm === 'create' || projPerm === 'owner' || isOwnerOrAssignee);
@@ -667,6 +707,7 @@ async function deleteChecklistItem(taskId, itemIndex) {
     if (task && task.items && task.items[itemIndex] && !task.locked) {
         task.items.splice(itemIndex, 1);
         await updateTaskData(taskId, task);
+        currentDetailedTask = task;
         refreshUI();
     }
 }
@@ -754,7 +795,13 @@ async function performAction() {
 }
 
 // Mở popup hiển thị chi tiết công việc
-function showTaskDetails(task) {
+async function showTaskDetails(summaryTask, silent = false) {
+    const task = await fetchTaskByIdAPI(summaryTask.id, silent);
+    if (!task) {
+        showMessage("Không thể tải chi tiết công việc", true);
+        return;
+    }
+    currentDetailedTask = task;
     // Áp dụng màu sắc của người thực hiện cho tiêu đề trong modal
     detailTitle.style.color = getAssigneeColor(task.assignee);
     detailTitle.textContent = task.title;
@@ -872,7 +919,7 @@ function showTaskDetails(task) {
             checkbox.type = 'checkbox';
             checkbox.checked = item.completed;
 
-            const currentTask = editingTaskId ? getTaskById(editingTaskId) : task;
+            const currentTask = task;
             const projPerm = getProjectPermission(currentTask ? currentTask.projectId : null);
             const isOwnerOrAssignee = currentTask ? (currentTask.ownerId === currentUsername || currentTask.assignee === currentUsername) : false;
             const canEditCheckbox = (projPerm === 'edit' || projPerm === 'create' || projPerm === 'owner' || isOwnerOrAssignee);
@@ -895,8 +942,8 @@ function showTaskDetails(task) {
     }
 
     viewingTaskId = task.id;
-    renderComments(task);
-    renderHistory(task);
+    renderComments(task, true);
+    renderHistory(task, true);
     
     if (tabCommentsBtn) tabCommentsBtn.click();
 
@@ -925,12 +972,21 @@ function showTaskDetails(task) {
     detailModalOverlay.classList.add('show');
 }
 
-function renderComments(task) {
+function renderComments(task, clearAll = true) {
     if (!detailCommentsList) return;
-    detailCommentsList.innerHTML = '';
+    if (clearAll) detailCommentsList.innerHTML = '';
+    
     if (task.comments && task.comments.length > 0) {
-        task.comments.forEach(comment => {
+        if (!clearAll) {
+            const emptyMsg = detailCommentsList.querySelector('.italic');
+            if (emptyMsg) emptyMsg.remove();
+        }
+        task.comments.forEach((comment, index) => {
+            const cid = comment.id || index;
+            if (!clearAll && document.getElementById(`comment-${cid}`)) return;
+            
             const commentDiv = document.createElement('div');
+            commentDiv.id = `comment-${cid}`;
             commentDiv.className = 'bg-gray-50 p-3 rounded-xl border border-gray-100';
             
             const header = document.createElement('div');
@@ -973,15 +1029,24 @@ function renderComments(task) {
     }
 }
 
-function renderHistory(task) {
+function renderHistory(task, clearAll = true) {
     if (!detailHistoryList) return;
-    detailHistoryList.innerHTML = '';
+    if (clearAll) detailHistoryList.innerHTML = '';
     
     if (task.history && task.history.length > 0) {
-        const sortedHistory = [...task.history].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        if (!clearAll) {
+            const emptyMsg = detailHistoryList.querySelector('.italic');
+            if (emptyMsg) emptyMsg.remove();
+        }
         
-        sortedHistory.forEach(item => {
+        const sortedHistory = [...task.history].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        
+        sortedHistory.forEach((item, index) => {
+            const hid = item.id || new Date(item.timestamp).getTime() + index;
+            if (!clearAll && document.getElementById(`history-${hid}`)) return;
+            
             const historyDiv = document.createElement('div');
+            historyDiv.id = `history-${hid}`;
             historyDiv.className = 'flex items-start gap-3 p-2 bg-gray-50 rounded-xl border border-gray-100';
             
             const iconDiv = document.createElement('div');
@@ -1008,7 +1073,7 @@ function renderHistory(task) {
             historyDiv.appendChild(iconDiv);
             historyDiv.appendChild(contentDiv);
             
-            detailHistoryList.appendChild(historyDiv);
+            detailHistoryList.prepend(historyDiv);
         });
     } else {
         detailHistoryList.innerHTML = '<p class="text-sm text-gray-500 italic">Chưa có lịch sử hoạt động.</p>';
@@ -1124,20 +1189,27 @@ if (addCommentBtn) {
         const text = newCommentInput.value.trim();
         if (!text && !pendingCommentImage) return;
         
-        const task = getTaskById(viewingTaskId);
-        if (!task) return;
+        addCommentBtn.disabled = true;
         
-        const projPerm = getProjectPermission(task.projectId);
-        const isOwnerOrAssignee = (task.ownerId === currentUsername || task.assignee === currentUsername);
+        // Luôn lấy dữ liệu mới nhất từ server trước khi thêm comment để tránh ghi đè
+        const latestTask = await fetchTaskByIdAPI(viewingTaskId, true);
+        if (!latestTask) {
+            addCommentBtn.disabled = false;
+            return;
+        }
+        
+        const projPerm = getProjectPermission(latestTask.projectId);
+        const isOwnerOrAssignee = (latestTask.ownerId === currentUsername || latestTask.assignee === currentUsername);
         const canComment = (projPerm === 'edit' || projPerm === 'create' || projPerm === 'owner' || isOwnerOrAssignee);
         
         if (!canComment) {
             showMessage("Bạn không có quyền bình luận trong công việc này.", true);
+            addCommentBtn.disabled = false;
             return;
         }
 
-        if (!task.comments) {
-            task.comments = [];
+        if (!latestTask.comments) {
+            latestTask.comments = [];
         }
         
         const newComment = {
@@ -1151,8 +1223,8 @@ if (addCommentBtn) {
             newComment.image = pendingCommentImage;
         }
         
-        if (!task.history) task.history = [];
-        task.history.push({
+        if (!latestTask.history) latestTask.history = [];
+        latestTask.history.push({
             id: crypto.randomUUID(),
             action: 'commented',
             actor: currentUsername,
@@ -1160,10 +1232,10 @@ if (addCommentBtn) {
             details: 'đã thêm một bình luận mới.'
         });
         
-        task.comments.push(newComment);
+        latestTask.comments.push(newComment);
         
-        addCommentBtn.disabled = true;
-        await updateTaskData(task.id, task);
+        await updateTaskData(latestTask.id, latestTask);
+        currentDetailedTask = latestTask;
         addCommentBtn.disabled = false;
         
         newCommentInput.value = '';
@@ -1172,8 +1244,8 @@ if (addCommentBtn) {
             commentImagePreviewContainer.classList.add('hidden');
             commentImagePreview.src = '';
         }
-        renderComments(task);
-        renderHistory(task);
+        renderComments(latestTask, false);
+        renderHistory(latestTask, false);
         refreshUI();
     });
 }
@@ -1201,7 +1273,8 @@ async function deleteTask(taskId) {
 
 // Nhân bản một công việc
 async function cloneTask(taskId) {
-    const originalTask = getTaskById(taskId);
+    const originalTask = await fetchTaskByIdAPI(taskId);
+    if (!originalTask) return;
     const projPerm = getProjectPermission(originalTask.projectId);
     const canClone = (projPerm === 'edit' || projPerm === 'create' || projPerm === 'owner');
     if (!canClone) {
@@ -1395,8 +1468,9 @@ openModalBtn.addEventListener('click', () => {
 });
 
 // Mở modal để chỉnh sửa công việc
-function openEditModal(taskId) {
-    const task = getTaskById(taskId);
+async function openEditModal(taskId, silent = false) {
+    const task = await fetchTaskByIdAPI(taskId, silent);
+    if (!task) return;
     const projPerm = getProjectPermission(task.projectId);
     const isOwnerOrAssignee = (task.ownerId === currentUsername || task.assignee === currentUsername);
     const canEdit = (projPerm === 'edit' || projPerm === 'create' || projPerm === 'owner' || isOwnerOrAssignee);
@@ -1506,7 +1580,7 @@ addChecklistItemBtn.addEventListener('click', () => addChecklistItem());
 // Thêm công việc mới hoặc cập nhật công việc hiện có
 addTaskForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const task = editingTaskId ? getTaskById(editingTaskId) : null;
+    const task = editingTaskId ? await fetchTaskByIdAPI(editingTaskId) : null;
     const projPerm = getProjectPermission(taskProjectSelect.value);
     const isOwnerOrAssignee = (task ? task.ownerId === currentUsername || task.assignee === currentUsername : userPermission === 'owner');
     const canEdit = (projPerm === 'edit' || projPerm === 'create' || projPerm === 'owner' || isOwnerOrAssignee);
@@ -1604,7 +1678,8 @@ addTaskForm.addEventListener('submit', async (e) => {
 
 // Cập nhật trạng thái công việc
 async function updateTaskStatus(taskId, newStatus) {
-    const task = getTaskById(taskId);
+    const task = await fetchTaskByIdAPI(taskId);
+    if (!task) return;
     const projPerm = getProjectPermission(task.projectId);
     const isOwnerOrAssignee = (task.ownerId === currentUsername || task.assignee === currentUsername);
     const canMove = (projPerm === 'edit' || projPerm === 'create' || projPerm === 'owner' || isOwnerOrAssignee);
@@ -1655,7 +1730,8 @@ async function updateTaskStatus(taskId, newStatus) {
 
 // Chuyển task trở lại cột "Việc cần làm" từ bất kỳ trạng thái nào
 async function rejectTask(taskId) {
-    const task = getTaskById(taskId);
+    const task = await fetchTaskByIdAPI(taskId);
+    if (!task) return;
     const projPerm = getProjectPermission(task.projectId);
 
     if (projPerm !== 'create' && projPerm !== 'edit' && projPerm !== 'owner') {
@@ -1685,7 +1761,8 @@ async function rejectTask(taskId) {
 
 // Chuyển task từ "Đánh giá" sang "Hoàn thành"
 async function acceptTask(taskId) {
-    const task = getTaskById(taskId);
+    const task = await fetchTaskByIdAPI(taskId);
+    if (!task) return;
     const projPerm = getProjectPermission(task.projectId);
 
     if (projPerm !== 'create' && projPerm !== 'edit' && projPerm !== 'owner') {
@@ -1734,13 +1811,11 @@ dropZones.forEach(zone => {
 
 // Thêm sự kiện thay đổi cho bộ lọc dự án
 if (projectFilter) {
-    projectFilter.addEventListener('change', (e) => {
-        populateSprintFilter(true); // Cập nhật lại dropdown sprint khi đổi Project và reset về Hiện tại
-        populateAssigneeFilter(); // Cập nhật lại dropdown người thực hiện khi đổi Project
-        updateButtonStates();
+    projectFilter.addEventListener('change', async (e) => {
         const sprintFilterEl = document.getElementById('sprintFilter');
-        const sfValue = sprintFilterEl ? sprintFilterEl.value : 'all';
-        renderTasks(assigneeFilter.value, selectedStatuses, e.target.value, sfValue);
+        if (sprintFilterEl) sprintFilterEl.dataset.initialized = 'false'; // Ép buộc lấy lại sprint mặc định
+        updateButtonStates();
+        await loadTasks(e.target.value);
     });
 }
 
@@ -1930,6 +2005,51 @@ let activityTimeout = null;
 });
 // --- Kết thúc Quản lý phiên ---
 
+// --- Tính năng Auto-Refresh (Polling) ---
+setInterval(async () => {
+    const token = localStorage.getItem('kanban_token');
+    if (!token || kanbanBoard.classList.contains('hidden') || lastSyncTimestamp === null) return;
+
+    // Bỏ qua nếu người dùng đang thao tác kéo thả
+    if (draggedItemId !== null) return;
+
+    // Kiểm tra xem có hộp thoại nào đang mở không
+    const openModals = document.querySelectorAll('.modal-overlay.show');
+    let isOnlyDetailModalOpen = false;
+    
+    if (openModals.length > 0) {
+        // Nếu có hộp thoại nào KHÁC hộp thoại chi tiết đang mở, tạm dừng Auto-Refresh
+        const hasOtherModal = Array.from(openModals).some(m => m.id !== 'detailModalOverlay');
+        if (hasOtherModal) return;
+        isOnlyDetailModalOpen = true;
+    }
+
+    try {
+        const currentProjectId = projectFilter ? projectFilter.value : null;
+        const res = await checkUpdatesAPI(currentProjectId, lastSyncTimestamp);
+        if (res && res.changed) {
+            console.log("[Auto-Refresh] Phát hiện dữ liệu thay đổi trên máy chủ. Đang tải lại...");
+            
+            // Nếu chỉ có hộp thoại chi tiết đang mở, cập nhật lại bình luận và lịch sử của công việc đó
+            if (isOnlyDetailModalOpen && viewingTaskId) {
+                const latestTask = await fetchTaskByIdAPI(viewingTaskId, true);
+                if (latestTask) {
+                    currentDetailedTask = latestTask;
+                    renderComments(latestTask, false);
+                    renderHistory(latestTask, false);
+                }
+            }
+
+            showMessage("Dữ liệu vừa được cập nhật từ máy chủ.");
+            await loadTasks(currentProjectId);
+        } else if (res && res.timestamp) {
+            lastSyncTimestamp = res.timestamp;
+        }
+    } catch (error) {
+        // Bỏ qua các lỗi mạng tạm thời
+    }
+}, 30000); // 30 giây
+
 // Khởi tạo các module con
 initAuth();
 initAdmin();
@@ -1971,7 +2091,10 @@ export async function initKanban() {
     // Tải danh sách dự án từ backend
     project_list = await fetchProjectsAPI();
 
-    await loadTasks();
+    populateProjectFilter(); // Khởi tạo trước danh sách dự án
+    const initialProject = projectFilter && projectFilter.value ? projectFilter.value : null;
+
+    await loadTasks(initialProject); // Tải dữ liệu cho dự án mặc định
     updateButtonStates();
 
     kanbanBoard.classList.remove('hidden');

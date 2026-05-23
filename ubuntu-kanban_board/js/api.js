@@ -7,7 +7,7 @@ const API_BASE_URL = '/api/v1/kanban'; // Đổi theo route của Flask
 
 // Hàm helper dùng chung để gọi fetch và xử lý lỗi
 async function apiFetch(endpoint, options = {}) {
-    showLoading();
+    if (!options.silent) showLoading();
     try {
         // Thêm Authorization header nếu có token trong máy người dùng
         const token = localStorage.getItem('kanban_token');
@@ -54,7 +54,7 @@ async function apiFetch(endpoint, options = {}) {
         }
         throw error; // Vẫn ném lỗi ra ngoài để luồng xử lý biết và ngưng thực thi
     } finally {
-        hideLoading();
+        if (!options.silent) hideLoading();
     }
 }
 
@@ -128,8 +128,16 @@ export async function restoreProjectAPI(projectId) {
 
 // --- 2. API CÔNG VIỆC (TASKS) ---
 
-export async function fetchTasksAPI() {
-    return await apiFetch('/tasks');
+export async function fetchTasksAPI(projectId = null) {
+    let endpoint = '/tasks?view=summary';
+    if (projectId) {
+        endpoint += `&projectId=${projectId}`;
+    }
+    return await apiFetch(endpoint);
+}
+
+export async function fetchTaskByIdAPI(taskId, silent = false) {
+    return await apiFetch(`/tasks/${taskId}`, { silent });
 }
 
 export async function createTaskAPI(taskData) {
@@ -153,4 +161,12 @@ export async function deleteTaskAPI(taskId) {
         method: 'DELETE'
     });
     return true;
+}
+
+export async function checkUpdatesAPI(projectId, lastSync) {
+    let endpoint = `/updates/check?lastSync=${lastSync}`;
+    if (projectId) {
+        endpoint += `&projectId=${projectId}`;
+    }
+    return await apiFetch(endpoint, { silent: true });
 }

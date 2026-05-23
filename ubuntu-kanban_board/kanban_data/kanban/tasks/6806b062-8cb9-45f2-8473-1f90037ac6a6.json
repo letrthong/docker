@@ -1,0 +1,31 @@
+{
+    "id": "6806b062-8cb9-45f2-8473-1f90037ac6a6",
+    "title": "xxxxx",
+    "description": "<p>x</p>",
+    "projectId": "eafdf6ef379b45fe98b2a30c451ad900",
+    "assignee": "admin",
+    "priority": "medium",
+    "storyPoints": "",
+    "sprintIds": [],
+    "items": [
+        {
+            "text": "x",
+            "completed": false
+        }
+    ],
+    "comments": [],
+    "status": "todo",
+    "createdAt": "2026-05-23T05:24:23.191Z",
+    "completedAt": null,
+    "locked": false,
+    "ownerId": "admin",
+    "history": [
+        {
+            "id": "0c63b699-adf1-40ef-a54c-56ab709e0b34",
+            "action": "created",
+            "actor": "admin",
+            "timestamp": "2026-05-23T05:24:23.191Z",
+            "details": "đã tạo công việc này."
+        }
+    ]
+}

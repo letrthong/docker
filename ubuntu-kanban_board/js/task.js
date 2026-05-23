@@ -13,8 +13,8 @@ export function getTaskById(taskId) {
     return tasks.find(t => t.id === taskId);
 }
 
-export async function fetchAndLoadTasks() {
-    const data = await fetchTasksAPI();
+export async function fetchAndLoadTasks(projectId = null) {
+    const data = await fetchTasksAPI(projectId);
     if (data) {
         tasks = data;
     }

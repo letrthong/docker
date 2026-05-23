@@ -11,23 +11,30 @@
     ],
     "items": [
         {
-            "text": "xxx",
-            "completed": false
+            "completed": false,
+            "text": "xxx"
         }
     ],
     "comments": [],
-    "status": "todo",
+    "status": "in-progress",
     "createdAt": "2026-05-23T04:30:39.680Z",
     "completedAt": null,
     "locked": false,
     "ownerId": "admin",
     "history": [
         {
-            "id": "47ac60b9-414a-4297-bf75-39882f61f3a1",
             "action": "created",
             "actor": "admin",
-            "timestamp": "2026-05-23T04:30:39.680Z",
-            "details": "đã tạo công việc này."
+            "details": "đã tạo công việc này.",
+            "id": "47ac60b9-414a-4297-bf75-39882f61f3a1",
+            "timestamp": "2026-05-23T04:30:39.680Z"
+        },
+        {
+            "id": "d74b2e9e-48d4-433f-afda-2eda680d8413",
+            "action": "status_change",
+            "actor": "admin",
+            "timestamp": "2026-05-23T05:18:26.227Z",
+            "details": "đã chuyển trạng thái từ <strong>Việc cần làm</strong> sang <strong>Đang tiến hành</strong>."
         }
     ]
 }
