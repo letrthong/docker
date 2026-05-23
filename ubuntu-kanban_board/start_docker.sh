@@ -1,6 +1,6 @@
 #!/bin/bash
 
-mkdir -p out
+mkdir -p kanban_data
 # remove the rest containers if have
 docker compose down
 
@@ -8,7 +8,7 @@ docker compose down
 # và chạy container ở chế độ nền (Detached mode)
 docker compose up -d  --build
 
-docker cp telua_python_kanban_board:/app/dist/index.html ./out/index.html
+docker cp telua_python_kanban_board:/app/dist/index.html ./kanban_data/index.html
 
 echo "===================================================="
 echo "🚀 Container đã chạy ngầm thành công!"

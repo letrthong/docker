@@ -9,7 +9,7 @@ docker compose up -d
 
 
 mkdir -p out
-docker cp telua_python_kanban_board:/app/dist/index.html ./out/index.html
+docker cp telua_python_kanban_board:/app/dist/index.html ./kanban_data/index.html
 
 # Xem logs nếu muốn
 docker compose logs -f
