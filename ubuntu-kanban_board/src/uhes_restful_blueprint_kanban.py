@@ -1,3 +1,5 @@
+from config import CONFIG_DIR
+
 from flask import Blueprint, request, jsonify, send_from_directory
 import os
 import json
@@ -5,8 +7,6 @@ import uuid
 import jwt
 import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
-from werkzeug.utils import secure_filename
-from config import CONFIG_DIR
 
 # Tạo một Blueprint. Tiền tố '/api/v1/kanban' sẽ được gán khi đăng ký trong file app.py
 kanban_api = Blueprint('kanban_api', __name__)
@@ -375,7 +375,8 @@ def upload_file():
     if file.filename == '':
         return jsonify({"error": "Chưa chọn file"}), 400
     if file:
-        filename = secure_filename(f"{uuid.uuid4().hex}_{file.filename}")
+        ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else 'bin'
+        filename = f"{uuid.uuid4().hex}.{ext}"
         file.save(os.path.join(UPLOAD_DIR, filename))
         return jsonify({"url": f"/api/v1/kanban/uploads/{filename}"}), 201
 

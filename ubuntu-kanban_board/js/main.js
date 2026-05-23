@@ -1013,6 +1013,16 @@ addTaskForm.addEventListener('submit', async (e) => {
         });
     }
 
+    if (sprintIds.length === 0) {
+        const project = project_list.find(p => p.id === projectId);
+        if (!project || !project.sprints || project.sprints.length === 0) {
+            showMessage("Dự án này chưa có Sprint nào. Vui lòng quản lý dự án và thêm Sprint trước.", true);
+        } else {
+            showMessage("Vui lòng chọn ít nhất một Sprint cho công việc này.", true);
+        }
+        return;
+    }
+
     if (!title) {
         return;
     }
