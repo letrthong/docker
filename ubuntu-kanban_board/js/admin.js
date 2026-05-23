@@ -1,7 +1,7 @@
 import { createUserAPI, updateUserAPI } from './api.js';
 import { getUserlist } from './user.js';
 import {
-    addUserBtn, userModalOverlay, addUserForm, newUsername, newUserPassword, cancelUserBtn, userModalTitle, submitUserBtn,
+    userModalOverlay, addUserForm, newUsername, newUserPassword, cancelUserBtn, userModalTitle, submitUserBtn,
     openManageUsersBtn, manageUsersModalOverlay, closeManageUsersBtn, userListTableBody, openAddUserFromManageBtn,
     userInfoDropdown, showMessage
 } from './ui.js';
@@ -40,7 +40,6 @@ export function initAdmin() {
         userModalOverlay.classList.add('show');
     }
 
-    if (addUserBtn) addUserBtn.addEventListener('click', () => openUserModal());
     if (openAddUserFromManageBtn) openAddUserFromManageBtn.addEventListener('click', () => openUserModal());
     if (cancelUserBtn) cancelUserBtn.addEventListener('click', () => {
         userModalOverlay.classList.remove('show');

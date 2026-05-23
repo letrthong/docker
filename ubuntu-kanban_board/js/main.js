@@ -3,7 +3,6 @@ import { getTasks, getTaskById, fetchAndLoadTasks, addTaskData, updateTaskData, 
 import { loginAPI, fetchProjectsAPI, fetchTaskByIdAPI, checkUpdatesAPI } from './api.js';
 import {
     loginScreen, kanbanBoard, loginForm, loginUsername, loginPassword, logoutBtn, loggedInUserDisplay,
-    addUserBtn,
     userProfileContainer, userProfileBtn, userInfoDropdown, dropdownUsername, dropdownRole,
     manageUsersDropdownItem, manageProjectsDropdownItem,
     totalTasksCount, todoColumn, inprogressColumn, blockedColumn, reviewColumn, doneColumn,
@@ -1360,15 +1359,6 @@ function updateButtonStates() {
 
     openModalBtn.disabled = !canCreate;
     openModalBtn.classList.toggle('btn-disabled', !canCreate);
-    
-    // Nút tạo user chỉ dành cho Owner
-    if (addUserBtn) {
-        if (userPermission === 'owner') {
-            addUserBtn.classList.remove('hidden');
-        } else {
-            addUserBtn.classList.add('hidden');
-        }
-    }
 }
 
 initSessionManager();
@@ -1386,7 +1376,6 @@ export function hideTextOnMobile(button) {
     });
 }
 hideTextOnMobile(openModalBtn);
-hideTextOnMobile(addUserBtn);
 
 // --- Tính năng Auto-Refresh (Polling) ---
 setInterval(async () => {
