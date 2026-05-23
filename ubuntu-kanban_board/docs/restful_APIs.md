@@ -59,9 +59,9 @@ Tất cả các API endpoints sẽ bắt đầu với: `http://localhost:5000/ap
 ```
 
 ### 2.1 Lấy toàn bộ danh sách công việc
-- **URL:** `/tasks`
+- **URL:** `/tasks` (Hỗ trợ query parameters: `?view=summary`, `?projectId=...`, `?sprintId=...`)
 - **Method:** `GET`
-- **Mô tả:** Lấy danh sách toàn bộ công việc để render lên Kanban Board.
+- **Mô tả:** Lấy danh sách toàn bộ công việc để render lên Kanban Board. Hỗ trợ Server-side Filtering để tối ưu tốc độ tải.
 - **Success Response (200 OK):** Trả về mảng (array) chứa các Task Objects.
 
 ### 2.2 Tạo công việc mới

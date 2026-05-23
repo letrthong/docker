@@ -18,6 +18,11 @@ export const taskTitleInput = document.getElementById('taskTitleInput');
 export const taskDescriptionInput = document.getElementById('taskDescriptionInput');
 export const taskProjectSelect = document.getElementById('taskProjectSelect');
 export const taskAssigneeSelect = document.getElementById('taskAssigneeSelect');
+export const taskAssigneeWrapper = document.getElementById('taskAssigneeWrapper');
+export const taskAssigneeDropdownBtn = document.getElementById('taskAssigneeDropdownBtn');
+export const taskAssigneeSelectedText = document.getElementById('taskAssigneeSelectedText');
+export const taskAssigneeSearchInput = document.getElementById('taskAssigneeSearchInput');
+export const taskAssigneeDropdownList = document.getElementById('taskAssigneeDropdownList');
 export const taskPrioritySelect = document.getElementById('taskPrioritySelect');
 export const taskStoryPointsSelect = document.getElementById('taskStoryPointsSelect');
 export const checklistContainer = document.getElementById('checklistContainer');
@@ -65,6 +70,15 @@ export const openTrashBtn = document.getElementById('openTrashBtn');
 export const trashModalOverlay = document.getElementById('trashModalOverlay');
 export const closeTrashBtn = document.getElementById('closeTrashBtn');
 export const trashListTableBody = document.getElementById('trashListTableBody');
+
+// Cài đặt
+export const settingsDropdownItem = document.getElementById('settingsDropdownItem');
+export const openSettingsBtn = document.getElementById('openSettingsBtn');
+export const settingsModalOverlay = document.getElementById('settingsModalOverlay');
+export const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+export const showFilterBarCheckbox = document.getElementById('showFilterBarCheckbox');
+export const filterBarContainer = document.getElementById('filterBarContainer');
+export const darkModeCheckbox = document.getElementById('darkModeCheckbox');
 
 // Đổi Mật Khẩu Modal
 export const changePasswordModalOverlay = document.getElementById('changePasswordModalOverlay');
@@ -138,6 +152,11 @@ export const detailModalFooter = document.getElementById('detailModalFooter');
 // Lọc
 export const projectFilter = document.getElementById('projectFilter');
 export const assigneeFilter = document.getElementById('assigneeFilter');
+export const assigneeDropdownBtn = document.getElementById('assigneeDropdownBtn');
+export const assigneeSelectedText = document.getElementById('assigneeSelectedText');
+export const assigneeSearchInput = document.getElementById('assigneeSearchInput');
+export const assigneeDropdownList = document.getElementById('assigneeDropdownList');
+export const assigneeFilterWrapper = document.getElementById('assigneeFilterWrapper');
 export const statusFilterDropdown = document.getElementById('statusFilter');
 export const statusDropdownList = document.getElementById('statusDropdownList');
 export const statusDropdownButton = document.getElementById('dropdown-button');

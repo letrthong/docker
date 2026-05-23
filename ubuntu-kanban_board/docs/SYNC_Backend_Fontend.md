@@ -61,7 +61,7 @@ Trước khi thực hiện một hành động ghi (Write) vào Backend, Fronten
 6. Cập nhật lại giao diện.
 
 **Lưu ý với Bình luận (Comments):**
-Để tối ưu hóa và chống ghi đè triệt để khi nhiều người cùng chat, chức năng Bình luận đã được tách thành API độc lập (`POST` và `DELETE` trên `/tasks/<task_id>/comments`). Backend sẽ chịu trách nhiệm tự động cập nhật file `comments` rời và ghi thêm log vào mảng `history` của file công việc gốc mà không yêu cầu client phải gửi lại (PUT) toàn bộ dữ liệu Task.
+Để tối ưu hóa và chống ghi đè triệt để khi nhiều người cùng chat, chức năng Bình luận đã được tách thành API độc lập (`POST`, `PUT` và `DELETE` trên `/tasks/<task_id>/comments`). Backend sẽ chịu trách nhiệm tự động cập nhật file `comments` rời và ghi thêm log vào mảng `history` của file công việc gốc mà không yêu cầu client phải gửi lại (PUT) toàn bộ dữ liệu Task.
 
 **Lưu ý khi Đồng bộ Danh sách (Tasks):**
 Thay vì tải toàn bộ công việc về Frontend, hàm `loadTasks()` giờ đây luôn gắn kèm `projectId` và `sprintId` vào URL (`GET /tasks?projectId=...&sprintId=...`). Backend sẽ chủ động bỏ qua (skip) việc đọc các tệp công việc không khớp điều kiện để trả về mảng dữ liệu siêu nhỏ. Nhờ vậy, vòng lặp Auto-Refresh 30s diễn ra cực kỳ nhanh chóng và không làm treo hay ngốn RAM trình duyệt!

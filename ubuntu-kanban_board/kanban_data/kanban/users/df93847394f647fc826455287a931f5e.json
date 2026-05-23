@@ -1,0 +1,6 @@
+{
+    "username": "test",
+    "permission": "user",
+    "password": "pbkdf2:sha256:260000$IKcCUEjK0p0HXnPI$f721a8952409d516c1ebf0d4a40fed4401c6498adb0cf513a846f2b9c81d908c",
+    "useruid": "df93847394f647fc826455287a931f5e"
+}

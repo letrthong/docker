@@ -8,6 +8,7 @@
 - **Quản lý Dự án & Sprint:** Tạo dự án, phân công thành viên vào dự án, lên kế hoạch các đợt chạy nước rút (sprints).
 - **Phân quyền (Role-Based Access Control):** Hỗ trợ chi tiết các nhóm quyền: Owner, Create, Edit, View.
 - **Đồng bộ:** Cơ chế Auto-refresh và Anti-overwrite an toàn, giúp nhiều người dùng có thể tương tác đồng thời.
+- **Giao diện & Tùy chỉnh (UI/UX):** Hỗ trợ Dark Mode (Chế độ tối), cho phép ẩn/hiện thanh công cụ lọc để tối ưu không gian trên Mobile, tự động lưu trạng thái vào trình duyệt (`localStorage`). Bộ lọc mặc định hiển thị "Việc của tôi".
 
 ## Cài đặt và Khởi chạy
 

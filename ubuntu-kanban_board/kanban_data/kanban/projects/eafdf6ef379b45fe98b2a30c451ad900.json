@@ -4,7 +4,11 @@
     "users": [
         {
             "useruid": "6d44899a96e5409caab5997afcf66196",
-            "permission": "view"
+            "permission": "edit"
+        },
+        {
+            "useruid": "df93847394f647fc826455287a931f5e",
+            "permission": "edit"
         }
     ],
     "sprints": [

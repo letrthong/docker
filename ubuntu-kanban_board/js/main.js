@@ -7,11 +7,13 @@ import {
     manageUsersDropdownItem, manageProjectsDropdownItem,
     totalTasksCount, todoColumn, inprogressColumn, blockedColumn, reviewColumn, doneColumn,
     openModalBtn, taskModalOverlay, addTaskForm, taskTitleInput, taskDescriptionInput, taskAssigneeSelect,
+    taskAssigneeWrapper, taskAssigneeDropdownBtn, taskAssigneeSelectedText, taskAssigneeSearchInput, taskAssigneeDropdownList,
     taskProjectSelect, taskPrioritySelect, taskStoryPointsSelect, checklistContainer, addChecklistItemBtn, cancelBtn, closeTaskModalIconBtn, modalTitle, submitBtn,
     confirmationModalOverlay, confirmTitle, confirmMessage, confirmActionBtn, cancelConfirmBtn,
     detailModalOverlay,
     projectFilter, assigneeFilter, statusFilterDropdown, statusDropdownList, statusDropdownButton,
-    showMessage, dateFormatter, getAssigneeColor, trashDropdownItem
+    showMessage, dateFormatter, getAssigneeColor, trashDropdownItem,
+    settingsDropdownItem, openSettingsBtn, settingsModalOverlay, closeSettingsBtn, showFilterBarCheckbox, filterBarContainer
 } from './ui.js';
 import { initAuth } from './auth.js';
 import { initAdmin } from './admin.js';
@@ -139,7 +141,8 @@ function renderTasks(assigneeFilterValue = 'all', statusFilterValues = ['all'], 
         }
 
         const normalizedAssignee = task.assignee ? task.assignee.toLowerCase().trim() : '';
-        const assigneeMatch = (assigneeFilterValue === 'all' || normalizedAssignee === assigneeFilterValue);
+        const normalizedCurrentUser = currentUsername ? currentUsername.toLowerCase().trim() : '';
+        const assigneeMatch = (assigneeFilterValue === 'all') || (assigneeFilterValue === 'my_tasks' && normalizedAssignee === normalizedCurrentUser) || (normalizedAssignee === assigneeFilterValue);
         const statusMatch = (statusFilterValues.includes('all') || statusFilterValues.includes(task.status));
         const projectMatch = (task.projectId === projectFilterValue) || (!task.projectId && projectFilterValue === 'none');
         const sprintMatch = (sprintFilterValue === 'all') || (task.sprintIds && task.sprintIds.includes(sprintFilterValue));
@@ -188,11 +191,14 @@ function renderTasks(assigneeFilterValue = 'all', statusFilterValues = ['all'], 
     updateSP('done-sp-total', doneSP);
 }
 
+// Biến lưu trữ tùy chọn dự án để search
+let currentProjectOptions = [];
+
 // Thêm các tùy chọn dự án vào bộ lọc
 export function populateProjectFilter() {
     if (!projectFilter) return;
     const currentFilterValue = projectFilter.value;
-    projectFilter.innerHTML = '';
+    const optionsData = [];
 
     // Lọc dự án: Owner thấy toàn bộ, người dùng bình thường chỉ thấy dự án mình tham gia
     const visibleProjects = userPermission === 'owner' 
@@ -200,27 +206,74 @@ export function populateProjectFilter() {
         : project_list.filter(p => isUserInProject(p, currentUserId));
 
     visibleProjects.forEach((project) => {
-        const option = document.createElement('option');
-        option.value = project.id;
-        option.textContent = project.name;
-        projectFilter.appendChild(option);
+        optionsData.push({ value: project.id, text: project.name });
     });
 
     // Chỉ hiển thị "Không có dự án" nếu người dùng chưa có dự án nào
     if (visibleProjects.length === 0) {
-        const noneOption = document.createElement('option');
-        noneOption.value = 'none';
-        noneOption.textContent = 'Không có dự án';
-        projectFilter.appendChild(noneOption);
+        optionsData.push({ value: 'none', text: 'Không có dự án' });
     }
 
-    // Nếu giá trị đã chọn trước đó vẫn còn trong danh sách, giữ nguyên
-    if (Array.from(projectFilter.options).some(opt => opt.value === currentFilterValue)) {
-        projectFilter.value = currentFilterValue;
-    } else if (projectFilter.options.length > 0) {
-        projectFilter.value = projectFilter.options[0].value;
+    let nextValue = currentFilterValue;
+    if (!optionsData.some(opt => opt.value === currentFilterValue)) {
+        if (optionsData.length > 0) {
+            nextValue = optionsData[0].value;
+        } else {
+            nextValue = 'none';
+        }
     }
+
+    projectFilter.value = nextValue;
+    renderProjectDropdown(optionsData, nextValue);
 }
+
+function renderProjectDropdown(optionsData, selectedValue) {
+    currentProjectOptions = optionsData;
+    const projectSelectedText = document.getElementById('projectSelectedText');
+    const selectedOpt = optionsData.find(o => o.value === selectedValue) || optionsData[0];
+    if (projectSelectedText) projectSelectedText.textContent = selectedOpt ? selectedOpt.text : 'Chọn dự án...';
+    
+    filterProjectList('');
+}
+
+function filterProjectList(searchTerm) {
+    const projectDropdownList = document.getElementById('projectDropdownList');
+    const projectSelectedText = document.getElementById('projectSelectedText');
+    const projectFilterWrapper = document.getElementById('projectFilterWrapper');
+    const projectSearchInput = document.getElementById('projectSearchInput');
+
+    if (!projectDropdownList) return;
+    projectDropdownList.innerHTML = '';
+    const term = searchTerm.toLowerCase();
+    
+    currentProjectOptions.filter(opt => opt.text.toLowerCase().includes(term)).forEach(opt => {
+        const div = document.createElement('div');
+        div.className = 'p-2 hover:bg-gray-100 cursor-pointer text-sm text-gray-700 flex items-center justify-between transition-colors';
+        div.textContent = opt.text;
+        
+        if (opt.value === projectFilter.value) {
+            div.classList.add('bg-blue-50', 'font-semibold', 'text-blue-700');
+            const checkIcon = document.createElement('i');
+            checkIcon.className = 'fas fa-check text-blue-600';
+            div.appendChild(checkIcon);
+        }
+        
+        div.addEventListener('click', (e) => {
+            e.stopPropagation();
+            projectFilter.value = opt.value;
+            if (projectSelectedText) projectSelectedText.textContent = opt.text;
+            if (projectFilterWrapper) projectFilterWrapper.classList.remove('active');
+            filterProjectList(projectSearchInput ? projectSearchInput.value : ''); // Reset UI tick
+            
+            // Kích hoạt sự kiện thay đổi
+            projectFilter.dispatchEvent(new Event('change'));
+        });
+        projectDropdownList.appendChild(div);
+    });
+}
+
+// Biến lưu trữ tùy chọn sprint để search
+let currentSprintOptions = [];
 
 // Thêm các tùy chọn Sprint vào bộ lọc
 export function populateSprintFilter(resetToCurrent = false) {
@@ -230,7 +283,8 @@ export function populateSprintFilter(resetToCurrent = false) {
     const isInitialized = sprintFilter.dataset.initialized === 'true';
     const currentFilterValue = sprintFilter.value;
     
-    sprintFilter.innerHTML = '<option value="all">Tất cả</option>';
+    const optionsData = [];
+    optionsData.push({ value: 'all', text: 'Tất cả' });
 
     let currentSprintId = 'all';
 
@@ -241,36 +295,92 @@ export function populateSprintFilter(resetToCurrent = false) {
             if (currentSp) currentSprintId = currentSp.id;
 
             project.sprints.forEach((sprint) => {
-                const option = document.createElement('option');
-                option.value = sprint.id;
-                option.textContent = getSprintDisplayText(sprint);
-                sprintFilter.appendChild(option);
+                optionsData.push({ value: sprint.id, text: getSprintDisplayText(sprint) });
             });
         }
     }
 
+    let nextValue = currentSprintId;
+
     if (resetToCurrent || !isInitialized) {
-        sprintFilter.value = currentSprintId;
+        nextValue = currentSprintId;
         sprintFilter.dataset.initialized = 'true';
-    } else if (Array.from(sprintFilter.options).some(opt => opt.value === currentFilterValue)) {
-        sprintFilter.value = currentFilterValue;
+    } else if (optionsData.some(opt => opt.value === currentFilterValue)) {
+        nextValue = currentFilterValue;
     } else {
-        sprintFilter.value = currentSprintId;
+        nextValue = currentSprintId;
     }
+
+    sprintFilter.value = nextValue;
+    renderSprintDropdown(optionsData, nextValue);
 }
+
+function renderSprintDropdown(optionsData, selectedValue) {
+    currentSprintOptions = optionsData;
+    const sprintSelectedText = document.getElementById('sprintSelectedText');
+    const selectedOpt = optionsData.find(o => o.value === selectedValue) || optionsData[0];
+    if (sprintSelectedText) sprintSelectedText.textContent = selectedOpt.text;
+    
+    filterSprintList('');
+}
+
+function filterSprintList(searchTerm) {
+    const sprintDropdownList = document.getElementById('sprintDropdownList');
+    const sprintFilter = document.getElementById('sprintFilter');
+    const sprintSelectedText = document.getElementById('sprintSelectedText');
+    const sprintFilterWrapper = document.getElementById('sprintFilterWrapper');
+    const sprintSearchInput = document.getElementById('sprintSearchInput');
+
+    if (!sprintDropdownList) return;
+    sprintDropdownList.innerHTML = '';
+    const term = searchTerm.toLowerCase();
+    
+    currentSprintOptions.filter(opt => opt.text.toLowerCase().includes(term)).forEach(opt => {
+        const div = document.createElement('div');
+        div.className = 'p-2 hover:bg-gray-100 cursor-pointer text-sm text-gray-700 flex items-center justify-between transition-colors';
+        div.textContent = opt.text;
+        
+        if (opt.value === sprintFilter.value) {
+            div.classList.add('bg-blue-50', 'font-semibold', 'text-blue-700');
+            const checkIcon = document.createElement('i');
+            checkIcon.className = 'fas fa-check text-blue-600';
+            div.appendChild(checkIcon);
+        }
+        
+        div.addEventListener('click', (e) => {
+            e.stopPropagation();
+            sprintFilter.value = opt.value;
+            if (sprintSelectedText) sprintSelectedText.textContent = opt.text;
+            if (sprintFilterWrapper) sprintFilterWrapper.classList.remove('active');
+            filterSprintList(sprintSearchInput ? sprintSearchInput.value : ''); // Reset ô tìm kiếm
+            
+            // Kích hoạt sự kiện change để gọi hàm lọc dữ liệu bên ngoài
+            sprintFilter.dispatchEvent(new Event('change'));
+        });
+        sprintDropdownList.appendChild(div);
+    });
+}
+
+// Biến lưu trữ tùy chọn để search
+let currentAssigneeOptions = [];
 
 // Thêm các tùy chọn người thực hiện vào bộ lọc
 export function populateAssigneeFilter() {
+    const isInitialized = assigneeFilter.dataset.initialized === 'true';
     const currentFilterValue = assigneeFilter.value;
-    assigneeFilter.innerHTML = '<option value="all">Tất cả</option>';
+    
+    const optionsData = [];
+    optionsData.push({ value: 'all', text: 'Tất cả' });
 
-    // Bỏ qua những user đã bị vô hiệu hóa
+    if (currentUsername) {
+        optionsData.push({ value: 'my_tasks', text: 'Việc của tôi' });
+    }
+
     let usersToDisplay = user_list.filter(u => !u.disabled);
     
     if (projectFilter && projectFilter.value && projectFilter.value !== 'none') {
         const project = project_list.find(p => p.id === projectFilter.value);
         if (project && project.users) {
-            // Chỉ hiển thị user thuộc dự án
             usersToDisplay = usersToDisplay.filter(u => isUserInProject(project, u.useruid));
         } else {
             usersToDisplay = [];
@@ -283,18 +393,58 @@ export function populateAssigneeFilter() {
     }
 
     usersToDisplay.forEach((user) => {
-        const option = document.createElement('option');
-        option.value = user.username.toLowerCase().trim();
-        option.textContent = user.username;
-        assigneeFilter.appendChild(option);
+        optionsData.push({ value: user.username.toLowerCase().trim(), text: user.username });
     });
 
-    // Đặt lại giá trị bộ lọc đã chọn trước đó nếu giá trị đó vẫn còn trong danh sách
-    if (Array.from(assigneeFilter.options).some(opt => opt.value === currentFilterValue)) {
-        assigneeFilter.value = currentFilterValue;
-    } else {
-        assigneeFilter.value = 'all';
+    let nextValue = 'all';
+    if (!isInitialized) {
+        nextValue = 'my_tasks';
+        assigneeFilter.dataset.initialized = 'true';
+    } else if (optionsData.some(opt => opt.value === currentFilterValue)) {
+        nextValue = currentFilterValue;
     }
+
+    assigneeFilter.value = nextValue;
+    renderAssigneeDropdown(optionsData, nextValue);
+}
+
+function renderAssigneeDropdown(optionsData, selectedValue) {
+    currentAssigneeOptions = optionsData;
+    const selectedOpt = optionsData.find(o => o.value === selectedValue) || optionsData[0];
+    if (assigneeSelectedText) assigneeSelectedText.textContent = selectedOpt.text;
+    
+    filterAssigneeList('');
+}
+
+function filterAssigneeList(searchTerm) {
+    if (!assigneeDropdownList) return;
+    assigneeDropdownList.innerHTML = '';
+    const term = searchTerm.toLowerCase();
+    
+    currentAssigneeOptions.filter(opt => opt.text.toLowerCase().includes(term)).forEach(opt => {
+        const div = document.createElement('div');
+        div.className = 'p-2 hover:bg-gray-100 cursor-pointer text-sm text-gray-700 flex items-center justify-between transition-colors';
+        div.textContent = opt.text;
+        
+        if (opt.value === assigneeFilter.value) {
+            div.classList.add('bg-blue-50', 'font-semibold', 'text-blue-700');
+            const checkIcon = document.createElement('i');
+            checkIcon.className = 'fas fa-check text-blue-600';
+            div.appendChild(checkIcon);
+        }
+        
+        div.addEventListener('click', (e) => {
+            e.stopPropagation();
+            assigneeFilter.value = opt.value;
+            if (assigneeSelectedText) assigneeSelectedText.textContent = opt.text;
+            if (assigneeFilterWrapper) assigneeFilterWrapper.classList.remove('active');
+            filterAssigneeList(assigneeSearchInput ? assigneeSearchInput.value : ''); // Reset UI tick
+            
+            // Kích hoạt sự kiện thay đổi (sẽ tự động gọi hàm renderTasks sẵn có bên dưới)
+            assigneeFilter.dispatchEvent(new Event('change'));
+        });
+        assigneeDropdownList.appendChild(div);
+    });
 }
 
 // Tạo một thẻ công việc và xử lý kéo thả
@@ -742,9 +892,12 @@ function populateProjectSelect(selectedProject = '') {
     }
 }
 
+// Biến lưu tùy chọn cho form Người thực hiện
+let currentTaskAssigneeOptions = [];
+
 // Hàm để điền danh sách người dùng vào select box
 function populateAssigneeSelect(selectedAssignee = '', projectId = '') {
-    taskAssigneeSelect.innerHTML = '';
+    const optionsData = [];
 
     // Bỏ qua những user đã bị vô hiệu hóa
     let usersToDisplay = user_list.filter(u => !u.disabled);
@@ -760,25 +913,58 @@ function populateAssigneeSelect(selectedAssignee = '', projectId = '') {
 
     // Quản lý (Owner), Người tạo (Create), Chỉnh sửa (Edit) đều có thể gán cho bất kỳ ai trong dự án
     usersToDisplay.forEach(user => {
-            const option = document.createElement('option');
-            option.value = user.username;
-            option.textContent = user.username;
-            taskAssigneeSelect.appendChild(option);
+        optionsData.push({ value: user.username, text: user.username });
     });
 
     if (selectedAssignee) {
-        let option = Array.from(taskAssigneeSelect.options).find(opt => opt.value === selectedAssignee);
+        let option = optionsData.find(opt => opt.value === selectedAssignee);
         if (!option) {
-            // Nếu user cũ không còn trong dự án, vẫn giữ lại để không bị mất data khi ấn Sửa
-            option = document.createElement('option');
-            option.value = selectedAssignee;
-            option.textContent = `${selectedAssignee} (Ngoài dự án/Đã khóa)`;
-            taskAssigneeSelect.appendChild(option);
+            optionsData.push({ value: selectedAssignee, text: `${selectedAssignee} (Ngoài dự án/Đã khóa)` });
         }
-        option.selected = true;
     } else {
-         taskAssigneeSelect.value = currentUsername;
+        selectedAssignee = currentUsername;
     }
+
+    taskAssigneeSelect.value = selectedAssignee;
+    renderTaskAssigneeDropdown(optionsData, selectedAssignee);
+}
+
+function renderTaskAssigneeDropdown(optionsData, selectedValue) {
+    currentTaskAssigneeOptions = optionsData;
+    const selectedOpt = optionsData.find(o => o.value === selectedValue) || optionsData[0];
+    if (taskAssigneeSelectedText) {
+        taskAssigneeSelectedText.textContent = selectedOpt ? selectedOpt.text : 'Chọn người thực hiện...';
+    }
+    
+    filterTaskAssigneeList('');
+}
+
+function filterTaskAssigneeList(searchTerm) {
+    if (!taskAssigneeDropdownList) return;
+    taskAssigneeDropdownList.innerHTML = '';
+    const term = searchTerm.toLowerCase();
+    
+    currentTaskAssigneeOptions.filter(opt => opt.text.toLowerCase().includes(term)).forEach(opt => {
+        const div = document.createElement('div');
+        div.className = 'p-2 hover:bg-gray-100 cursor-pointer text-sm text-gray-700 flex items-center justify-between transition-colors';
+        div.textContent = opt.text;
+        
+        if (opt.value === taskAssigneeSelect.value) {
+            div.classList.add('bg-blue-50', 'font-semibold', 'text-blue-700');
+            const checkIcon = document.createElement('i');
+            checkIcon.className = 'fas fa-check text-blue-600';
+            div.appendChild(checkIcon);
+        }
+        
+        div.addEventListener('click', (e) => {
+            e.stopPropagation();
+            taskAssigneeSelect.value = opt.value;
+            if (taskAssigneeSelectedText) taskAssigneeSelectedText.textContent = opt.text;
+            if (taskAssigneeWrapper) taskAssigneeWrapper.classList.remove('active');
+            filterTaskAssigneeList(taskAssigneeSearchInput ? taskAssigneeSearchInput.value : '');
+        });
+        taskAssigneeDropdownList.appendChild(div);
+    });
 }
 
 // Hàm để điền danh sách sprint vào vùng chọn đa dạng (multiselect) của task
@@ -1045,6 +1231,7 @@ addTaskForm.addEventListener('submit', async (e) => {
                 timestamp: new Date().toISOString(),
                 details: 'đã cập nhật thông tin công việc.'
             });
+            await updateTaskData(editingTaskId, task);
         }
     } else {
         // Chế độ thêm mới
@@ -1074,6 +1261,7 @@ addTaskForm.addEventListener('submit', async (e) => {
         }];
         await addTaskData(newTask);
     }
+    showMessage(editingTaskId ? "Đã lưu thành công!" : "Đã tạo công việc thành công!");
     refreshUI();
     addTaskForm.reset();
     if (quill) quill.root.innerHTML = '';
@@ -1316,6 +1504,93 @@ statusDropdownList.querySelectorAll('input').forEach(input => {
     });
 });
 
+// Bắt sự kiện tắt/mở của Custom Select cho Người thực hiện trong modal
+if (taskAssigneeDropdownBtn) {
+    taskAssigneeDropdownBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        taskAssigneeWrapper.classList.toggle('active');
+        if (taskAssigneeWrapper.classList.contains('active') && taskAssigneeSearchInput) {
+            taskAssigneeSearchInput.value = '';
+            filterTaskAssigneeList('');
+            taskAssigneeSearchInput.focus();
+        }
+    });
+}
+if (taskAssigneeSearchInput) {
+    taskAssigneeSearchInput.addEventListener('input', (e) => {
+        filterTaskAssigneeList(e.target.value);
+    });
+    taskAssigneeSearchInput.addEventListener('click', e => e.stopPropagation());
+}
+
+// Bắt sự kiện tắt/mở của Filter Người dùng
+if (assigneeDropdownBtn) {
+    assigneeDropdownBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        assigneeFilterWrapper.classList.toggle('active');
+        if (assigneeFilterWrapper.classList.contains('active') && assigneeSearchInput) {
+            assigneeSearchInput.value = '';
+            filterAssigneeList('');
+            assigneeSearchInput.focus();
+        }
+    });
+}
+
+if (assigneeSearchInput) {
+    assigneeSearchInput.addEventListener('input', (e) => {
+        filterAssigneeList(e.target.value);
+    });
+    assigneeSearchInput.addEventListener('click', e => e.stopPropagation());
+}
+
+// Bắt sự kiện tắt/mở của Filter Sprint
+const sprintDropdownBtn = document.getElementById('sprintDropdownBtn');
+const sprintFilterWrapper = document.getElementById('sprintFilterWrapper');
+const sprintSearchInput = document.getElementById('sprintSearchInput');
+
+if (sprintDropdownBtn) {
+    sprintDropdownBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        sprintFilterWrapper.classList.toggle('active');
+        if (sprintFilterWrapper.classList.contains('active') && sprintSearchInput) {
+            sprintSearchInput.value = '';
+            filterSprintList('');
+            sprintSearchInput.focus();
+        }
+    });
+}
+
+if (sprintSearchInput) {
+    sprintSearchInput.addEventListener('input', (e) => {
+        filterSprintList(e.target.value);
+    });
+    sprintSearchInput.addEventListener('click', e => e.stopPropagation());
+}
+
+// Bắt sự kiện tắt/mở của Filter Dự án
+const projectDropdownBtn = document.getElementById('projectDropdownBtn');
+const projectFilterWrapper = document.getElementById('projectFilterWrapper');
+const projectSearchInput = document.getElementById('projectSearchInput');
+
+if (projectDropdownBtn) {
+    projectDropdownBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        projectFilterWrapper.classList.toggle('active');
+        if (projectFilterWrapper.classList.contains('active') && projectSearchInput) {
+            projectSearchInput.value = '';
+            filterProjectList('');
+            projectSearchInput.focus();
+        }
+    });
+}
+
+if (projectSearchInput) {
+    projectSearchInput.addEventListener('input', (e) => {
+        filterProjectList(e.target.value);
+    });
+    projectSearchInput.addEventListener('click', e => e.stopPropagation());
+}
+
 statusDropdownButton.addEventListener('click', (e) => {
     e.stopPropagation();
     statusFilterDropdown.classList.toggle('active');
@@ -1333,6 +1608,20 @@ if (userProfileBtn && userInfoDropdown) {
 document.addEventListener('click', (e) => {
     if (!statusFilterDropdown.contains(e.target)) {
         statusFilterDropdown.classList.remove('active');
+    }
+    if (assigneeFilterWrapper && !assigneeFilterWrapper.contains(e.target)) {
+        assigneeFilterWrapper.classList.remove('active');
+    }
+    if (taskAssigneeWrapper && !taskAssigneeWrapper.contains(e.target)) {
+        taskAssigneeWrapper.classList.remove('active');
+    }
+    const sprintFilterWrapper = document.getElementById('sprintFilterWrapper');
+    if (sprintFilterWrapper && !sprintFilterWrapper.contains(e.target)) {
+        sprintFilterWrapper.classList.remove('active');
+    }
+    const projectFilterWrapper = document.getElementById('projectFilterWrapper');
+    if (projectFilterWrapper && !projectFilterWrapper.contains(e.target)) {
+        projectFilterWrapper.classList.remove('active');
     }
     if (userInfoDropdown && userProfileContainer && !userProfileContainer.contains(e.target)) {
         userInfoDropdown.classList.add('hidden');
@@ -1362,6 +1651,78 @@ function updateButtonStates() {
 }
 
 initSessionManager();
+
+// --- Logic Cài đặt hiển thị ---
+const FILTER_BAR_VISIBLE_KEY = 'kanban_filter_bar_visible';
+const DARK_MODE_KEY = 'kanban_dark_mode';
+
+function initSettings() {
+    const isFilterBarVisible = localStorage.getItem(FILTER_BAR_VISIBLE_KEY) !== 'false';
+    
+    if (showFilterBarCheckbox) {
+        showFilterBarCheckbox.checked = isFilterBarVisible;
+    }
+    
+    if (filterBarContainer) {
+        if (!isFilterBarVisible) {
+            filterBarContainer.classList.add('hidden');
+        } else {
+            filterBarContainer.classList.remove('hidden');
+        }
+    }
+
+    const isDarkMode = localStorage.getItem(DARK_MODE_KEY) === 'true';
+    if (darkModeCheckbox) {
+        darkModeCheckbox.checked = isDarkMode;
+    }
+
+    if (openSettingsBtn) {
+        openSettingsBtn.addEventListener('click', () => {
+            if (userInfoDropdown) {
+                userInfoDropdown.classList.add('hidden');
+                userInfoDropdown.classList.remove('flex');
+            }
+            if (settingsModalOverlay) {
+                settingsModalOverlay.classList.add('show');
+            }
+        });
+    }
+
+    if (closeSettingsBtn) {
+        closeSettingsBtn.addEventListener('click', () => {
+            if (settingsModalOverlay) {
+                settingsModalOverlay.classList.remove('show');
+            }
+        });
+    }
+
+    if (showFilterBarCheckbox) {
+        showFilterBarCheckbox.addEventListener('change', (e) => {
+            const isVisible = e.target.checked;
+            localStorage.setItem(FILTER_BAR_VISIBLE_KEY, isVisible);
+            if (filterBarContainer) {
+                if (!isVisible) {
+                    filterBarContainer.classList.add('hidden');
+                } else {
+                    filterBarContainer.classList.remove('hidden');
+                }
+            }
+        });
+    }
+
+    if (darkModeCheckbox) {
+        darkModeCheckbox.addEventListener('change', (e) => {
+            const isDark = e.target.checked;
+            localStorage.setItem(DARK_MODE_KEY, isDark);
+            
+            if (isDark) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+    }
+}
 
 // Tối ưu giao diện nút bấm trên mobile (chỉ hiện icon)
 export function hideTextOnMobile(button) {
@@ -1427,6 +1788,8 @@ initProject();
 export async function initKanban() {
     const info = await getUserIdInfo();
     setUserInfo(info);
+
+    initSettings();
 
     // Hiển thị tên người dùng trên Header
     if (loggedInUserDisplay) loggedInUserDisplay.textContent = currentUsername;

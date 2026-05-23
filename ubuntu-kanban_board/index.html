@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
@@ -12,6 +12,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <!-- Tải Quill CSS để hiển thị khung soạn thảo phong phú -->
     <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+    <!-- Chống chớp giao diện (FOUC) khi dùng Dark mode -->
+    <script>
+        if (localStorage.getItem('kanban_dark_mode') === 'true') {
+            document.documentElement.classList.add('dark');
+        }
+    </script>
     <style>
         /* Sử dụng phông chữ Inter cho toàn bộ trang */
         body {
@@ -168,7 +174,7 @@
         }
     </style>
 </head>
-    <body class="bg-gray-100 flex flex-col min-h-screen">
+    <body class="bg-gray-100 dark:bg-gray-900 transition-colors duration-300 flex flex-col min-h-screen">
 
         <!-- Màn hình Đăng nhập -->
         <div id="loginScreen" class="flex flex-col min-h-screen justify-center items-center bg-gray-100 fixed inset-0 z-[5000]">
@@ -233,6 +239,11 @@
                             <i class="fas fa-trash-restore mr-2"></i>Thùng rác Dự án
                         </button>
                     </div>
+                    <div class="p-4 border-t border-gray-100 bg-white" id="settingsDropdownItem">
+                        <button id="openSettingsBtn" class="w-full text-left text-sm font-semibold text-gray-700 hover:text-gray-900 focus:outline-none">
+                            <i class="fas fa-cog mr-2"></i>Cài đặt
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -244,26 +255,63 @@
     </div>
 
     <!-- Bộ lọc -->
-    <div class="w-full">
+    <div id="filterBarContainer" class="w-full">
         <div class="flex flex-col md:flex-row items-center justify-between gap-4 mb-8 md:bg-white md:p-4 md:rounded-2xl md:shadow-sm md:border md:border-gray-200">
             <!-- Phần lọc -->
             <div class="flex flex-col md:flex-row items-start md:items-center gap-4 w-full md:w-auto">
                 <div class="flex flex-col w-full md:w-auto">
-                    <label for="projectFilter" class="text-gray-700 text-xs font-medium whitespace-nowrap mb-1">Lọc theo dự án:</label>
-                    <select id="projectFilter" class="p-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
-                    </select>
+                    <label class="text-gray-700 text-xs font-medium whitespace-nowrap mb-1">Lọc theo dự án:</label>
+                    <div id="projectFilterWrapper" class="multiselect-dropdown w-full">
+                        <div class="p-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer flex justify-between items-center bg-white min-w-[160px]" id="projectDropdownBtn">
+                            <span id="projectSelectedText" class="truncate text-gray-700">Chọn dự án...</span>
+                            <i class="fas fa-caret-down ml-2 text-gray-500"></i>
+                        </div>
+                        <div class="dropdown-list" id="projectDropdownMenu" style="padding: 0;">
+                            <div class="p-2 border-b border-gray-100 sticky top-0 bg-white z-10 rounded-t-lg">
+                                <input type="text" id="projectSearchInput" placeholder="Tìm dự án..." class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                            </div>
+                            <div class="overflow-y-auto max-h-48" id="projectDropdownList">
+                                <!-- Các tùy chọn sẽ được thêm bằng JS -->
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="projectFilter" value="none">
                 </div>
                 <div class="flex flex-col w-full md:w-auto">
-                    <label for="sprintFilter" class="text-gray-700 text-xs font-medium whitespace-nowrap mb-1">Lọc theo Sprint:</label>
-                    <select id="sprintFilter" class="p-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
-                        <option value="all">Tất cả</option>
-                    </select>
+                    <label class="text-gray-700 text-xs font-medium whitespace-nowrap mb-1">Lọc theo Sprint:</label>
+                    <div id="sprintFilterWrapper" class="multiselect-dropdown w-full">
+                        <div class="p-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer flex justify-between items-center bg-white min-w-[160px]" id="sprintDropdownBtn">
+                            <span id="sprintSelectedText" class="truncate text-gray-700">Tất cả</span>
+                            <i class="fas fa-caret-down ml-2 text-gray-500"></i>
+                        </div>
+                        <div class="dropdown-list" id="sprintDropdownMenu" style="padding: 0;">
+                            <div class="p-2 border-b border-gray-100 sticky top-0 bg-white z-10 rounded-t-lg">
+                                <input type="text" id="sprintSearchInput" placeholder="Tìm Sprint..." class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                            </div>
+                            <div class="overflow-y-auto max-h-48" id="sprintDropdownList">
+                                <!-- Các tùy chọn sẽ được thêm bằng JS -->
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="sprintFilter" value="all">
                 </div>
                 <div class="flex flex-col w-full md:w-auto">
-                    <label for="assigneeFilter" class="text-gray-700 text-xs font-medium whitespace-nowrap mb-1">Lọc theo người:</label>
-                    <select id="assigneeFilter" class="p-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
-                        <option value="all">Tất cả</option>
-                    </select>
+                    <label class="text-gray-700 text-xs font-medium whitespace-nowrap mb-1">Lọc theo người:</label>
+                    <div id="assigneeFilterWrapper" class="multiselect-dropdown w-full">
+                        <div class="p-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer flex justify-between items-center bg-white min-w-[160px]" id="assigneeDropdownBtn">
+                            <span id="assigneeSelectedText" class="truncate text-gray-700">Việc của tôi</span>
+                            <i class="fas fa-caret-down ml-2 text-gray-500"></i>
+                        </div>
+                        <div class="dropdown-list" id="assigneeDropdownMenu" style="padding: 0;">
+                            <div class="p-2 border-b border-gray-100 sticky top-0 bg-white z-10 rounded-t-lg">
+                                <input type="text" id="assigneeSearchInput" placeholder="Tìm người..." class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                            </div>
+                            <div class="overflow-y-auto max-h-48" id="assigneeDropdownList">
+                                <!-- Các tùy chọn sẽ được thêm bằng JS -->
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="assigneeFilter" value="my_tasks">
                 </div>
                 <div class="flex flex-col w-full md:w-auto">
                     <label class="text-gray-700 text-xs font-medium whitespace-nowrap mb-1">Lọc theo trạng thái:</label>
@@ -375,8 +423,22 @@
                             </select>
                         </div>
                         <div class="flex flex-col gap-2">
-                            <label for="taskAssigneeSelect" class="text-gray-600 font-semibold">Người thực hiện:</label>
-                            <select id="taskAssigneeSelect" class="p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
+                            <label class="text-gray-600 font-semibold">Người thực hiện:</label>
+                            <div id="taskAssigneeWrapper" class="multiselect-dropdown w-full">
+                                <div class="p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer flex justify-between items-center bg-white" id="taskAssigneeDropdownBtn">
+                                    <span id="taskAssigneeSelectedText" class="truncate text-gray-700">Chọn người thực hiện...</span>
+                                    <i class="fas fa-caret-down ml-2 text-gray-500"></i>
+                                </div>
+                                <div class="dropdown-list" id="taskAssigneeDropdownMenu" style="padding: 0;">
+                                    <div class="p-2 border-b border-gray-100 sticky top-0 bg-white z-10 rounded-t-lg">
+                                        <input type="text" id="taskAssigneeSearchInput" placeholder="Tìm người..." class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                                    </div>
+                                    <div class="overflow-y-auto max-h-48" id="taskAssigneeDropdownList">
+                                        <!-- Các tùy chọn sẽ được thêm bằng JS -->
+                                    </div>
+                                </div>
+                            </div>
+                            <input type="hidden" id="taskAssigneeSelect">
                         </div>
                         <div id="sprintsWrapper" class="hidden flex-col gap-2">
                             <label class="text-gray-600 font-semibold">Sprints (Chọn nhiều):</label>
@@ -629,6 +691,28 @@
                         <!-- Danh sách dự án đã xóa sẽ được render bằng JS -->
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cửa sổ Popup (Modal) Cài đặt -->
+    <div id="settingsModalOverlay" class="modal-overlay z-[7000]">
+        <div class="modal-content w-full max-w-md">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-gray-800">Cài đặt hiển thị</h2>
+                <button type="button" id="closeSettingsBtn" class="text-red-500 bg-red-100 hover:bg-red-600 hover:text-white focus:outline-none w-8 h-8 flex items-center justify-center rounded-full transition-colors shadow-sm">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="flex flex-col gap-4">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="showFilterBarCheckbox" class="form-checkbox h-5 w-5 text-blue-600 rounded">
+                    <span class="text-gray-700 font-medium">Hiển thị thanh bộ lọc (Filter)</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer mt-2">
+                    <input type="checkbox" id="darkModeCheckbox" class="form-checkbox h-5 w-5 text-blue-600 rounded">
+                    <span class="text-gray-700 font-medium">Chế độ tối (Dark mode)</span>
+                </label>
             </div>
         </div>
     </div>
