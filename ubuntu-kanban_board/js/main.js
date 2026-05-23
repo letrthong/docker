@@ -451,15 +451,15 @@ function filterAssigneeList(searchTerm) {
 function createTaskCard(task) {
     const card = document.createElement('div');
 
-    let bgColorClass = 'bg-white'; // Mặc định là màu trắng
+    let bgColorClass = 'bg-white dark:bg-gray-700'; // Mặc định là màu trắng
     if (task.status === 'in-progress') {
-        bgColorClass = 'bg-blue-100';
+        bgColorClass = 'bg-blue-100 dark:bg-blue-900';
     } else if (task.status === 'blocked') {
-        bgColorClass = 'bg-red-50';
+        bgColorClass = 'bg-red-50 dark:bg-red-900';
     } else if (task.status === 'review') {
-        bgColorClass = 'bg-yellow-50';
+        bgColorClass = 'bg-yellow-50 dark:bg-yellow-900';
     } else if (task.status === 'done') {
-        bgColorClass = 'bg-green-100';
+        bgColorClass = 'bg-green-100 dark:bg-green-900';
     }
 
     card.className = `card ${bgColorClass} p-4 rounded-xl shadow-md transition-shadow duration-300 hover:shadow-lg`;
@@ -505,7 +505,7 @@ function createTaskCard(task) {
 
     // Nút Nhân bản
     const cloneBtn = document.createElement('button');
-    cloneBtn.innerHTML = `<i class="fas fa-clone text-gray-500 hover:text-gray-700"></i>`;
+    cloneBtn.innerHTML = `<i class="fas fa-clone text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"></i>`;
     
     const canClone = (projPerm === 'edit' || projPerm === 'create' || projPerm === 'owner');
     cloneBtn.className = `p-1 rounded-full hover:bg-gray-200 ${!canClone || task.locked ? 'opacity-50 cursor-not-allowed' : ''}`;
@@ -518,7 +518,7 @@ function createTaskCard(task) {
 
     // Nút Chỉnh sửa
     const editBtn = document.createElement('button');
-    editBtn.innerHTML = `<i class="fas fa-pen text-blue-500 hover:text-blue-700"></i>`;
+    editBtn.innerHTML = `<i class="fas fa-pen text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-200"></i>`;
     editBtn.className = `p-1 rounded-full hover:bg-gray-200 ${!canEdit || task.locked ? 'opacity-50 cursor-not-allowed' : ''}`;
     editBtn.disabled = !canEdit || task.locked;
     editBtn.onclick = async (e) => {
@@ -540,7 +540,7 @@ function createTaskCard(task) {
 
     // Nút Xóa
     const deleteBtn = document.createElement('button');
-    deleteBtn.innerHTML = `<i class="fas fa-trash-alt text-red-500 hover:text-red-700"></i>`;
+    deleteBtn.innerHTML = `<i class="fas fa-trash-alt text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-200"></i>`;
     
     const canDelete = (projPerm === 'create' || projPerm === 'owner');
     deleteBtn.className = `p-1 rounded-full hover:bg-gray-200 ${!canDelete || task.locked ? 'opacity-50 cursor-not-allowed' : ''}`;
@@ -566,6 +566,10 @@ function createTaskCard(task) {
     // Áp dụng màu sắc của người thực hiện cho tiêu đề công việc
     const assigneeColor = getAssigneeColor(task.assignee);
     title.style.color = assigneeColor;
+    // Đảm bảo chữ vẫn dễ đọc trên nền tối, có thể dùng text shadow nhẹ nếu cần thiết
+    if (document.documentElement.classList.contains('dark')) {
+        title.style.filter = 'brightness(1.5)';
+    }
     title.className = "font-bold flex-1 pr-16";
 
     card.appendChild(actionsContainer);
@@ -574,7 +578,7 @@ function createTaskCard(task) {
         const project = project_list.find(p => p.id === task.projectId);
         if (project) {
             const projectTag = document.createElement('div');
-            projectTag.className = "text-xs font-semibold text-purple-600 bg-purple-100 rounded-md px-2 py-1 mb-2 inline-block";
+            projectTag.className = "text-xs font-semibold text-purple-600 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/50 rounded-md px-2 py-1 mb-2 inline-block";
             projectTag.textContent = project.name;
             card.appendChild(projectTag);
 
@@ -587,7 +591,7 @@ function createTaskCard(task) {
                 
                 if (sprintNames.length > 0) {
                     const sprintsTag = document.createElement('div');
-                    sprintsTag.className = "text-xs font-semibold text-blue-600 bg-blue-100 rounded-md px-2 py-1 mb-2 inline-block ml-1";
+                    sprintsTag.className = "text-xs font-semibold text-blue-600 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/50 rounded-md px-2 py-1 mb-2 inline-block ml-1";
                     sprintsTag.textContent = "Sprints: " + sprintNames.join(', ');
                     card.appendChild(sprintsTag);
                 }
@@ -601,7 +605,7 @@ function createTaskCard(task) {
         extraTags.className = "flex gap-2 mb-2";
         if (task.priority) {
             const priorityMap = { 'low': 'Thấp', 'medium': 'Trung bình', 'high': 'Cao' };
-            const priorityColor = task.priority === 'high' ? 'text-red-600 bg-red-100' : (task.priority === 'medium' ? 'text-yellow-600 bg-yellow-100' : 'text-green-600 bg-green-100');
+            const priorityColor = task.priority === 'high' ? 'text-red-600 dark:text-red-300 bg-red-100 dark:bg-red-900/50' : (task.priority === 'medium' ? 'text-yellow-600 dark:text-yellow-300 bg-yellow-100 dark:bg-yellow-900/50' : 'text-green-600 dark:text-green-300 bg-green-100 dark:bg-green-900/50');
             const pTag = document.createElement('div');
             pTag.className = `text-xs font-semibold rounded-md px-2 py-1 inline-block ${priorityColor}`;
             pTag.textContent = priorityMap[task.priority] || task.priority;
@@ -609,13 +613,13 @@ function createTaskCard(task) {
         }
         if (task.storyPoints) {
             const spTag = document.createElement('div');
-            spTag.className = "text-xs font-semibold text-gray-600 bg-gray-200 rounded-md px-2 py-1 inline-block";
+            spTag.className = "text-xs font-semibold text-gray-600 dark:text-gray-300 bg-gray-200 dark:bg-gray-600 rounded-md px-2 py-1 inline-block";
             spTag.innerHTML = `<i class="fas fa-star text-yellow-500 mr-1"></i>${task.storyPoints}`;
             extraTags.appendChild(spTag);
         }
         if (count > 0) {
             const commentTag = document.createElement('div');
-            commentTag.className = "text-xs font-semibold text-gray-600 bg-gray-200 rounded-md px-2 py-1 inline-block";
+            commentTag.className = "text-xs font-semibold text-gray-600 dark:text-gray-300 bg-gray-200 dark:bg-gray-600 rounded-md px-2 py-1 inline-block";
             commentTag.innerHTML = `<i class="fas fa-comment text-blue-500 mr-1"></i>${count}`;
             extraTags.appendChild(commentTag);
         }
@@ -627,7 +631,7 @@ function createTaskCard(task) {
 
     // Hiển thị tên người thực hiện và chủ sở hữu nếu có
     const ownerDiv = document.createElement('div');
-    ownerDiv.className = "mt-2 text-sm text-gray-600";
+    ownerDiv.className = "mt-2 text-sm text-gray-600 dark:text-gray-300";
     if (task.assignee && task.assignee.trim() !== '') {
         const assigneeDiv = document.createElement('div');
         assigneeDiv.className = "flex items-center";
@@ -643,14 +647,14 @@ function createTaskCard(task) {
     if (task.ownerId) {
         const ownerText = document.createElement('div');
         ownerText.className = "flex items-center mt-1";
-        ownerText.innerHTML = `<i class="fas fa-user-shield text-gray-500 mr-2"></i><strong>Chủ sở hữu:</strong> ${task.ownerId}`;
+        ownerText.innerHTML = `<i class="fas fa-user-shield text-gray-500 dark:text-gray-400 mr-2"></i><strong>Chủ sở hữu:</strong> ${task.ownerId}`;
         ownerDiv.appendChild(ownerText);
     }
     card.appendChild(ownerDiv);
 
     // Hiển thị ngày tạo và ngày hoàn thành
     const dateDiv = document.createElement('div');
-    dateDiv.className = "mt-2 text-xs text-gray-500";
+    dateDiv.className = "mt-2 text-xs text-gray-500 dark:text-gray-400";
     const createdAt = new Date(task.createdAt);
     dateDiv.innerHTML = `<strong>Tạo:</strong> ${dateFormatter.format(createdAt)}`;
     if (task.completedAt) {
@@ -676,7 +680,7 @@ function createTaskCard(task) {
         card.appendChild(progressBarContainer);
 
         const progressText = document.createElement('div');
-        progressText.className = "text-right text-xs text-gray-600 mt-1";
+        progressText.className = "text-right text-xs text-gray-600 dark:text-gray-400 mt-1";
         progressText.textContent = `${progress}% (${completedItems}/${totalItems})`;
         card.appendChild(progressText);
     }
