@@ -1,96 +1,41 @@
-# Bảng Kanban - RESTful API Documentation
+# Bảng Kanban (Kanban Board)
 
-Tài liệu này định nghĩa các Interface (API) cần được triển khai trên backend Python Flask (`src/app.py`) để giao tiếp với Frontend.
+Ứng dụng quản lý công việc (Kanban Board) cơ bản sử dụng Vanilla JS (Frontend) và Python Flask (Backend) với cơ sở dữ liệu lưu trữ dưới dạng file JSON.
 
-## Base URL
-Tất cả các API endpoints sẽ bắt đầu với: `http://localhost:5000/api/v1/kanban`
+## Tính năng chính
 
----
+- **Quản lý Công việc (Tasks):** Thêm, sửa, xóa, kéo thả công việc giữa các cột trạng thái. Hỗ trợ mô tả phong phú (Rich text), checklist, bình luận, và lịch sử hoạt động.
+- **Quản lý Dự án & Sprint:** Tạo dự án, phân công thành viên vào dự án, lên kế hoạch các đợt chạy nước rút (sprints).
+- **Phân quyền (Role-Based Access Control):** Hỗ trợ chi tiết các nhóm quyền: Owner, Create, Edit, View.
+- **Đồng bộ:** Cơ chế Auto-refresh và Anti-overwrite an toàn, giúp nhiều người dùng có thể tương tác đồng thời.
 
-## 1. User API (Quản lý Người dùng)
+## Cài đặt và Khởi chạy
 
-### 1.1 Lấy thông tin người dùng hiện tại
-- **URL:** `/users/me`
-- **Method:** `GET`
-- **Mô tả:** Trả về thông tin cá nhân và quyền hạn (permissions) của phiên đăng nhập hiện tại.
-- **Success Response (200 OK):**
-  ```json
-  {
-    "useruid": "101",
-    "username": "alice",
-    "permission": "create" 
-  }
-  ```
-  *(Lưu ý: `permission` có thể là `view`, `owner`, `edit`, `create`)*
+Dự án được cấu hình sẵn để chạy dễ dàng bằng Docker.
 
-### 1.2 Lấy danh sách toàn bộ người dùng
-- **URL:** `/users`
-- **Method:** `GET`
-- **Mô tả:** Trả về danh sách tất cả người dùng để hiển thị trong Dropdown phân công (Assignee) và bộ lọc (Filter).
-- **Success Response (200 OK):**
-  ```json
-  [
-    {"useruid": "101", "username": "alice"},
-    {"useruid": "102", "username": "bob"},
-    {"useruid": "103", "username": "charlie"}
-  ]
-  ```
+```bash
+# Cấp quyền thực thi cho script
+chmod +x start_docker.sh
 
----
-
-## 2. Task API (Quản lý Công việc)
-
-### Cấu trúc (Schema) của một Task Model:
-```json
-{
-  "id": "string (UUID)",
-  "title": "string",
-  "assignee": "string (username)",
-  "sprintIds": ["string (sprint_id 1)", "string (sprint_id 2)"],
-  "items": [
-    {"text": "string", "completed": "boolean"}
-  ],
-  "status": "string (todo, in-progress, blocked, review, done)",
-  "createdAt": "string (ISO 8601 Datetime)",
-  "completedAt": "string (ISO 8601 Datetime) hoặc null",
-  "locked": "boolean",
-  "ownerId": "string (username)"
-}
+# Chạy script để khởi động Docker và tạo các thư mục cấu hình
+./start_docker.sh
 ```
 
-### 2.1 Lấy toàn bộ danh sách công việc
-- **URL:** `/tasks`
-- **Method:** `GET`
-- **Mô tả:** Lấy danh sách toàn bộ công việc để render lên Kanban Board.
-- **Success Response (200 OK):** Trả về mảng (array) chứa các Task Objects.
+Sau khi chạy thành công, truy cập giao diện tại: `http://localhost:5000`
 
-### 2.2 Tạo công việc mới
-- **URL:** `/tasks`
-- **Method:** `POST`
-- **Headers:** `Content-Type: application/json`
-- **Body Payload:** Trực tiếp gửi lên một Task Object.
-- **Success Response (201 Created):** 
-  ```json
-  { "message": "Task created successfully", "task": { /* Task Object */ } }
-  ```
+## Tài liệu (Documentation)
 
-### 2.3 Cập nhật công việc (Trạng thái, Assignee, Checklist, Title)
-- **URL:** `/tasks/<task_id>`
-- **Method:** `PUT` (hoặc `PATCH`)
-- **Headers:** `Content-Type: application/json`
-- **Body Payload:** Các trường (fields) cần cập nhật.
-- **Success Response (200 OK):**
-  ```json
-  { "message": "Task updated successfully" }
-  ```
+Các tài liệu phân tích kỹ thuật và định nghĩa API được đặt trong thư mục `docs/`:
 
-### 2.4 Xóa công việc
-- **URL:** `/tasks/<task_id>`
-- **Method:** `DELETE`
-- **Success Response (200 OK):**
-  ```json
-  { "message": "Task deleted successfully" }
-  ```
+- Tài liệu API (RESTful APIs)
+- Cơ chế Đồng bộ Dữ liệu
+- Phân tích Kiến trúc Hệ thống
+- Hướng dẫn Simulator Docker
+
+---
+
+## Ghi chú khác (Notes)
+
 ### sprints trong dự án
 1 dụ án sẽ có nhiều sprints và lúc tạo task lựa chọn multiselect sprints do thực tế 1 task có thể làm trong nhiều sprints
 

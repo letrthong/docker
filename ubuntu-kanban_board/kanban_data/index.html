@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bảng Kanban</title>
+    <!-- Tải phông chữ Inter từ Google Fonts -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap">
+    <!-- Tải Tailwind CSS CDN để tạo kiểu nhanh chóng -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tải Font Awesome để sử dụng các biểu tượng -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <!-- Tải Quill CSS để hiển thị khung soạn thảo phong phú -->
+    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+    <style>
+        /* Sử dụng phông chữ Inter cho toàn bộ trang */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Kiểu tùy chỉnh cho kéo và thả */
+        .card {
+            cursor: grab;
+            transition: transform 0.2s ease-in-out, background-color 0.3s ease-in-out;
+        }
+        .card:active {
+            cursor: grabbing;
+        }
+        .dragging {
+            opacity: 0.4;
+            transform: scale(0.95);
+        }
+        .drop-zone {
+            min-height: 100px;
+        }
+        /* Cửa sổ popup (Modal) chung */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-overlay.show {
+            display: flex;
+        }
+        /* Đảm bảo modal xác nhận luôn ở trên cùng */
+        #confirmationModalOverlay {
+            z-index: 9999;
+        }
+        /* Đảm bảo modal chi tiết ở lớp dưới modal xác nhận */
+        #detailModalOverlay {
+            z-index: 9998;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 1.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            width: 90%;
+            max-width: 600px;
+            transform: scale(0.9);
+            transition: transform 0.3s ease-in-out;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-overlay.show .modal-content {
+            transform: scale(1);
+        }
+        /* Tùy chỉnh thanh cuộn cho Modal */
+        .modal-content::-webkit-scrollbar {
+            width: 6px;
+        }
+        .modal-content::-webkit-scrollbar-track {
+            background: transparent; 
+        }
+        .modal-content::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 10px;
+        }
+        .modal-content::-webkit-scrollbar-thumb:hover {
+            background-color: #94a3b8;
+        }
+        .card.locked, .card.non-draggable {
+            cursor: not-allowed;
+        }
+        .btn-disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .message-box {
+            position: fixed;
+            top: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 1rem 2rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            transition: all 0.3s ease-in-out;
+            opacity: 0;
+            visibility: hidden;
+            background-color: #4CAF50;
+            color: white;
+            z-index: 10000; /* Đảm bảo hộp thông báo ở trên cùng */
+        }
+        .message-box.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        .multiselect-dropdown {
+            position: relative;
+            width: 100%;
+        }
+        .multiselect-dropdown .dropdown-list {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background-color: white;
+            border: 1px solid #ccc;
+            border-radius: 0.5rem;
+            z-index: 10;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+        }
+        .multiselect-dropdown.active .dropdown-list {
+            display: block;
+        }
+        .multiselect-dropdown .dropdown-list-item {
+            padding: 0.5rem 1rem;
+            display: flex;
+            align-items: center;
+        }
+        .multiselect-dropdown .dropdown-list-item:hover {
+            background-color: #f3f4f6;
+        }
+        .multiselect-dropdown .dropdown-list-item input[type="checkbox"] {
+            margin-right: 0.5rem;
+        }
+        /* Ghi đè CSS Quill để đồng bộ giao diện Tailwind của dự án */
+        .ql-toolbar.ql-snow {
+            border-top-left-radius: 0.75rem;
+            border-top-right-radius: 0.75rem;
+            border-color: #d1d5db;
+            font-family: 'Inter', sans-serif;
+        }
+        .ql-container.ql-snow {
+            border-bottom-left-radius: 0.75rem;
+            border-bottom-right-radius: 0.75rem;
+            border-color: #d1d5db;
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+        }
+        /* Thêm viền cho bảng trong Quill Editor để dễ nhìn hơn */
+        .ql-editor table {
+            border-collapse: collapse;
+            width: 100%;
+            table-layout: fixed;
+        }
+        .ql-editor td, .ql-editor th {
+            border: 1px solid #d1d5db;
+            padding: 0.5rem;
+        }
+    </style>
+  <script type="module" crossorigin>(function(){const e=document.createElement("link").relList;if(e&&e.supports&&e.supports("modulepreload"))return;for(const r of document.querySelectorAll('link[rel="modulepreload"]'))s(r);new MutationObserver(r=>{for(const i of r)if(i.type==="childList")for(const o of i.addedNodes)o.tagName==="LINK"&&o.rel==="modulepreload"&&s(o)}).observe(document,{childList:!0,subtree:!0});function t(r){const i={};return r.integrity&&(i.integrity=r.integrity),r.referrerPolicy&&(i.referrerPolicy=r.referrerPolicy),r.crossOrigin==="use-credentials"?i.credentials="include":r.crossOrigin==="anonymous"?i.credentials="omit":i.credentials="same-origin",i}function s(r){if(r.ep)return;r.ep=!0;const i=t(r);fetch(r.href,i)}})();const Mn=document.getElementById("totalTasksCount"),Lt=document.getElementById("todo-column"),Ct=document.getElementById("inprogress-column"),Bt=document.getElementById("blocked-column"),Tt=document.getElementById("review-column"),kt=document.getElementById("done-column"),lt=document.getElementById("openModalBtn"),Te=document.getElementById("taskModalOverlay"),Ce=document.getElementById("addTaskForm"),vn=document.getElementById("taskTitleInput"),V=document.getElementById("taskDescriptionInput"),j=document.getElementById("taskProjectSelect"),W=document.getElementById("taskAssigneeSelect"),le=document.getElementById("taskPrioritySelect"),de=document.getElementById("taskStoryPointsSelect"),G=document.getElementById("checklistContainer"),Pn=document.getElementById("addChecklistItemBtn"),jn=document.getElementById("cancelBtn"),St=document.getElementById("closeTaskModalIconBtn"),bn=document.getElementById("modalTitle"),wn=document.getElementById("submitBtn"),ae=document.getElementById("loginScreen"),dt=document.getElementById("kanbanBoard"),Ye=document.getElementById("loginForm"),Dn=document.getElementById("loginUsername"),An=document.getElementById("loginPassword"),Mt=document.getElementById("logoutBtn"),Pt=document.getElementById("loggedInUserDisplay"),xe=document.getElementById("addUserBtn"),je=document.getElementById("userModalOverlay"),ne=document.getElementById("addUserForm"),se=document.getElementById("newUsername"),z=document.getElementById("newUserPassword"),jt=document.getElementById("cancelUserBtn"),Dt=document.getElementById("userModalTitle"),At=document.getElementById("submitUserBtn"),Nt=document.getElementById("userProfileContainer"),$t=document.getElementById("userProfileBtn"),T=document.getElementById("userInfoDropdown"),Ht=document.getElementById("dropdownUsername"),Ot=document.getElementById("dropdownRole"),et=document.getElementById("manageUsersDropdownItem"),Ut=document.getElementById("openManageUsersBtn"),De=document.getElementById("manageProjectsDropdownItem"),qt=document.getElementById("openManageProjectsBtn");document.getElementById("changePasswordDropdownItem");const Ft=document.getElementById("openChangePasswordBtn"),Ae=document.getElementById("trashDropdownItem"),_t=document.getElementById("openTrashBtn"),Rt=document.getElementById("trashModalOverlay"),Vt=document.getElementById("closeTrashBtn"),Ne=document.getElementById("trashListTableBody"),tt=document.getElementById("changePasswordModalOverlay"),$e=document.getElementById("changePasswordForm"),Nn=document.getElementById("newPasswordInput"),$n=document.getElementById("confirmPasswordInput"),Kt=document.getElementById("cancelChangePasswordBtn");document.getElementById("submitChangePasswordBtn");const zt=document.getElementById("manageUsersModalOverlay"),Xt=document.getElementById("closeManageUsersBtn"),nt=document.getElementById("userListTableBody"),Jt=document.getElementById("openAddUserFromManageBtn"),Qt=document.getElementById("manageProjectsModalOverlay"),Wt=document.getElementById("closeManageProjectsBtn"),st=document.getElementById("projectListTableBody"),Zt=document.getElementById("openAddProjectBtn"),He=document.getElementById("projectModalOverlay"),Gt=document.getElementById("projectModalTitle"),Oe=document.getElementById("projectForm"),Yt=document.getElementById("projectName"),en=document.getElementById("projectDescription"),tn=document.getElementById("projectUsersContainer"),nn=document.getElementById("cancelProjectBtn"),sn=document.getElementById("submitProjectBtn"),gt=document.getElementById("confirmationModalOverlay"),fe=document.getElementById("confirmTitle"),ye=document.getElementById("confirmMessage"),L=document.getElementById("confirmActionBtn"),Hn=document.getElementById("cancelConfirmBtn"),ke=document.getElementById("detailModalOverlay"),X=document.getElementById("detailHeaderContainer"),F=document.getElementById("detailStatusBadge"),on=document.getElementById("detailTitle"),On=document.getElementById("detailOwner"),Ue=document.getElementById("detailAssignee"),oe=document.getElementById("detailDescription"),ot=document.getElementById("detailDescriptionSection"),rn=document.getElementById("detailPriority"),an=document.getElementById("detailStoryPoints"),Un=document.getElementById("detailCreatedAt"),qn=document.getElementById("detailCompletedAt"),it=document.getElementById("detailChecklistItems"),ve=document.getElementById("detailCommentsList"),Je=document.getElementById("newCommentInput"),qe=document.getElementById("detailCommentsSection"),_=document.getElementById("tabCommentsBtn"),ie=document.getElementById("tabHistoryBtn"),Fe=document.getElementById("detailHistorySection"),be=document.getElementById("detailHistoryList"),J=document.getElementById("addCommentBtn"),cn=document.getElementById("commentImageBtn"),_e=document.getElementById("commentImageInput"),H=document.getElementById("commentImagePreviewContainer"),ue=document.getElementById("commentImagePreview"),ln=document.getElementById("removeCommentImageBtn"),dn=document.getElementById("closeDetailModalIconBtn"),Fn=document.getElementById("closeDetailModalBtn"),un=document.getElementById("completedAtSection"),rt=document.getElementById("detailModalFooter"),p=document.getElementById("projectFilter"),$=document.getElementById("assigneeFilter"),ut=document.getElementById("statusFilter"),Ee=document.getElementById("statusDropdownList"),_n=document.getElementById("dropdown-button"),ce=document.getElementById("loadingOverlay");function f(n,e=!1){const t=document.getElementById("message-box");t.textContent=n,t.style.backgroundColor=e?"#f44336":"#4CAF50",t.classList.add("show"),setTimeout(()=>{t.classList.remove("show")},3e3)}let Ie=0;function Rn(){Ie++,Ie===1&&ce&&(ce.classList.remove("hidden"),ce.classList.add("flex"))}function Vn(){Ie--,Ie<=0&&ce&&(Ie=0,ce.classList.remove("flex"),ce.classList.add("hidden"))}const me=new Intl.DateTimeFormat("vi-VN",{year:"numeric",month:"long",day:"numeric",hour:"2-digit",minute:"2-digit"}),at={},mn=["#F44336","#E91E63","#9C27B0","#673AB7","#3F51B5","#2196F3","#03A9F4","#00BCD4","#009688","#4CAF50","#8BC34A","#CDDC39","#FFEB3B","#FFC107","#FF9800","#FF5722"];let pn=0;function pe(n){if(!n)return"transparent";const e=n.toLowerCase().trim();return at[e]||(at[e]=mn[pn%mn.length],pn++),at[e]}const Kn="/api/v1/kanban";async function C(n,e={}){e.silent||Rn();try{const t=localStorage.getItem("kanban_token");t&&(e.headers={...e.headers,Authorization:`Bearer ${t}`});const s=await fetch(`${Kn}${n}`,e);if(!s.ok){if(s.status===401)throw localStorage.removeItem("kanban_token"),localStorage.removeItem("last_activity"),f("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",!0),setTimeout(()=>window.location.reload(),2e3),new Error("Unauthorized");let i=`HTTP ${s.status} - ${s.statusText}`;try{const o=await s.json();(o.error||o.message)&&(i=o.error||o.message)}catch{}throw f(`Lỗi từ máy chủ: ${i}`,!0),new Error(i)}const r=await s.text();return r?JSON.parse(r):null}catch(t){throw t.name==="TypeError"&&f("Không thể kết nối tới Backend. Vui lòng kiểm tra lại server!",!0),t}finally{e.silent||Vn()}}async function zn(){return await C("/users/me")}async function Xn(n,e){return await C("/users/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:n,password:e})})}async function Jn(){return await C("/users")}async function Qn(n){return await C("/users",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(n)})}async function mt(n,e){return await C(`/users/${n}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(e)})}async function pt(){return await C("/projects")}async function Wn(n){return await C("/projects",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(n)})}async function Zn(n,e){return await C(`/projects/${n}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(e)})}async function Gn(){return await C("/projects?status=deleted")}async function Yn(n){return await C(`/projects/${n}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({status:"active"})})}async function es(n=null){let e="/tasks?view=summary";return n&&(e+=`&projectId=${n}`),await C(e)}async function A(n,e=!1){return await C(`/tasks/${n}`,{silent:e})}async function ts(n){return await C("/tasks",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(n)})}async function ns(n,e){return await C(`/tasks/${n}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(e)})}async function ss(n){return await C(`/tasks/${n}`,{method:"DELETE"}),!0}async function xn(n,e){let t=`/updates/check?lastSync=${e}`;return n&&(t+=`&projectId=${n}`),await C(t,{silent:!0})}async function os(){return await zn()}async function Q(){return await Jn()}let D=[];function En(){return D}function ht(n){return D.find(e=>e.id===n)}async function is(n=null){const e=await es(n);return e&&(D=e),D}async function In(n){const e=await ts(n);e&&e.task?D.push(e.task):D.push(n)}async function ge(n,e){await ns(n,e);const t=D.findIndex(s=>s.id===n);t!==-1&&(D[t]={...D[t],...e})}async function rs(n){await ss(n),D=D.filter(e=>e.id!==n)}function as(){Ye&&Ye.addEventListener("submit",async n=>{n.preventDefault();const e=Dn.value.trim(),t=An.value.trim(),s=await Xn(e,t);s&&s.token&&(localStorage.setItem("kanban_token",s.token),It(),Ye.reset(),ae.classList.add("hidden"),ae.classList.remove("flex"),await Tn(),f(s.message||"Đăng nhập thành công!"))}),Ft&&Ft.addEventListener("click",()=>{T.classList.add("hidden"),T.classList.remove("flex"),tt.classList.add("show")}),Kt&&Kt.addEventListener("click",()=>{tt.classList.remove("show"),$e.reset()}),$e&&$e.addEventListener("submit",async n=>{n.preventDefault();const e=Nn.value.trim(),t=$n.value.trim();if(e!==t)return f("Mật khẩu xác nhận không khớp!",!0);await mt(O,{password:e})&&(f("Đổi mật khẩu thành công!"),tt.classList.remove("show"),$e.reset())}),Mt&&Mt.addEventListener("click",()=>{localStorage.removeItem("kanban_token"),window.location.reload()})}let Re=null,Ve=null;function cs(){function n(i=null){i?(Re=i.useruid,Dt.textContent="Sửa Thông Tin Người Dùng",At.textContent="Cập nhật",se.value=i.username,se.disabled=!0,se.classList.add("bg-gray-200","cursor-not-allowed"),z&&(z.placeholder="Mật khẩu (để trống nếu không đổi)",z.required=!1)):(Re=null,Dt.textContent="Thêm Người Dùng Mới",At.textContent="Tạo Người Dùng",ne.reset(),se.disabled=!1,se.classList.remove("bg-gray-200","cursor-not-allowed"),z&&(z.placeholder="Mật khẩu",z.required=!0)),je.classList.add("show")}xe&&xe.addEventListener("click",()=>n()),Jt&&Jt.addEventListener("click",()=>n()),jt&&jt.addEventListener("click",()=>{je.classList.remove("show"),ne.reset()}),ne&&ne.addEventListener("submit",async i=>{i.preventDefault();const o={username:se.value.trim(),permission:"user"},a=z.value.trim();if(a&&(o.password=a),Re){if(await mt(Re,o)){f("Đã cập nhật người dùng thành công!"),je.classList.remove("show"),ne.reset(),await e();const d=await Q();re(d),we()}}else if(await Qn(o)){f("Đã tạo người dùng thành công!"),je.classList.remove("show"),ne.reset();const d=await Q();re(d),we(),await e()}}),Ut&&Ut.addEventListener("click",async()=>{T.classList.add("hidden"),T.classList.remove("flex"),await e(),zt.classList.add("show")}),Xt&&Xt.addEventListener("click",()=>{zt.classList.remove("show")});async function e(){if(!nt)return;const i=await Q();re(i),nt.innerHTML="",Z.forEach(o=>{const a=document.createElement("tr");a.className="border-b hover:bg-gray-50 transition-colors";const l=o.permission==="owner",d=o.disabled===!0,u=d?'<span class="text-red-600 font-semibold">Vô hiệu hóa</span>':'<span class="text-green-600 font-semibold">Hoạt động</span>',m={owner:"Quản trị hệ thống (Owner)",user:"Người dùng"}[o.permission]||o.permission;a.innerHTML=`
+                <td class="py-3 px-4 text-sm text-gray-800 font-medium">${o.username}</td>
+                <td class="py-3 px-4 text-sm text-gray-600">${m}</td>
+                <td class="py-3 px-4 text-sm">${u}</td>
+                <td class="py-3 px-4 text-center">
+                    ${l?'<span class="text-xs text-gray-400 font-medium">Không thể sửa</span>':`
+                        <button class="edit-user-btn text-xs font-semibold py-1 px-3 rounded-lg transition-colors bg-blue-100 text-blue-700 hover:bg-blue-200 mr-2" data-uid="${o.useruid}" data-username="${o.username}" data-role="${o.permission}">
+                            <i class="fas fa-pen mr-1"></i>Sửa
+                        </button>
+                        <button class="toggle-user-status-btn text-xs font-semibold py-1 px-3 rounded-lg transition-colors ${d?"bg-green-100 text-green-700 hover:bg-green-200":"bg-red-100 text-red-700 hover:bg-red-200"}" data-uid="${o.useruid}" data-disabled="${d}">
+                            ${d?"Kích hoạt":"Vô hiệu hóa"}
+                        </button>
+                    `}
+                </td>
+            `,nt.appendChild(a)}),document.querySelectorAll(".edit-user-btn").forEach(o=>{o.addEventListener("click",a=>{const l=a.currentTarget,d=l.getAttribute("data-uid"),u=l.getAttribute("data-username");n({useruid:d,username:u})})}),document.querySelectorAll(".toggle-user-status-btn").forEach(o=>{o.addEventListener("click",async a=>{const l=a.target.getAttribute("data-uid"),d=a.target.getAttribute("data-disabled")==="true";if(await mt(l,{disabled:!d})){f(d?"Đã kích hoạt lại tài khoản!":"Đã vô hiệu hóa tài khoản!"),await e();const c=await Q();re(c),we()}})})}qt&&qt.addEventListener("click",async()=>{T.classList.add("hidden"),T.classList.remove("flex"),await t(),Qt.classList.add("show")}),Wt&&Wt.addEventListener("click",()=>{Qt.classList.remove("show")});async function t(){if(!st)return;const i=await pt();gn(i);const o=await Q();re(o),st.innerHTML="",x.forEach(a=>{const l=document.createElement("tr");l.className="border-b hover:bg-gray-50 transition-colors";const d=a.users?a.users.length:0,u=(a.users||[]).map(c=>{const m=typeof c=="string"?c:c.useruid,y=typeof c=="string"?"view":c.permission||"view",v=Z.find(I=>I.useruid===m);return v?`${v.username} (${y})`:m}).join(", ");l.innerHTML=`
+                <td class="py-3 px-4 text-sm text-gray-800 font-medium">${a.name}</td>
+                <td class="py-3 px-4 text-sm text-gray-600 truncate max-w-xs">${a.description||""}</td>
+                <td class="py-3 px-4 text-sm text-gray-600" title="${u}">${d} thành viên</td>
+                <td class="py-3 px-4 text-center">
+                    <button class="edit-project-btn text-xs font-semibold py-1 px-3 rounded-lg transition-colors bg-blue-100 text-blue-700 hover:bg-blue-200" data-id="${a.id}">
+                        <i class="fas fa-pen mr-1"></i>Sửa / Thêm User
+                    </button>
+                </td>
+            `,st.appendChild(l)}),document.querySelectorAll(".edit-project-btn").forEach(a=>{a.addEventListener("click",l=>{const d=l.currentTarget.getAttribute("data-id"),u=x.find(c=>c.id===d);s(u)})})}async function s(i=null){const o=await Q();re(o),tn.innerHTML="",Z.forEach(l=>{let d=!1,u="view";if(i&&i.users){const I=i.users.find(N=>(typeof N=="string"?N:N.useruid)===l.useruid);I&&(d=!0,u=typeof I=="string"?"view":I.permission||"view")}const c=document.createElement("div");c.className="flex items-center justify-between p-2 hover:bg-gray-100 rounded-lg border-b border-gray-100";const m=l.disabled?' <span class="text-red-500 ml-1 text-xs">(Đã vô hiệu hóa)</span>':"";c.innerHTML=`
+                <div class="flex items-center">
+                    <input type="checkbox" id="user-chk-${l.useruid}" value="${l.useruid}" ${d?"checked":""} class="project-user-checkbox form-checkbox h-4 w-4 text-blue-600 rounded">
+                    <label for="user-chk-${l.useruid}" class="ml-2 text-sm text-gray-700 font-medium">${l.username}${m}</label>
+                </div>
+                <select id="user-role-${l.useruid}" class="project-user-role-select text-sm p-1 border border-gray-300 rounded focus:outline-none bg-white" ${d?"":"disabled"}>
+                    <option value="view" ${u==="view"?"selected":""}>Chỉ xem (View)</option>
+                    <option value="edit" ${u==="edit"?"selected":""}>Chỉnh sửa (Edit)</option>
+                    <option value="create" ${u==="create"?"selected":""}>Quản lý (Create)</option>
+                </select>
+            `,tn.appendChild(c);const y=c.querySelector(`#user-chk-${l.useruid}`),v=c.querySelector(`#user-role-${l.useruid}`);y.addEventListener("change",I=>{v.disabled=!I.target.checked})});const a=document.getElementById("projectSprintsContainer");a&&(a.innerHTML=""),i&&i.sprints&&i.sprints.forEach(l=>kn(l)),i?(Ve=i.id,Gt.textContent="Chỉnh sửa Dự án",sn.textContent="Cập nhật",Yt.value=i.name,en.value=i.description||""):(Ve=null,Gt.textContent="Thêm Dự án Mới",sn.textContent="Tạo Dự án",Oe.reset()),He.classList.add("show")}Zt&&Zt.addEventListener("click",()=>s()),nn&&nn.addEventListener("click",()=>{He.classList.remove("show"),Oe.reset()}),Oe&&Oe.addEventListener("submit",async i=>{i.preventDefault();const o=[];document.querySelectorAll(".project-user-checkbox:checked").forEach(d=>{const u=d.value,c=document.getElementById(`user-role-${u}`);o.push({useruid:u,permission:c.value})});const a=[];document.querySelectorAll("#projectSprintsContainer .sprint-item").forEach(d=>{const u=d.dataset.id,c=d.querySelector(".sprint-name-input").value.trim(),m=d.querySelector(".sprint-start-input").value,y=d.querySelector(".sprint-end-input").value,v=d.querySelector(".sprint-current-radio").checked;c&&a.push({id:u,name:c,startDate:m,endDate:y,isCurrent:v})});const l={name:Yt.value.trim(),description:en.value.trim(),users:o,sprints:a};Ve?await Zn(Ve,l)&&(f("Đã cập nhật dự án thành công!"),He.classList.remove("show"),await t(),Le(),Xe(),we()):await Wn(l)&&(f("Đã tạo dự án thành công!"),He.classList.remove("show"),await t(),Le(),Xe())}),_t&&_t.addEventListener("click",async()=>{T.classList.add("hidden"),T.classList.remove("flex"),await r(),Rt.classList.add("show")}),Vt&&Vt.addEventListener("click",()=>{Rt.classList.remove("show")});async function r(){if(!Ne)return;const i=await Gn();if(Ne.innerHTML="",i.length===0){Ne.innerHTML='<tr><td colspan="3" class="py-4 text-center text-gray-500">Thùng rác trống</td></tr>';return}i.forEach(o=>{const a=document.createElement("tr");a.className="border-b hover:bg-gray-50 transition-colors",a.innerHTML=`
+                <td class="py-3 px-4 text-sm text-gray-800 font-medium">${o.name}</td>
+                <td class="py-3 px-4 text-sm text-gray-600 truncate max-w-xs">${o.description||""}</td>
+                <td class="py-3 px-4 text-center">
+                    <button class="restore-project-btn text-xs font-semibold py-1 px-3 rounded-lg transition-colors bg-green-100 text-green-700 hover:bg-green-200" data-id="${o.id}">
+                        <i class="fas fa-undo mr-1"></i>Khôi phục
+                    </button>
+                </td>
+            `,Ne.appendChild(a)}),document.querySelectorAll(".restore-project-btn").forEach(o=>{o.addEventListener("click",async a=>{const l=a.currentTarget.getAttribute("data-id");if(await Yn(l)){f("Đã khôi phục dự án thành công!"),await r();const u=await pt();gn(u),Le(),Xe()}})})}}let Ke,k,O,h,Z=[],x=[];const re=n=>{Z=n},gn=n=>{x=n};let Be=null,q=null,Y=null,E={id:null,type:null,itemIndex:null},M=["all"],Se=null,ze=null,B;if(document.getElementById("editor-container")){B=new Quill("#editor-container",{theme:"snow",placeholder:"Mô tả chi tiết công việc...",modules:{table:!0,toolbar:{container:[[{size:["small",!1,"large","huge"]}],["bold","italic","underline","strike"],[{color:[]},{background:[]}],[{list:"ordered"},{list:"bullet"},{align:[]}],["link","image","table"],["table-insert-row","table-delete-row","table-insert-column","table-delete-column"],["clean"]],handlers:{table:function(){this.quill.getModule("table").insertTable(2,2)},"table-insert-row":function(){this.quill.getModule("table").insertRowBelow()},"table-insert-column":function(){this.quill.getModule("table").insertColumnRight()},"table-delete-row":function(){this.quill.getModule("table").deleteRow()},"table-delete-column":function(){this.quill.getModule("table").deleteColumn()},image:function(){const i=document.createElement("input");i.setAttribute("type","file"),i.setAttribute("accept","image/*"),i.click(),i.onchange=()=>{const o=i.files[0];if(o&&o.type.startsWith("image/")){const a=new FileReader;a.onload=l=>{const d=new Image;d.onload=()=>{let u=d.width,c=d.height;const m=1200;(u>m||c>m)&&(u>c?(c=Math.round(c*(m/u)),u=m):(u=Math.round(u*(m/c)),c=m));const y=document.createElement("canvas");y.width=u,y.height=c,y.getContext("2d").drawImage(d,0,0,u,c);const I=y.toDataURL("image/webp",.8),N=B.getSelection(!0);B.insertEmbed(N.index,"image",I),B.setSelection(N.index+1)},d.src=l.target.result},a.readAsDataURL(o)}}}}}}}),B.on("text-change",function(){V&&(V.value=B.root.innerHTML==="<p><br></p>"?"":B.root.innerHTML)});const n=document.querySelector(".ql-table");n&&(n.innerHTML='<i class="fas fa-table" style="color: #444; font-size: 15px;"></i>');const e=document.querySelector(".ql-table-insert-row");e&&(e.innerHTML='<span class="font-bold text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-gray-700" title="Thêm dòng phía dưới">+ dòng</span>',e.style.width="auto",e.style.padding="0 2px");const t=document.querySelector(".ql-table-delete-row");t&&(t.innerHTML='<span class="font-bold text-xs bg-red-50 hover:bg-red-100 px-2 py-1 rounded text-red-600" title="Xóa dòng hiện tại">- dòng</span>',t.style.width="auto",t.style.padding="0 2px");const s=document.querySelector(".ql-table-insert-column");s&&(s.innerHTML='<span class="font-bold text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-gray-700" title="Thêm cột bên phải">+ cột</span>',s.style.width="auto",s.style.padding="0 2px");const r=document.querySelector(".ql-table-delete-column");r&&(r.innerHTML='<span class="font-bold text-xs bg-red-50 hover:bg-red-100 px-2 py-1 rounded text-red-600" title="Xóa cột hiện tại">- cột</span>',r.style.width="auto",r.style.padding="0 2px")}function K(n,e){return!n||!n.users?!1:n.users.some(t=>(typeof t=="string"?t:t.useruid)===e)}function w(n){if(k==="owner")return"owner";if(!n||n==="none"||n==="all")return"view";const e=x.find(t=>t.id===n);if(e&&e.users){const t=e.users.find(s=>(typeof s=="string"?s:s.useruid)===O);if(t)return typeof t=="string"?"view":t.permission||"view"}return"view"}function We(n){if(!n)return null;let e=n.isCurrent?`${n.name} ⭐`:n.name;const t=i=>{if(!i)return"";const o=i.split("-");return o.length===3?`${o[2]}/${o[1]}`:i},s=t(n.startDate),r=t(n.endDate);return s&&r?e+=` (${s} - ${r})`:s?e+=` (Từ ${s})`:r&&(e+=` (Đến ${r})`),e}function ls(){Mn.textContent=En().length}function U(){Le(),Xe(),we(),ls();const n=document.getElementById("sprintFilter"),e=n?n.value:"all";Ze($.value,M,p.value,e)}async function ft(n=null){(await is(n)).forEach(t=>{t.assignee&&pe(t.assignee)}),U();try{const t=await xn(n,0);t&&t.timestamp&&(ze=t.timestamp)}catch{}}function Ze(n="all",e=["all"],t="none",s="all"){Lt.innerHTML="",Ct.innerHTML="",Bt.innerHTML="",Tt.innerHTML="",kt.innerHTML="";let r=0,i=0,o=0,a=0,l=0;En().filter(c=>{if(k!=="owner"&&!(c.ownerId===h||c.assignee===h)){if(!c.projectId||c.projectId==="all"||c.projectId==="")return!1;{const ee=x.find(te=>te.id===c.projectId);if(!ee||!K(ee,O))return!1}}const m=c.assignee?c.assignee.toLowerCase().trim():"",y=n==="all"||m===n,v=e.includes("all")||e.includes(c.status),I=c.projectId===t||!c.projectId&&t==="none",N=s==="all"||c.sprintIds&&c.sprintIds.includes(s);return y&&v&&I&&N}).forEach(c=>{const m=ds(c),y=parseInt(c.storyPoints)||0;c.status==="todo"?(Lt.appendChild(m),r+=y):c.status==="in-progress"?(Ct.appendChild(m),i+=y):c.status==="blocked"?(Bt.appendChild(m),o+=y):c.status==="review"?(Tt.appendChild(m),a+=y):c.status==="done"&&(kt.appendChild(m),l+=y)});const u=(c,m)=>{const y=document.getElementById(c);y&&(m>0?(y.innerHTML=`<i class="fas fa-star text-yellow-500 mr-1"></i>${m}`,y.classList.remove("hidden")):y.classList.add("hidden"))};u("todo-sp-total",r),u("inprogress-sp-total",i),u("blocked-sp-total",o),u("review-sp-total",a),u("done-sp-total",l)}function Le(){if(!p)return;const n=p.value;p.innerHTML="";const e=k==="owner"?x:x.filter(t=>K(t,O));if(e.forEach(t=>{const s=document.createElement("option");s.value=t.id,s.textContent=t.name,p.appendChild(s)}),e.length===0){const t=document.createElement("option");t.value="none",t.textContent="Không có dự án",p.appendChild(t)}Array.from(p.options).some(t=>t.value===n)?p.value=n:p.options.length>0&&(p.value=p.options[0].value)}function Xe(n=!1){const e=document.getElementById("sprintFilter");if(!e)return;const t=e.dataset.initialized==="true",s=e.value;e.innerHTML='<option value="all">Tất cả</option>';let r="all";if(p&&p.value&&p.value!=="none"){const i=x.find(o=>o.id===p.value);if(i&&i.sprints){const o=i.sprints.find(a=>a.isCurrent);o&&(r=o.id),i.sprints.forEach(a=>{const l=document.createElement("option");l.value=a.id,l.textContent=We(a),e.appendChild(l)})}}n||!t?(e.value=r,e.dataset.initialized="true"):Array.from(e.options).some(i=>i.value===s)?e.value=s:e.value=r}function we(){const n=$.value;$.innerHTML='<option value="all">Tất cả</option>';let e=Z.filter(t=>!t.disabled);if(p&&p.value&&p.value!=="none"){const t=x.find(s=>s.id===p.value);t&&t.users?e=e.filter(s=>K(t,s.useruid)):e=[]}else if(k!=="owner"){const t=x.filter(r=>K(r,O)),s=new Set([O]);t.forEach(r=>r.users.forEach(i=>s.add(typeof i=="string"?i:i.useruid))),e=e.filter(r=>s.has(r.useruid))}e.forEach(t=>{const s=document.createElement("option");s.value=t.username.toLowerCase().trim(),s.textContent=t.username,$.appendChild(s)}),Array.from($.options).some(t=>t.value===n)?$.value=n:$.value="all"}function ds(n){const e=document.createElement("div");let t="bg-white";n.status==="in-progress"?t="bg-blue-100":n.status==="blocked"?t="bg-red-50":n.status==="review"?t="bg-yellow-50":n.status==="done"&&(t="bg-green-100"),e.className=`card ${t} p-4 rounded-xl shadow-md transition-shadow duration-300 hover:shadow-lg`;const s=n.ownerId===h||n.assignee===h,r=w(n.projectId),o=(r==="edit"||r==="create"||r==="owner"||s)&&!n.locked;e.draggable=o,o||e.classList.add("non-draggable"),e.dataset.id=n.id,e.dataset.status=n.status,e.addEventListener("click",async()=>{if(e.classList.contains("is-loading"))return;e.classList.add("is-loading","opacity-75");const g=document.createElement("i");g.className="fas fa-spinner fa-spin text-blue-500 ml-2 loading-spinner",v.appendChild(g);try{await gs(n,!0)}finally{e.classList.remove("is-loading","opacity-75");const b=v.querySelector(".loading-spinner");b&&b.remove()}});const a=document.createElement("div");a.className="flex justify-end gap-2 mb-2";const l=r==="edit"||r==="create"||r==="owner"||s,d=document.createElement("button");d.innerHTML='<i class="fas fa-clone text-gray-500 hover:text-gray-700"></i>';const u=r==="edit"||r==="create"||r==="owner";d.className=`p-1 rounded-full hover:bg-gray-200 ${!u||n.locked?"opacity-50 cursor-not-allowed":""}`,d.disabled=!u||n.locked,d.onclick=g=>{g.stopPropagation(),u&&!n.locked&&Qe(n.id,"clone")},a.appendChild(d);const c=document.createElement("button");c.innerHTML='<i class="fas fa-pen text-blue-500 hover:text-blue-700"></i>',c.className=`p-1 rounded-full hover:bg-gray-200 ${!l||n.locked?"opacity-50 cursor-not-allowed":""}`,c.disabled=!l||n.locked,c.onclick=async g=>{if(g.stopPropagation(),l&&!n.locked){if(c.classList.contains("is-loading"))return;c.classList.add("is-loading");const b=c.innerHTML;c.innerHTML='<i class="fas fa-spinner fa-spin text-blue-500"></i>';try{await ys(n.id,!0)}finally{c.innerHTML=b,c.classList.remove("is-loading")}}},a.appendChild(c);const m=document.createElement("button");m.innerHTML='<i class="fas fa-trash-alt text-red-500 hover:text-red-700"></i>';const y=r==="create"||r==="owner";m.className=`p-1 rounded-full hover:bg-gray-200 ${!y||n.locked?"opacity-50 cursor-not-allowed":""}`,m.disabled=!y||n.locked,m.onclick=g=>{g.stopPropagation(),y&&!n.locked&&Qe(n.id,"delete")},a.appendChild(m);const v=document.createElement("h3");let I=n.title;I.length>22?(I=I.substring(0,22)+"...",v.classList.add("text-sm")):v.classList.add("text-lg"),v.textContent=I;const N=pe(n.assignee);if(v.style.color=N,v.className="font-bold flex-1 pr-16",e.appendChild(a),n.projectId){const g=x.find(b=>b.id===n.projectId);if(g){const b=document.createElement("div");if(b.className="text-xs font-semibold text-purple-600 bg-purple-100 rounded-md px-2 py-1 mb-2 inline-block",b.textContent=g.name,e.appendChild(b),n.sprintIds&&n.sprintIds.length>0&&g.sprints){const P=n.sprintIds.map(S=>{const he=g.sprints.find(Ge=>Ge.id===S);return We(he)}).filter(Boolean);if(P.length>0){const S=document.createElement("div");S.className="text-xs font-semibold text-blue-600 bg-blue-100 rounded-md px-2 py-1 mb-2 inline-block ml-1",S.textContent="Sprints: "+P.join(", "),e.appendChild(S)}}}}const ee=n.commentsCount!==void 0?n.commentsCount:n.comments?n.comments.length:0;if(n.priority||n.storyPoints||ee>0){const g=document.createElement("div");if(g.className="flex gap-2 mb-2",n.priority){const b={low:"Thấp",medium:"Trung bình",high:"Cao"},P=n.priority==="high"?"text-red-600 bg-red-100":n.priority==="medium"?"text-yellow-600 bg-yellow-100":"text-green-600 bg-green-100",S=document.createElement("div");S.className=`text-xs font-semibold rounded-md px-2 py-1 inline-block ${P}`,S.textContent=b[n.priority]||n.priority,g.appendChild(S)}if(n.storyPoints){const b=document.createElement("div");b.className="text-xs font-semibold text-gray-600 bg-gray-200 rounded-md px-2 py-1 inline-block",b.innerHTML=`<i class="fas fa-star text-yellow-500 mr-1"></i>${n.storyPoints}`,g.appendChild(b)}if(ee>0){const b=document.createElement("div");b.className="text-xs font-semibold text-gray-600 bg-gray-200 rounded-md px-2 py-1 inline-block",b.innerHTML=`<i class="fas fa-comment text-blue-500 mr-1"></i>${ee}`,g.appendChild(b)}e.appendChild(g)}e.appendChild(v);const te=document.createElement("div");if(te.className="mt-2 text-sm text-gray-600",n.assignee&&n.assignee.trim()!==""){const g=document.createElement("div");g.className="flex items-center";const b=document.createElement("div");b.className="w-3 h-3 rounded-full mr-2",b.style.backgroundColor=pe(n.assignee);const P=document.createElement("span");P.innerHTML=`<strong>Người thực hiện:</strong> ${n.assignee}`,g.appendChild(b),g.appendChild(P),te.appendChild(g)}if(n.ownerId){const g=document.createElement("div");g.className="flex items-center mt-1",g.innerHTML=`<i class="fas fa-user-shield text-gray-500 mr-2"></i><strong>Chủ sở hữu:</strong> ${n.ownerId}`,te.appendChild(g)}e.appendChild(te);const Me=document.createElement("div");Me.className="mt-2 text-xs text-gray-500";const Sn=new Date(n.createdAt);if(Me.innerHTML=`<strong>Tạo:</strong> ${me.format(Sn)}`,n.completedAt){const g=new Date(n.completedAt);Me.innerHTML+=`<br><strong>Hoàn thành:</strong> ${me.format(g)}`}e.appendChild(Me);const Pe=n.itemsTotal!==void 0?n.itemsTotal:n.items?n.items.length:0;if(Pe>0){const g=n.itemsCompleted!==void 0?n.itemsCompleted:n.items.filter(Ge=>Ge.completed).length,b=Pe>0?Math.round(g/Pe*100):0,P=document.createElement("div");P.className="mt-3 w-full bg-gray-300 rounded-full h-2.5 dark:bg-gray-700";const S=document.createElement("div");S.className="bg-blue-600 h-2.5 rounded-full",S.style.width=`${b}%`,P.appendChild(S),e.appendChild(P);const he=document.createElement("div");he.className="text-right text-xs text-gray-600 mt-1",he.textContent=`${b}% (${g}/${Pe})`,e.appendChild(he)}return e.addEventListener("dragstart",g=>{o?(Be=n.id,g.target.classList.add("dragging")):(g.preventDefault(),f("Bạn không có quyền di chuyển công việc.",!0))}),e.addEventListener("dragend",g=>{g.target.classList.remove("dragging"),Be=null}),e}async function us(n,e,t){const s=await A(n,!0);if(!s)return;const r=s.ownerId===h||s.assignee===h,i=w(s?s.projectId:null);if(!(i==="edit"||i==="create"||i==="owner"||r)){f("Bạn không có quyền chỉnh sửa công việc này.",!0);return}s&&!s.locked&&(s.items[e].completed=t,await ge(n,s),Se=s,U())}async function ms(n,e){const t=await A(n,!0);if(!t)return;const s=t.ownerId===h||t.assignee===h,r=w(t?t.projectId:null);if(!(r==="edit"||r==="create"||r==="owner"||s)){f("Bạn không có quyền chỉnh sửa công việc này.",!0);return}t&&t.items&&t.items[e]&&!t.locked&&(t.items.splice(e,1),await ge(n,t),Se=t,U())}function Qe(n,e,t=null){const s=ht(n),r=s?s.ownerId===h||s.assignee===h:!1,i=w(s?s.projectId:null),o=i==="edit"||i==="create"||i==="owner"||r,a=i==="create"||i==="owner",l=i==="edit"||i==="create"||i==="owner";if(e==="delete"&&!a){f("Bạn không có quyền xóa công việc.",!0);return}else if(e==="clone"&&!l){f("Bạn không có quyền nhân bản công việc này.",!0);return}else if((e==="accept-task"||e==="reject-task")&&!o){f("Bạn không có quyền chấp nhận hoặc từ chối công việc này.",!0);return}E.id=n,E.type=e,E.itemIndex=t,e==="delete"?(fe.textContent="Xác nhận xóa công việc",ye.textContent="Bạn có chắc chắn muốn xóa công việc này không? Hành động này không thể hoàn tác.",L.textContent="Xác nhận xóa",L.classList.remove("bg-blue-600","hover:bg-blue-700","bg-green-600","hover:bg-green-700"),L.classList.add("bg-red-600","hover:bg-red-700")):e==="clone"?(fe.textContent="Xác nhận nhân bản công việc",ye.textContent="Bạn có chắc chắn muốn tạo một bản sao của công việc này không?",L.textContent="Xác nhận nhân bản",L.classList.remove("bg-red-600","hover:bg-red-700","bg-green-600","hover:bg-green-700"),L.classList.add("bg-blue-600","hover:bg-blue-700")):e==="delete-item"?(fe.textContent="Xác nhận xóa mục",ye.textContent="Bạn có chắc chắn muốn xóa mục này không? Thao tác này không thể hoàn tác.",L.textContent="Xác nhận xóa",L.classList.remove("bg-blue-600","hover:bg-blue-700","bg-green-600","hover:bg-green-700"),L.classList.add("bg-red-600","hover:bg-red-700")):e==="accept-task"?(fe.textContent="Xác nhận hoàn thành",ye.textContent="Bạn có chắc chắn muốn chấp nhận và chuyển công việc này sang trạng thái Hoàn thành? Sau khi hoàn thành, bạn không thể thay đổi trạng thái công việc này.",L.textContent="Chấp nhận",L.classList.remove("bg-red-600","hover:bg-red-700","bg-blue-600","hover:bg-blue-700"),L.classList.add("bg-green-600","hover:bg-green-700")):e==="reject-task"&&(fe.textContent="Xác nhận từ chối",ye.textContent="Bạn có chắc chắn muốn từ chối và chuyển công việc này về lại trạng thái Việc cần làm?",L.textContent="Từ chối",L.classList.remove("bg-green-600","hover:bg-green-700","bg-blue-600","hover:bg-blue-700"),L.classList.add("bg-red-600","hover:bg-red-700")),gt.classList.add("show")}async function ps(){E.type==="delete"?await hs(E.id):E.type==="clone"?await fs(E.id):E.type==="delete-item"?await ms(E.id,E.itemIndex):E.type==="accept-task"?await ws(E.id):E.type==="reject-task"&&await bs(E.id),gt.classList.remove("show"),E.id=null,E.type=null,E.itemIndex=null}async function gs(n,e=!1){const t=await A(n.id,e);if(!t){f("Không thể tải chi tiết công việc",!0);return}if(Se=t,on.style.color=pe(t.assignee),on.textContent=t.title,X&&F){X.className="flex justify-between items-start gap-4 mb-4 pb-4 border-b-4 mt-2 pt-1",F.className="text-sm font-semibold px-3 py-1 rounded-full whitespace-nowrap";let o="";t.status==="todo"?(o="Việc cần làm",X.classList.add("border-gray-300"),F.classList.add("bg-gray-200","text-gray-700")):t.status==="in-progress"?(o="Đang tiến hành",X.classList.add("border-blue-300"),F.classList.add("bg-blue-100","text-blue-700")):t.status==="blocked"?(o="Bị khóa",X.classList.add("border-red-300"),F.classList.add("bg-red-100","text-red-700")):t.status==="review"?(o="Đánh giá",X.classList.add("border-yellow-300"),F.classList.add("bg-yellow-100","text-yellow-700")):t.status==="done"&&(o="Hoàn thành",X.classList.add("border-green-300"),F.classList.add("bg-green-100","text-green-700")),F.textContent=o}if(On.textContent=t.ownerId||"Không có",Ue.innerHTML="",t.assignee){const o=document.createElement("div");o.className="w-3 h-3 rounded-full mr-2",o.style.backgroundColor=pe(t.assignee),Ue.appendChild(o),Ue.innerHTML+=t.assignee}else Ue.textContent="Không có";oe&&ot&&(t.description?(/<[a-z][\s\S]*>/i.test(t.description)?(oe.innerHTML=t.description,oe.classList.remove("whitespace-pre-wrap"),oe.querySelectorAll("a").forEach(o=>{o.setAttribute("target","_blank"),o.setAttribute("rel","noopener noreferrer")})):(oe.textContent=t.description,oe.classList.add("whitespace-pre-wrap")),ot.classList.remove("hidden")):ot.classList.add("hidden"));const s={low:"Thấp",medium:"Trung bình",high:"Cao"};rn&&(rn.textContent=t.priority?s[t.priority]||t.priority:"Không có"),an&&(an.textContent=t.storyPoints||"Không có");const r=document.getElementById("detailSprints");if(r&&(r.classList.add("hidden"),t.sprintIds&&t.sprintIds.length>0&&t.projectId)){const o=x.find(a=>a.id===t.projectId);if(o&&o.sprints){const a=t.sprintIds.map(l=>{const d=o.sprints.find(u=>u.id===l);return We(d)}).filter(Boolean);a.length>0&&(r.textContent=a.join(", "),r.classList.remove("hidden"))}}if(Un.textContent=me.format(new Date(t.createdAt)),t.completedAt?(un.style.display="block",qn.textContent=me.format(new Date(t.completedAt))):un.style.display="none",it.innerHTML="",t.items&&t.items.length>0?t.items.forEach((o,a)=>{const l=document.createElement("li");l.className=`flex items-center gap-2 text-gray-700 ${o.completed?"line-through text-gray-500":""}`;const d=document.createElement("input");d.type="checkbox",d.checked=o.completed;const u=t,c=w(u?u.projectId:null),m=u?u.ownerId===h||u.assignee===h:!1,y=c==="edit"||c==="create"||c==="owner"||m;d.disabled=!y||t.locked,d.className="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer",d.onchange=()=>{us(t.id,a,d.checked)};const v=document.createElement("span");v.textContent=o.text,l.appendChild(d),l.appendChild(v),it.appendChild(l)}):it.innerHTML='<li class="text-gray-500">Không có checklist</li>',Y=t.id,yt(t,!0),vt(t,!0),_&&_.click(),rt.querySelectorAll(".dynamic-action-btn").forEach(o=>o.remove()),t.status==="review"&&(w(t.projectId)==="edit"||w(t.projectId)==="create"||w(t.projectId)==="owner")){const o=document.createElement("button");o.id="acceptDetailBtn",o.textContent="Chấp nhận",o.className="dynamic-action-btn bg-green-500 text-white font-semibold py-2 px-4 rounded-xl hover:bg-green-600 transition-colors mr-2",o.onclick=()=>Qe(t.id,"accept-task");const a=document.createElement("button");a.id="rejectDetailBtn",a.textContent="Từ chối",a.className="dynamic-action-btn bg-red-500 text-white font-semibold py-2 px-4 rounded-xl hover:bg-red-600 transition-colors mr-2",a.onclick=()=>Qe(t.id,"reject-task"),rt.prepend(a),rt.prepend(o)}ke.classList.add("show")}function yt(n,e=!0){if(ve)if(e&&(ve.innerHTML=""),n.comments&&n.comments.length>0){if(!e){const t=ve.querySelector(".italic");t&&t.remove()}n.comments.forEach((t,s)=>{const r=t.id||s;if(!e&&document.getElementById(`comment-${r}`))return;const i=document.createElement("div");i.id=`comment-${r}`,i.className="bg-gray-50 p-3 rounded-xl border border-gray-100";const o=document.createElement("div");o.className="flex justify-between items-center mb-1";const a=document.createElement("span");a.className="font-semibold text-sm text-gray-800 flex items-center gap-2";const l=document.createElement("div");l.className="w-2 h-2 rounded-full",l.style.backgroundColor=pe(t.author),a.appendChild(l),a.appendChild(document.createTextNode(t.author));const d=document.createElement("span");d.className="text-xs text-gray-500",d.textContent=me.format(new Date(t.createdAt)),o.appendChild(a),o.appendChild(d);const u=document.createElement("p");if(u.className="text-sm text-gray-700 whitespace-pre-wrap mt-1",u.textContent=t.text,i.appendChild(o),t.text&&i.appendChild(u),t.image){const c=document.createElement("img");c.src=t.image,c.className="mt-2 rounded-lg max-h-48 object-contain border border-gray-200 cursor-pointer hover:opacity-90",c.onclick=()=>window.open().document.write(`<img src="${t.image}" style="max-width:100%; max-height:100%;">`),i.appendChild(c)}ve.appendChild(i)})}else ve.innerHTML='<p class="text-sm text-gray-500 italic">Chưa có bình luận nào.</p>'}function vt(n,e=!0){if(be)if(e&&(be.innerHTML=""),n.history&&n.history.length>0){if(!e){const s=be.querySelector(".italic");s&&s.remove()}[...n.history].sort((s,r)=>new Date(s.timestamp)-new Date(r.timestamp)).forEach((s,r)=>{const i=s.id||new Date(s.timestamp).getTime()+r;if(!e&&document.getElementById(`history-${i}`))return;const o=document.createElement("div");o.id=`history-${i}`,o.className="flex items-start gap-3 p-2 bg-gray-50 rounded-xl border border-gray-100";const a=document.createElement("div");a.className="mt-1 text-gray-400",s.action==="created"?a.innerHTML='<i class="fas fa-plus-circle text-green-500"></i>':s.action==="status_change"?a.innerHTML='<i class="fas fa-exchange-alt text-blue-500"></i>':s.action==="edited"?a.innerHTML='<i class="fas fa-pen text-yellow-500"></i>':s.action==="commented"?a.innerHTML='<i class="fas fa-comment text-blue-500"></i>':a.innerHTML='<i class="fas fa-history"></i>';const l=document.createElement("div");l.className="flex-1";const d=document.createElement("p");d.className="text-sm text-gray-800",d.innerHTML=`<span class="font-semibold">${s.actor}</span> ${s.details}`;const u=document.createElement("p");u.className="text-xs text-gray-500 mt-1",u.textContent=me.format(new Date(s.timestamp)),l.appendChild(d),l.appendChild(u),o.appendChild(a),o.appendChild(l),be.prepend(o)})}else be.innerHTML='<p class="text-sm text-gray-500 italic">Chưa có lịch sử hoạt động.</p>'}let R=null;cn&&_e&&(cn.addEventListener("click",()=>{_e.click()}),_e.addEventListener("change",n=>{const e=n.target.files[0];if(e&&e.type.startsWith("image/")){const t=new FileReader;t.onload=s=>{const r=new Image;r.onload=()=>{let i=r.width,o=r.height;const a=1200;(i>a||o>a)&&(i>o?(o=Math.round(o*(a/i)),i=a):(i=Math.round(i*(a/o)),o=a));const l=document.createElement("canvas");l.width=i,l.height=o,l.getContext("2d").drawImage(r,0,0,i,o);const u=l.toDataURL("image/webp",.8);R=u,H&&ue&&(ue.src=u,H.classList.remove("hidden"))},r.src=s.target.result},t.readAsDataURL(e)}_e.value=""}));ln&&ln.addEventListener("click",()=>{R=null,H&&(H.classList.add("hidden"),ue.src="")});Fn.addEventListener("click",()=>{ke.classList.remove("show"),Y=null,R=null,H&&(H.classList.add("hidden"),ue.src="")});dn&&dn.addEventListener("click",()=>{ke.classList.remove("show"),Y=null,R=null,H&&(H.classList.add("hidden"),ue.src="")});_&&ie&&(_.addEventListener("click",()=>{_.classList.add("text-blue-600","border-blue-600"),_.classList.remove("text-gray-500","border-transparent"),ie.classList.add("text-gray-500","border-transparent"),ie.classList.remove("text-blue-600","border-blue-600"),qe&&qe.classList.remove("hidden"),Fe&&Fe.classList.add("hidden")}),ie.addEventListener("click",()=>{ie.classList.add("text-blue-600","border-blue-600"),ie.classList.remove("text-gray-500","border-transparent"),_.classList.add("text-gray-500","border-transparent"),_.classList.remove("text-blue-600","border-blue-600"),Fe&&Fe.classList.remove("hidden"),qe&&qe.classList.add("hidden")}));J&&J.addEventListener("click",async()=>{if(!Y)return;const n=Je.value.trim();if(!n&&!R)return;J.disabled=!0;const e=await A(Y,!0);if(!e){J.disabled=!1;return}const t=w(e.projectId),s=e.ownerId===h||e.assignee===h;if(!(t==="edit"||t==="create"||t==="owner"||s)){f("Bạn không có quyền bình luận trong công việc này.",!0),J.disabled=!1;return}e.comments||(e.comments=[]);const i={id:crypto.randomUUID(),text:n,author:h,createdAt:new Date().toISOString()};R&&(i.image=R),e.history||(e.history=[]),e.history.push({id:crypto.randomUUID(),action:"commented",actor:h,timestamp:new Date().toISOString(),details:"đã thêm một bình luận mới."}),e.comments.push(i),await ge(e.id,e),Se=e,J.disabled=!1,Je.value="",R=null,H&&(H.classList.add("hidden"),ue.src=""),yt(e,!1),vt(e,!1),U()});Je&&Je.addEventListener("keypress",n=>{n.key==="Enter"&&(n.preventDefault(),J.click())});async function hs(n){const e=ht(n),t=w(e.projectId);if(t!=="create"&&t!=="owner"){f("Bạn không có quyền xóa công việc này.",!0);return}await rs(n),U()}async function fs(n){const e=await A(n);if(!e)return;const t=w(e.projectId);if(!(t==="edit"||t==="create"||t==="owner")){f("Bạn không có quyền nhân bản công việc này.",!0);return}if(e){const r={id:crypto.randomUUID(),title:e.title,description:e.description||"",projectId:e.projectId||null,assignee:e.assignee,priority:e.priority||"medium",storyPoints:e.storyPoints||"",sprintIds:e.sprintIds?[...e.sprintIds]:[],comments:[],items:JSON.parse(JSON.stringify(e.items)),status:e.status,createdAt:new Date().toISOString(),completedAt:e.completedAt||null,locked:e.locked||!1,ownerId:h};r.history=[{id:crypto.randomUUID(),action:"created",actor:h,timestamp:new Date().toISOString(),details:`đã nhân bản công việc từ '${e.title}'.`}],await In(r),U()}}function Ln(n=""){if(j.innerHTML='<option value="">-- Chọn dự án (Bắt buộc) --</option>',(k==="owner"?x:x.filter(t=>{if(!K(t,O))return!1;const s=w(t.id);return s==="create"||s==="edit"})).forEach(t=>{const s=document.createElement("option");s.value=t.id,s.textContent=t.name,j.appendChild(s)}),n){let t=Array.from(j.options).find(s=>s.value===n);if(!t){const s=x.find(r=>r.id===n);t=document.createElement("option"),t.value=n,t.textContent=s?`${s.name} (Ngoài dự án)`:`${n} (Dự án đã xóa)`,j.appendChild(t)}j.value=n}}function bt(n="",e=""){W.innerHTML="";let t=Z.filter(s=>!s.disabled);if(e){const s=x.find(r=>r.id===e);s&&s.users?t=t.filter(r=>K(s,r.useruid)):t=[]}if(t.forEach(s=>{const r=document.createElement("option");r.value=s.username,r.textContent=s.username,W.appendChild(r)}),n){let s=Array.from(W.options).find(r=>r.value===n);s||(s=document.createElement("option"),s.value=n,s.textContent=`${n} (Ngoài dự án/Đã khóa)`,W.appendChild(s)),s.selected=!0}else W.value=h}function wt(n=[],e=""){const t=document.getElementById("taskSprintsContainer"),s=document.getElementById("sprintsWrapper");if(!t||!s)return;if(t.innerHTML="",!e){s.classList.add("hidden");return}const r=x.find(i=>i.id===e);r&&r.sprints&&r.sprints.length>0?(s.classList.remove("hidden"),r.sprints.forEach(i=>{const o=document.createElement("label");o.className="flex items-center gap-2 text-gray-700 cursor-pointer p-1 hover:bg-gray-100 rounded";const a=document.createElement("input");a.type="checkbox",a.value=i.id,a.className="form-checkbox h-4 w-4 text-blue-600 rounded",n.includes(i.id)&&(a.checked=!0),o.appendChild(a),o.appendChild(document.createTextNode(We(i))),t.appendChild(o)})):s.classList.add("hidden")}j&&j.addEventListener("change",n=>{bt(W.value,n.target.value),wt([],n.target.value)});lt.addEventListener("click",()=>{let n=!1;if(k==="owner")n=!0;else if(p.value&&p.value!=="none"){const e=w(p.value);n=e==="create"||e==="edit"}else n=x.some(e=>{const t=w(e.id);return K(e,O)&&(t==="create"||t==="edit")});if(n){q=null,bn.textContent="Thêm Công Việc Mới",wn.textContent="Thêm Công Việc",Ce.reset(),V&&(V.value=""),B&&(B.root.innerHTML=""),G.innerHTML="",xt();const e=p&&p.value!=="none"?p.value:"";Ln(e),bt("",j.value),wt([],j.value),le&&(le.value="medium"),de&&(de.value=""),Te.classList.add("show")}else f("Bạn không có quyền tạo công việc mới trong dự án này.",!0)});async function ys(n,e=!1){const t=await A(n,e);if(!t)return;const s=w(t.projectId),r=t.ownerId===h||t.assignee===h;if(!(s==="edit"||s==="create"||s==="owner"||r)){f(q?"Bạn không có quyền chỉnh sửa công việc này.":"Bạn không có quyền tạo công việc trong dự án này.",!0);return}q=n,bn.textContent="Chỉnh sửa Công việc",wn.textContent="Lưu Thay đổi",t&&(vn.value=t.title,V&&(V.value=t.description||""),B&&(t.description&&!/<[a-z][\s\S]*>/i.test(t.description)?B.root.innerText=t.description:B.root.innerHTML=t.description||""),Ln(t.projectId),bt(t.assignee,t.projectId),wt(t.sprintIds||[],t.projectId),le&&(le.value=t.priority||"medium"),de&&(de.value=t.storyPoints||""),G.innerHTML="",t.items&&t.items.length>0&&t.items.forEach(o=>{xt(o.text)}),Te.classList.add("show"))}jn.addEventListener("click",()=>{Te.classList.remove("show"),Ce.reset(),G.innerHTML=""});St&&St.addEventListener("click",()=>{Te.classList.remove("show"),Ce.reset(),G.innerHTML=""});Hn.addEventListener("click",()=>{gt.classList.remove("show"),E.id=null,E.type=null});L.addEventListener("click",ps);function xt(n=""){const e=q?ht(q):null,t=w(e?e.projectId:p.value),s=e?e.ownerId===h||e.assignee===h:!1;if(!(t==="create"||t==="edit"||t==="owner"||s)){f("Bạn không có quyền thêm mục checklist.",!0);return}const i=document.createElement("div");i.className="flex gap-2 items-center w-full";const o=document.createElement("input");o.type="text",o.placeholder="Mục cần làm...",o.value=n,o.className="flex-1 p-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500";const a=document.createElement("button");a.type="button",a.innerHTML='<i class="fas fa-times text-gray-400 hover:text-red-500"></i>',a.className="p-1 rounded-full hover:bg-gray-200",a.onclick=()=>{i.remove()},i.appendChild(o),i.appendChild(a),G.appendChild(i),o.focus()}Pn.addEventListener("click",()=>xt());Ce.addEventListener("submit",async n=>{n.preventDefault();const e=q?await A(q):null,t=w(j.value),s=e?e.ownerId===h||e.assignee===h:k==="owner";if(!(t==="edit"||t==="create"||t==="owner"||s)){f("Bạn không có quyền chỉnh sửa công việc này.",!0);return}const i=vn.value.trim(),o=V?V.value.trim():"",a=j.value,l=W.value.trim(),d=le?le.value:"medium",u=de?de.value:"";if(!a){f("Vui lòng chọn một dự án cho công việc này.",!0);return}const c=Array.from(G.querySelectorAll("input")).map(v=>({text:v.value.trim(),completed:!1})).filter(v=>v.text!==""),m=[],y=document.getElementById("taskSprintsContainer");if(y&&y.querySelectorAll('input[type="checkbox"]:checked').forEach(v=>{m.push(v.value)}),!!i){if(q)e&&(e.title=i,e.description=o,e.projectId=a||null,e.assignee=l,e.priority=d,e.storyPoints=u,e.items=c,e.sprintIds=m,e.history||(e.history=[]),e.history.push({id:crypto.randomUUID(),action:"edited",actor:h,timestamp:new Date().toISOString(),details:"đã cập nhật thông tin công việc."}));else{const v={id:crypto.randomUUID(),title:i,description:o,projectId:a||null,assignee:l,priority:d,storyPoints:u,sprintIds:m,items:c,comments:[],status:"todo",createdAt:new Date().toISOString(),completedAt:null,locked:!1,ownerId:h};v.history=[{id:crypto.randomUUID(),action:"created",actor:h,timestamp:new Date().toISOString(),details:"đã tạo công việc này."}],await In(v)}U(),Ce.reset(),B&&(B.root.innerHTML=""),G.innerHTML="",Te.classList.remove("show"),q=null}});async function vs(n,e){const t=await A(n);if(!t)return;const s=w(t.projectId),r=t.ownerId===h||t.assignee===h;if(!(s==="edit"||s==="create"||s==="owner"||r)){f("Bạn không có quyền di chuyển công việc này.",!0);return}if(t){const o=t.status;if(t.locked&&e!==o){f("Công việc đã hoàn thành và bị khóa, không thể di chuyển.",!0);return}if(e==="done"&&o!=="review"){f("Công việc phải ở trạng thái 'Đánh giá' trước khi được hoàn thành.",!0);return}const a={todo:"Việc cần làm","in-progress":"Đang tiến hành",blocked:"Bị khóa",review:"Đánh giá",done:"Hoàn thành"};t.status=e,t.history||(t.history=[]),t.history.push({id:crypto.randomUUID(),action:"status_change",actor:h,timestamp:new Date().toISOString(),details:`đã chuyển trạng thái từ <strong>${a[o]}</strong> sang <strong>${a[e]}</strong>.`}),await ge(n,t),U()}}async function bs(n){const e=await A(n);if(!e)return;const t=w(e.projectId);if(t!=="create"&&t!=="edit"&&t!=="owner"){f("Bạn không có quyền từ chối công việc này.",!0);return}e&&(e.status="todo",e.completedAt=null,e.locked=!1,e.history||(e.history=[]),e.history.push({id:crypto.randomUUID(),action:"status_change",actor:h,timestamp:new Date().toISOString(),details:"đã từ chối công việc và chuyển về <strong>Việc cần làm</strong>."}),await ge(n,e),U(),ke.classList.remove("show"))}async function ws(n){const e=await A(n);if(!e)return;const t=w(e.projectId);if(t!=="create"&&t!=="edit"&&t!=="owner"){f("Bạn không có quyền chấp nhận công việc này.",!0);return}e&&e.status==="review"&&(e.status="done",e.completedAt=new Date().toISOString(),e.locked=!0,e.history||(e.history=[]),e.history.push({id:crypto.randomUUID(),action:"status_change",actor:h,timestamp:new Date().toISOString(),details:"đã chấp nhận công việc và chuyển sang <strong>Hoàn thành</strong>."}),await ge(n,e),U(),ke.classList.remove("show"))}const xs=document.querySelectorAll(".drop-zone");xs.forEach(n=>{n.addEventListener("dragover",e=>{e.preventDefault(),e.dataTransfer.dropEffect="move"}),n.addEventListener("drop",async e=>{if(e.preventDefault(),Be){let t=e.currentTarget.id.replace("-column","");t==="inprogress"&&(t="in-progress"),await vs(Be,t)}})});p&&p.addEventListener("change",async n=>{const e=document.getElementById("sprintFilter");e&&(e.dataset.initialized="false"),Bn(),await ft(n.target.value)});const hn=document.getElementById("sprintFilter");hn&&hn.addEventListener("change",n=>{Ze($.value,M,p.value,n.target.value)});$.addEventListener("change",n=>{const e=n.target.value,t=document.getElementById("sprintFilter"),s=t?t.value:"all";Ze(e,M,p.value,s)});const Cn={"Việc cần làm":"todo","Đang tiến hành":"in-progress","Bị khóa":"blocked","Đánh giá":"review","Hoàn thành":"done"},Es=Object.keys(Cn),Et=document.createElement("div");Et.className="dropdown-list-item cursor-pointer";Et.innerHTML=`
+    <input type="checkbox" id="status-all" value="all" checked class="form-checkbox h-4 w-4 text-blue-600 rounded">
+    <label for="status-all" class="ml-2 text-gray-700">Tất cả</label>
+`;Ee.appendChild(Et);Es.forEach(n=>{const e=Cn[n],t=document.createElement("div");t.className="dropdown-list-item cursor-pointer",t.innerHTML=`
+        <input type="checkbox" id="status-${e}" value="${e}" class="form-checkbox h-4 w-4 text-blue-600 rounded">
+        <label for="status-${e}" class="ml-2 text-gray-700">${n}</label>
+    `,Ee.appendChild(t)});Ee.querySelectorAll("input").forEach(n=>{n.addEventListener("change",e=>{const t=e.target.value,s=e.target.checked;if(t==="all")s?(Ee.querySelectorAll("input").forEach(o=>{o.value!=="all"&&(o.checked=!1)}),M=["all"]):M=[];else{const o=Ee.querySelector('input[value="all"]');s?(o.checked&&(o.checked=!1,M=M.filter(a=>a!=="all")),M.push(t)):M=M.filter(a=>a!==t),M.length===0&&(o.checked=!0,M=["all"])}const r=document.getElementById("sprintFilter"),i=r?r.value:"all";Ze($.value,M,p.value,i)})});_n.addEventListener("click",n=>{n.stopPropagation(),ut.classList.toggle("active")});$t&&T&&$t.addEventListener("click",n=>{n.stopPropagation(),T.classList.toggle("hidden"),T.classList.toggle("flex")});document.addEventListener("click",n=>{ut.contains(n.target)||ut.classList.remove("active"),T&&Nt&&!Nt.contains(n.target)&&(T.classList.add("hidden"),T.classList.remove("flex"))});function Bn(){let n=!1;if(k==="owner")n=!0;else if(p.value&&p.value!=="none"){const e=w(p.value);n=e==="create"||e==="edit"}else n=x.some(e=>{const t=w(e.id);return K(e,O)&&(t==="create"||t==="edit")});lt.disabled=!n,lt.classList.toggle("btn-disabled",!n),xe&&(k==="owner"?xe.classList.remove("hidden"):xe.classList.add("hidden"))}const Is=30*60*1e3;function It(){localStorage.setItem("last_activity",Date.now().toString())}function Ls(){if(!localStorage.getItem("kanban_token"))return;const e=localStorage.getItem("last_activity");e&&Date.now()-parseInt(e,10)>Is&&(localStorage.removeItem("kanban_token"),localStorage.removeItem("last_activity"),f("Phiên đăng nhập đã hết hạn do bạn không hoạt động trong 30 phút. Vui lòng đăng nhập lại.",!0),setTimeout(()=>{window.location.reload()},2e3))}setInterval(Ls,6e4);let ct=null;["click","mousemove","keydown","scroll","touchstart"].forEach(n=>{document.addEventListener(n,()=>{ct||(ct=setTimeout(()=>{It(),ct=null},2e3))},{passive:!0})});setInterval(async()=>{if(!localStorage.getItem("kanban_token")||dt.classList.contains("hidden")||ze===null||Be!==null)return;const e=document.querySelectorAll(".modal-overlay.show");let t=!1;if(e.length>0){if(Array.from(e).some(r=>r.id!=="detailModalOverlay"))return;t=!0}try{const s=p?p.value:null,r=await xn(s,ze);if(r&&r.changed){if(console.log("[Auto-Refresh] Phát hiện dữ liệu thay đổi trên máy chủ. Đang tải lại..."),t&&Y){const i=await A(Y,!0);i&&(Se=i,yt(i,!1),vt(i,!1))}f("Dữ liệu vừa được cập nhật từ máy chủ."),await ft(s)}else r&&r.timestamp&&(ze=r.timestamp)}catch{}},3e4);as();cs();async function Tn(){if(Ke=await os(),k=Ke.permission,O=Ke.useruid,h=Ke.username,Pt&&(Pt.textContent=h),Ht&&(Ht.textContent=h),Ot){const e={owner:"Quản trị hệ thống (Owner)",user:"Người dùng"};Ot.textContent=e[k]||(k?k.toUpperCase():"Không rõ")}et&&(k==="owner"?(et.classList.remove("hidden"),De&&De.classList.remove("hidden"),Ae&&Ae.classList.remove("hidden")):(et.classList.add("hidden"),De&&De.classList.add("hidden"),Ae&&Ae.classList.add("hidden"))),Z=await Q(),x=await pt(),Le();const n=p&&p.value?p.value:null;await ft(n),Bn(),dt.classList.remove("hidden"),dt.classList.add("flex")}window.onload=async function(){localStorage.getItem("kanban_token")?(It(),ae.classList.add("hidden"),ae.classList.remove("flex"),await Tn()):(ae.classList.remove("hidden"),ae.classList.add("flex"))};const fn=document.getElementById("addProjectSprintBtn"),yn=document.getElementById("projectSprintsContainer");function kn(n=null){if(!yn)return;const e=n?n.id:crypto.randomUUID(),t=n?n.name:"",s=n&&n.startDate?n.startDate:"",r=n&&n.endDate?n.endDate:"",i=!!(n&&n.isCurrent),o=document.createElement("div");o.className="flex flex-wrap items-center gap-2 sprint-item p-2 bg-white border border-gray-200 rounded-lg",o.dataset.id=e;const a=document.createElement("input");a.type="text",a.value=t,a.placeholder="Tên Sprint (VD: Sprint 1)",a.className="flex-1 p-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 sprint-name-input min-w-[150px]";const l=document.createElement("input");l.type="date",l.value=s,l.title="Ngày bắt đầu",l.className="p-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 sprint-start-input text-sm text-gray-600 cursor-pointer";const d=document.createElement("input");d.type="date",d.value=r,d.title="Ngày kết thúc",d.className="p-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 sprint-end-input text-sm text-gray-600 cursor-pointer";const u=document.createElement("label");u.className="flex items-center gap-1 text-sm text-gray-700 cursor-pointer mx-1";const c=document.createElement("input");c.type="radio",c.name="currentSprintRadio",c.value=e,c.title="Đặt làm Sprint hiện tại",c.className="sprint-current-radio form-radio h-4 w-4 text-purple-600 rounded cursor-pointer",i&&(c.checked=!0),u.appendChild(c),u.appendChild(document.createTextNode("Hiện tại"));const m=document.createElement("button");m.type="button",m.innerHTML='<i class="fas fa-trash-alt text-red-500 hover:text-red-700"></i>',m.className="p-2 rounded-full hover:bg-gray-200 ml-auto",m.onclick=()=>o.remove(),o.appendChild(a),o.appendChild(l),o.appendChild(d),o.appendChild(u),o.appendChild(m),yn.appendChild(o)}fn&&fn.addEventListener("click",()=>kn());</script>
+</head>
+    <body class="bg-gray-100 flex flex-col min-h-screen">
+
+        <!-- Màn hình Đăng nhập -->
+        <div id="loginScreen" class="flex flex-col min-h-screen justify-center items-center bg-gray-100 fixed inset-0 z-[5000]">
+            <div class="bg-white p-8 rounded-2xl shadow-xl w-[90%] max-w-sm">
+                <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Đăng nhập Kanban</h2>
+                <form id="loginForm" class="flex flex-col gap-4" autocomplete="off">
+                    <input type="text" id="loginUsername" placeholder="Tên đăng nhập (VD: alice)" required class="p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500" autocomplete="off">
+                    <input type="password" id="loginPassword" placeholder="Mật khẩu" required class="p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500" autocomplete="new-password">
+                    <button type="submit" class="bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition mt-2">Đăng nhập</button>
+                </form>
+                <p class="mt-4 text-xs text-center text-gray-500">Được phát triển bởi <a href="https://telua.vn" target="_blank" class="text-blue-500 hover:underline">Telua</a></p>
+            </div>
+        </div>
+
+        <!-- Container cho Bảng Kanban (Sẽ bị ẩn cho đến khi đăng nhập thành công) -->
+        <div id="kanbanBoard" class="hidden flex-col min-h-screen p-4 md:p-4 w-full">
+
+    <!-- Bộ lọc -->
+    <div class="container mx-auto max-w-7xl">
+        <div class="flex flex-col-reverse md:flex-row items-start md:items-center justify-between gap-4 mb-8">
+            <!-- Phần lọc -->
+            <div class="flex flex-col md:flex-row items-start md:items-center gap-4 w-full md:w-auto">
+                <div class="flex flex-col w-full md:w-auto">
+                    <label for="projectFilter" class="text-gray-700 text-xs font-medium whitespace-nowrap mb-1">Lọc theo dự án:</label>
+                    <select id="projectFilter" class="p-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
+                    </select>
+                </div>
+                <div class="flex flex-col w-full md:w-auto">
+                    <label for="sprintFilter" class="text-gray-700 text-xs font-medium whitespace-nowrap mb-1">Lọc theo Sprint:</label>
+                    <select id="sprintFilter" class="p-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
+                        <option value="all">Tất cả</option>
+                    </select>
+                </div>
+                <div class="flex flex-col w-full md:w-auto">
+                    <label for="assigneeFilter" class="text-gray-700 text-xs font-medium whitespace-nowrap mb-1">Lọc theo người:</label>
+                    <select id="assigneeFilter" class="p-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
+                        <option value="all">Tất cả</option>
+                    </select>
+                </div>
+                <div class="flex flex-col w-full md:w-auto">
+                    <label class="text-gray-700 text-xs font-medium whitespace-nowrap mb-1">Lọc theo trạng thái:</label>
+                    <div id="statusFilter" class="multiselect-dropdown w-full">
+                        <div class="p-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer flex justify-between items-center" id="dropdown-button">
+                            <span>Chọn trạng thái...</span>
+                            <i class="fas fa-caret-down ml-2"></i>
+                        </div>
+                        <div class="dropdown-list" id="statusDropdownList">
+                            <!-- Các tùy chọn sẽ được thêm bằng JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tổng số công việc và nút Thêm -->
+            <div class="flex flex-col-reverse md:flex-row items-center md:items-center gap-4 w-full md:w-auto">
+                <div id="task-summary" class="p-2 rounded-xl w-full flex items-center justify-between md:justify-start">
+                    <p class="text-gray-700 font-medium mr-2">Tổng số công việc:</p>
+                     <p id="totalTasksCount" class="text-gray-700 font-medium">0</p>
+                </div>
+
+                <div class="flex flex-row items-center justify-between md:justify-end gap-2 w-full md:w-auto">
+                    <!-- Nút Thêm User (Chỉ hiển thị cho Owner) -->
+                    <button id="addUserBtn" class="hidden bg-gray-100 text-gray-600 w-10 h-10 flex items-center justify-center rounded-full transition duration-300 ease-in-out hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 flex-shrink-0" title="Thêm Người dùng">
+                        <i class="fas fa-user-plus"></i>
+                    </button>
+
+                    <!-- Nút Thêm Công việc -->
+                    <button id="openModalBtn" class="bg-gray-100 text-gray-600 w-10 h-10 flex items-center justify-center rounded-full transition duration-300 ease-in-out hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 flex-shrink-0" title="Thêm Công việc">
+                        <i class="fas fa-plus"></i>
+                    </button>
+
+                    <!-- Hiển thị tên người dùng -->
+                    <div class="relative" id="userProfileContainer">
+                        <div id="userProfileBtn" class="flex items-center bg-white px-3 py-2 h-10 rounded-full shadow-sm border border-gray-200 cursor-pointer hover:bg-gray-50 transition">
+                            <i class="fas fa-user-circle text-blue-500 mr-2 text-lg"></i>
+                            <span id="loggedInUserDisplay" class="text-sm font-semibold text-gray-700 truncate max-w-[80px] md:max-w-none"></span>
+                        </div>
+                        
+                        <!-- Dropdown thông tin user -->
+                        <div id="userInfoDropdown" class="absolute top-full right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 hidden z-50 flex-col overflow-hidden cursor-default" onclick="event.stopPropagation()">
+                            <div class="p-4 bg-gray-50">
+                                <p class="text-xs text-gray-500 mb-1">Tài khoản:</p>
+                                <p class="text-sm font-bold text-gray-800" id="dropdownUsername"></p>
+                            </div>
+                            <div class="p-4 border-t border-gray-100 bg-white">
+                                <p class="text-xs text-gray-500 mb-1">Vai trò:</p>
+                                <p class="text-sm font-semibold text-blue-600" id="dropdownRole"></p>
+                            </div>
+                            <div class="p-4 border-t border-gray-100 bg-white" id="changePasswordDropdownItem">
+                                <button id="openChangePasswordBtn" class="w-full text-left text-sm font-semibold text-gray-700 hover:text-blue-600 focus:outline-none">
+                                    <i class="fas fa-key mr-2"></i>Đổi mật khẩu
+                                </button>
+                            </div>
+                            <div class="p-4 border-t border-gray-100 bg-white hidden" id="manageUsersDropdownItem">
+                                <button id="openManageUsersBtn" class="w-full text-left text-sm font-semibold text-blue-600 hover:text-blue-800 focus:outline-none">
+                                    <i class="fas fa-users-cog mr-2"></i>Quản lý User
+                                </button>
+                            </div>
+                            <div class="p-4 border-t border-gray-100 bg-white hidden" id="manageProjectsDropdownItem">
+                                <button id="openManageProjectsBtn" class="w-full text-left text-sm font-semibold text-purple-600 hover:text-purple-800 focus:outline-none">
+                                    <i class="fas fa-project-diagram mr-2"></i>Quản lý Dự án
+                                </button>
+                            </div>
+                            <div class="p-4 border-t border-gray-100 bg-white hidden" id="trashDropdownItem">
+                                <button id="openTrashBtn" class="w-full text-left text-sm font-semibold text-red-600 hover:text-red-800 focus:outline-none">
+                                    <i class="fas fa-trash-restore mr-2"></i>Thùng rác Dự án
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Nút Đăng xuất -->
+                    <button id="logoutBtn" class="bg-red-100 text-red-600 w-10 h-10 flex items-center justify-center rounded-full transition duration-300 ease-in-out hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-red-500 flex-shrink-0" title="Đăng xuất">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Container cho các cột của Bảng Kanban -->
+    <div class="flex-grow w-full flex-shrink-0 grid grid-cols-1 md:grid-cols-5 gap-6">
+
+        <!-- Cột "To Do" -->
+        <div class="bg-gray-200 p-4 md:p-6 rounded-2xl shadow-xl flex flex-col">
+            <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center justify-between"><span>Việc cần làm</span> <span id="todo-sp-total" class="text-sm font-semibold text-gray-600 bg-white px-2 py-1 rounded-lg shadow-sm hidden"></span></h2>
+            <div id="todo-column" class="drop-zone flex-1 flex flex-col gap-4">
+                <!-- Thẻ công việc sẽ được thêm vào đây bằng JavaScript -->
+            </div>
+        </div>
+
+        <!-- Cột "In Progress" -->
+        <div class="bg-blue-200 p-4 md:p-6 rounded-2xl shadow-xl flex flex-col">
+            <h2 class="text-xl font-bold text-blue-800 mb-4 flex items-center justify-between"><span>Đang tiến hành</span> <span id="inprogress-sp-total" class="text-sm font-semibold text-blue-600 bg-white px-2 py-1 rounded-lg shadow-sm hidden"></span></h2>
+            <div id="inprogress-column" class="drop-zone flex-1 flex flex-col gap-4">
+                <!-- Thẻ công việc sẽ được thêm vào đây bằng JavaScript -->
+            </div>
+        </div>
+
+        <!-- Cột "Blocked" -->
+        <div class="bg-red-200 p-4 md:p-6 rounded-2xl shadow-xl flex flex-col">
+            <h2 class="text-xl font-bold text-red-800 mb-4 flex items-center justify-between"><span>Bị khóa</span> <span id="blocked-sp-total" class="text-sm font-semibold text-red-600 bg-white px-2 py-1 rounded-lg shadow-sm hidden"></span></h2>
+            <div id="blocked-column" class="drop-zone flex-1 flex flex-col gap-4">
+                <!-- Thẻ công việc sẽ được thêm vào đây bằng JavaScript -->
+            </div>
+        </div>
+
+        <!-- Cột "Review" -->
+        <div class="bg-yellow-50 p-4 md:p-6 rounded-2xl shadow-xl flex flex-col">
+            <h2 class="text-xl font-bold text-yellow-800 mb-4 flex items-center justify-between"><span>Đánh giá</span> <span id="review-sp-total" class="text-sm font-semibold text-yellow-600 bg-white px-2 py-1 rounded-lg shadow-sm hidden"></span></h2>
+            <div id="review-column" class="drop-zone flex-1 flex flex-col gap-4">
+                <!-- Thẻ công việc sẽ được thêm vào đây bằng JavaScript -->
+            </div>
+        </div>
+
+        <!-- Cột "Done" -->
+        <div class="bg-green-200 p-4 md:p-6 rounded-2xl shadow-xl flex flex-col">
+            <h2 class="text-xl font-bold text-green-800 mb-4 flex items-center justify-between"><span>Hoàn thành</span> <span id="done-sp-total" class="text-sm font-semibold text-green-600 bg-white px-2 py-1 rounded-lg shadow-sm hidden"></span></h2>
+            <div id="done-column" class="drop-zone flex-1 flex flex-col gap-4">
+                <!-- Thẻ công việc sẽ được thêm vào đây bằng JavaScript -->
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Cửa sổ Popup (Modal) để thêm/chỉnh sửa công việc -->
+    <div id="taskModalOverlay" class="modal-overlay">
+        <div class="modal-content w-full md:w-[90%] !max-w-6xl">
+            <div class="flex justify-between items-start mb-4 mt-4 pt-2">
+                <h2 id="modalTitle" class="text-2xl font-bold text-gray-800">Thêm Công Việc Mới</h2>
+                <button type="button" id="closeTaskModalIconBtn" class="text-red-500 bg-red-100 hover:bg-red-600 hover:text-white focus:outline-none w-8 h-8 flex items-center justify-center rounded-full transition-colors shadow-sm">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <form id="addTaskForm" class="flex flex-col gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Cột Trái -->
+                    <div class="flex flex-col gap-4">
+                        <div class="flex flex-col gap-2">
+                            <label for="taskTitleInput" class="text-gray-600 font-semibold">Tiêu đề công việc:</label>
+                            <input type="text" id="taskTitleInput" placeholder="Tiêu đề công việc..." required class="p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <label class="text-gray-600 font-semibold">Mô tả công việc:</label>
+                            <div id="editor-container" class="bg-white"></div>
+                            <input type="hidden" id="taskDescriptionInput">
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <label class="text-gray-600 font-semibold">Checklist:</label>
+                            <div id="checklistContainer" class="flex flex-col gap-2">
+                                <!-- Các mục checklist sẽ được thêm vào đây -->
+                            </div>
+                            <button type="button" id="addChecklistItemBtn" class="flex items-center gap-2 text-blue-500 font-semibold justify-center hover:text-blue-700 transition-colors mt-1">
+                                <i class="fas fa-plus-circle text-lg"></i>
+                                Thêm mục
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Cột Phải -->
+                    <div class="flex flex-col gap-4">
+                        <div class="flex flex-col gap-2">
+                            <label for="taskProjectSelect" class="text-gray-600 font-semibold">Dự án:</label>
+                            <select id="taskProjectSelect" required class="p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">-- Chọn dự án (Bắt buộc) --</option>
+                            </select>
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <label for="taskAssigneeSelect" class="text-gray-600 font-semibold">Người thực hiện:</label>
+                            <select id="taskAssigneeSelect" class="p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
+                        </div>
+                        <div id="sprintsWrapper" class="hidden flex-col gap-2">
+                            <label class="text-gray-600 font-semibold">Sprints (Chọn nhiều):</label>
+                            <div id="taskSprintsContainer" class="flex flex-col gap-2 border border-gray-200 rounded-xl p-3 bg-gray-50 max-h-40 overflow-y-auto">
+                                <!-- Các tùy chọn checkbox của sprints sẽ được thêm bằng JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-4 mt-4">
+                    <button type="button" id="cancelBtn" class="bg-gray-300 text-gray-800 font-semibold py-2 px-6 rounded-xl transition duration-300 hover:bg-gray-400">
+                        Hủy
+                    </button>
+                    <button type="submit" id="submitBtn" class="bg-blue-600 text-white font-semibold py-2 px-6 rounded-xl transition duration-300 hover:bg-blue-700">
+                        Thêm Công Việc
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Cửa sổ Popup (Modal) xác nhận chung. Nội dung sẽ được cập nhật bằng JS -->
+    <div id="confirmationModalOverlay" class="modal-overlay">
+        <div class="modal-content">
+            <h2 id="confirmTitle" class="text-xl font-bold text-gray-800 mb-4"></h2>
+            <p id="confirmMessage" class="text-gray-700 mb-6"></p>
+            <div class="flex justify-end gap-4 mt-4">
+                <button type="button" id="cancelConfirmBtn" class="bg-gray-300 text-gray-800 font-semibold py-2 px-6 rounded-xl transition duration-300 hover:bg-gray-400">
+                    Hủy
+                </button>
+                <button type="button" id="confirmActionBtn" class="bg-red-600 text-white font-semibold py-2 px-6 rounded-xl transition duration-300 hover:bg-red-700">
+                    Xác nhận
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cửa sổ Popup (Modal) để thêm/sửa người dùng -->
+    <div id="userModalOverlay" class="modal-overlay z-[7000]">
+        <div class="modal-content">
+            <h2 id="userModalTitle" class="text-2xl font-bold text-gray-800 mb-4">Thêm Người Dùng Mới</h2>
+            <form id="addUserForm" class="flex flex-col gap-4" autocomplete="off">
+                <input type="text" id="newUsername" placeholder="Tên đăng nhập" required class="p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500" autocomplete="off">
+                <input type="password" id="newUserPassword" placeholder="Mật khẩu (để trống nếu không đổi)" class="p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500" autocomplete="new-password">
+                <div class="flex justify-end gap-4 mt-4">
+                    <button type="button" id="cancelUserBtn" class="bg-gray-300 text-gray-800 font-semibold py-2 px-6 rounded-xl transition duration-300 hover:bg-gray-400">Hủy</button>
+                    <button type="submit" id="submitUserBtn" class="bg-blue-600 text-white font-semibold py-2 px-6 rounded-xl transition duration-300 hover:bg-blue-700">Tạo Người Dùng</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Cửa sổ Popup (Modal) để xem chi tiết công việc -->
+    <div id="detailModalOverlay" class="modal-overlay">
+        <div class="modal-content w-full md:w-[90%] !max-w-6xl">
+            <div id="detailHeaderContainer" class="flex justify-between items-start gap-4 mb-4 pb-4 border-b-4 mt-2 pt-1">
+                <h2 id="detailTitle" class="text-2xl font-bold"></h2>
+                <div class="flex items-center gap-2">
+                    <span id="detailStatusBadge" class="text-sm font-semibold px-3 py-1 rounded-full whitespace-nowrap"></span>
+                    <button type="button" id="closeDetailModalIconBtn" class="text-red-500 bg-red-100 hover:bg-red-600 hover:text-white focus:outline-none w-8 h-8 flex items-center justify-center rounded-full transition-colors shadow-sm">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="flex flex-col gap-2 text-gray-700 mb-4">
+                <p class="font-semibold flex items-center gap-2"><i class="fas fa-user-tag mr-2 text-gray-500"></i>Người tạo: <span id="detailOwner"></span></p>
+                <p class="font-semibold flex items-center gap-2"><i class="fas fa-user mr-2 text-gray-500"></i>Người thực hiện: <span id="detailAssignee" class="flex items-center gap-2"></span></p>
+                <p class="font-semibold flex items-center gap-2"><i class="fas fa-running mr-2 text-gray-500"></i>Sprints: <span id="detailSprints" class="font-normal text-blue-600 bg-blue-100 px-2 py-0.5 rounded-md hidden"></span></p>
+                <p class="text-sm text-gray-500"><i class="fas fa-calendar-alt mr-2"></i>Ngày tạo: <span id="detailCreatedAt"></span></p>
+                <p class="text-sm text-gray-500" id="completedAtSection"><i class="fas fa-calendar-check mr-2"></i>Ngày hoàn thành: <span id="detailCompletedAt"></span></p>
+            </div>
+
+            <div id="detailDescriptionSection" class="mt-4 mb-4 hidden">
+                <h3 class="font-semibold text-gray-800 mb-2">Mô tả:</h3>
+                <div id="detailDescription" class="text-gray-700 ql-editor border border-gray-200 bg-gray-50 rounded-xl !p-4"></div>
+            </div>
+
+            <div id="detailChecklist" class="mt-4">
+                <h3 class="font-semibold text-gray-800 mb-2">Checklist:</h3>
+                <ul id="detailChecklistItems" class="list-none space-y-2">
+                    <!-- Các mục checklist sẽ được thêm vào đây -->
+                </ul>
+            </div>
+
+            <div class="mt-6 border-t border-gray-200 pt-4">
+                <div class="flex gap-4 border-b border-gray-200 mb-4">
+                    <button id="tabCommentsBtn" type="button" class="pb-2 font-semibold text-blue-600 border-b-2 border-blue-600 focus:outline-none transition-colors">Bình luận</button>
+                    <button id="tabHistoryBtn" type="button" class="pb-2 font-semibold text-gray-500 hover:text-gray-800 border-b-2 border-transparent focus:outline-none transition-colors">Lịch sử</button>
+                </div>
+                
+                <div id="detailCommentsSection">
+                    <div id="detailCommentsList" class="flex flex-col gap-3 mb-4">
+                        <!-- Các bình luận sẽ được thêm vào đây -->
+                    </div>
+                    <div class="flex gap-2 relative">
+                        <input type="text" id="newCommentInput" placeholder="Viết bình luận..." class="flex-1 p-2 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                        <button type="button" id="commentImageBtn" class="bg-gray-200 text-gray-600 font-semibold py-2 px-3 rounded-xl hover:bg-gray-300 transition" title="Đính kèm ảnh"><i class="fas fa-image"></i></button>
+                        <input type="file" id="commentImageInput" accept="image/*" class="hidden">
+                        <button type="button" id="addCommentBtn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-xl hover:bg-blue-700 transition">Gửi</button>
+                    </div>
+                    <div id="commentImagePreviewContainer" class="mt-2 hidden flex items-center gap-2">
+                        <img id="commentImagePreview" class="h-16 w-auto rounded border object-contain bg-gray-50" />
+                        <button type="button" id="removeCommentImageBtn" class="text-red-500 hover:text-red-700 p-1 rounded-full"><i class="fas fa-times-circle text-lg"></i></button>
+                    </div>
+                </div>
+
+                <div id="detailHistorySection" class="hidden">
+                    <div id="detailHistoryList" class="flex flex-col gap-3">
+                        <!-- Các lịch sử hoạt động sẽ được thêm vào đây -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end mt-6" id="detailModalFooter">
+                <button type="button" id="closeDetailModalBtn" class="bg-gray-300 text-gray-800 font-semibold py-2 px-6 rounded-xl transition duration-300 hover:bg-gray-400">
+                    Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cửa sổ Popup (Modal) Đổi Mật Khẩu -->
+    <div id="changePasswordModalOverlay" class="modal-overlay z-[7000]">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Đổi Mật Khẩu</h2>
+            <form id="changePasswordForm" class="flex flex-col gap-4">
+                <input type="password" id="newPasswordInput" placeholder="Mật khẩu mới" required class="p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <input type="password" id="confirmPasswordInput" placeholder="Xác nhận mật khẩu mới" required class="p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                
+                <div class="flex justify-end gap-4 mt-4">
+                    <button type="button" id="cancelChangePasswordBtn" class="bg-gray-300 text-gray-800 font-semibold py-2 px-6 rounded-xl transition duration-300 hover:bg-gray-400">Hủy</button>
+                    <button type="submit" id="submitChangePasswordBtn" class="bg-blue-600 text-white font-semibold py-2 px-6 rounded-xl transition duration-300 hover:bg-blue-700">Đổi mật khẩu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Cửa sổ Popup (Modal) Quản lý User -->
+    <div id="manageUsersModalOverlay" class="modal-overlay z-[6000]">
+        <div class="modal-content w-full max-w-3xl">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-gray-800">Quản lý Người dùng</h2>
+                <div class="flex items-center gap-4">
+                    <button type="button" id="openAddUserFromManageBtn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-xl hover:bg-blue-700 transition flex items-center">
+                        <i class="fas fa-plus mr-2"></i>Thêm User
+                    </button>
+                    <button type="button" id="closeManageUsersBtn" class="text-red-500 bg-red-100 hover:bg-red-600 hover:text-white focus:outline-none w-8 h-8 flex items-center justify-center rounded-full transition-colors shadow-sm">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="overflow-x-auto max-h-96">
+                <table class="min-w-full bg-white border border-gray-200 rounded-xl">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="py-3 px-4 border-b text-left text-sm font-semibold text-gray-700">Tài khoản</th>
+                            <th class="py-3 px-4 border-b text-left text-sm font-semibold text-gray-700">Vai trò</th>
+                            <th class="py-3 px-4 border-b text-left text-sm font-semibold text-gray-700">Trạng thái</th>
+                            <th class="py-3 px-4 border-b text-center text-sm font-semibold text-gray-700">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userListTableBody">
+                        <!-- Danh sách user sẽ được render bằng JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cửa sổ Popup (Modal) Quản lý Dự án -->
+    <div id="manageProjectsModalOverlay" class="modal-overlay z-[6000]">
+        <div class="modal-content w-full max-w-3xl">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-gray-800">Quản lý Dự án</h2>
+                <div class="flex items-center gap-4">
+                    <button type="button" id="openAddProjectBtn" class="bg-purple-600 text-white font-semibold py-2 px-4 rounded-xl hover:bg-purple-700 transition flex items-center">
+                        <i class="fas fa-plus mr-2"></i>Thêm Dự án
+                    </button>
+                    <button type="button" id="closeManageProjectsBtn" class="text-red-500 bg-red-100 hover:bg-red-600 hover:text-white focus:outline-none w-8 h-8 flex items-center justify-center rounded-full transition-colors shadow-sm">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="overflow-x-auto max-h-96">
+                <table class="min-w-full bg-white border border-gray-200 rounded-xl">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="py-3 px-4 border-b text-left text-sm font-semibold text-gray-700">Tên Dự án</th>
+                            <th class="py-3 px-4 border-b text-left text-sm font-semibold text-gray-700">Mô tả</th>
+                            <th class="py-3 px-4 border-b text-left text-sm font-semibold text-gray-700">Thành viên</th>
+                            <th class="py-3 px-4 border-b text-center text-sm font-semibold text-gray-700">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody id="projectListTableBody">
+                        <!-- Danh sách dự án sẽ được render bằng JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cửa sổ Popup (Modal) Thêm/Sửa Dự án -->
+    <div id="projectModalOverlay" class="modal-overlay z-[7000]">
+        <div class="modal-content">
+            <h2 id="projectModalTitle" class="text-2xl font-bold text-gray-800 mb-4">Thêm Dự án Mới</h2>
+            <form id="projectForm" class="flex flex-col gap-4">
+                <input type="text" id="projectName" placeholder="Tên dự án" required class="p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <textarea id="projectDescription" placeholder="Mô tả dự án" class="p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                <div class="mt-2">
+                    <label class="text-gray-700 text-sm font-semibold mb-2 block">Thêm thành viên vào dự án:</label>
+                    <div id="projectUsersContainer" class="max-h-40 overflow-y-auto border border-gray-200 rounded-xl p-3 bg-gray-50 flex flex-col gap-2">
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <label class="text-gray-700 text-sm font-semibold mb-2 block">Quản lý Sprints:</label>
+                    <div id="projectSprintsContainer" class="max-h-40 overflow-y-auto border border-gray-200 rounded-xl p-3 bg-gray-50 flex flex-col gap-2">
+                    </div>
+                    <button type="button" id="addProjectSprintBtn" class="mt-2 flex items-center gap-2 text-purple-600 font-semibold text-sm hover:text-purple-800 focus:outline-none">
+                        <i class="fas fa-plus-circle"></i> Thêm Sprint
+                    </button>
+                </div>
+                <div class="flex justify-end gap-4 mt-4">
+                    <button type="button" id="cancelProjectBtn" class="bg-gray-300 text-gray-800 font-semibold py-2 px-6 rounded-xl transition duration-300 hover:bg-gray-400">Hủy</button>
+                    <button type="submit" id="submitProjectBtn" class="bg-purple-600 text-white font-semibold py-2 px-6 rounded-xl transition duration-300 hover:bg-purple-700">Lưu Dự án</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Cửa sổ Popup (Modal) Thùng Rác -->
+    <div id="trashModalOverlay" class="modal-overlay z-[6000]">
+        <div class="modal-content w-full max-w-3xl">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-gray-800">Thùng rác Dự án</h2>
+                <button type="button" id="closeTrashBtn" class="text-red-500 bg-red-100 hover:bg-red-600 hover:text-white focus:outline-none w-8 h-8 flex items-center justify-center rounded-full transition-colors shadow-sm">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="overflow-x-auto max-h-96">
+                <table class="min-w-full bg-white border border-gray-200 rounded-xl">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="py-3 px-4 border-b text-left text-sm font-semibold text-gray-700">Tên Dự án</th>
+                            <th class="py-3 px-4 border-b text-left text-sm font-semibold text-gray-700">Mô tả</th>
+                            <th class="py-3 px-4 border-b text-center text-sm font-semibold text-gray-700">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trashListTableBody">
+                        <!-- Danh sách dự án đã xóa sẽ được render bằng JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="message-box" class="message-box"></div>
+    
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-[10000] hidden flex-col justify-center items-center">
+        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500"></div>
+        <p class="text-white mt-4 font-semibold text-lg">Đang xử lý...</p>
+    </div>
+
+    <!-- Tải Quill JS -->
+    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+    <!-- Tải logic JS từ file bên ngoài -->
+</body>
+</html>
