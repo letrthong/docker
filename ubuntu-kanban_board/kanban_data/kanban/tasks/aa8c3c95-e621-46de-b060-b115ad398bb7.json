@@ -1,0 +1,58 @@
+{
+    "id": "aa8c3c95-e621-46de-b060-b115ad398bb7",
+    "title": "xxxx",
+    "description": "<p>xxx<img src=\"/api/v1/kanban/uploads/6f26b3f015e24d85a4ea98404935d0f6_696124035_122267220818145572_83288870541246508_n.webp\"></p>",
+    "projectId": "eafdf6ef379b45fe98b2a30c451ad900",
+    "assignee": "admin",
+    "priority": "medium",
+    "storyPoints": "",
+    "sprintIds": [],
+    "items": [
+        {
+            "text": "xx",
+            "completed": false
+        }
+    ],
+    "status": "todo",
+    "createdAt": "2026-05-23T08:29:00.198Z",
+    "completedAt": null,
+    "locked": false,
+    "ownerId": "admin",
+    "history": [
+        {
+            "id": "4ba973d2-eec0-4bb2-b9c8-f92fa6fadcfb",
+            "action": "created",
+            "actor": "admin",
+            "timestamp": "2026-05-23T08:29:00.198Z",
+            "details": "đã tạo công việc này."
+        },
+        {
+            "id": "cf92347c8dac497e9b3da0dfaf070224",
+            "action": "commented",
+            "actor": "admin",
+            "timestamp": "2026-05-23T08:29:14.143Z",
+            "details": "đã thêm một bình luận mới."
+        },
+        {
+            "id": "647bdbe58f10479cb971b42a65f8ac6d",
+            "action": "commented",
+            "actor": "admin",
+            "timestamp": "2026-05-23T08:29:21.133Z",
+            "details": "đã thêm một bình luận mới."
+        },
+        {
+            "id": "e98696cd82774d0286ea834f627a21e4",
+            "action": "edited",
+            "actor": "admin",
+            "timestamp": "2026-05-23T08:31:39.364972Z",
+            "details": "đã xóa một bình luận."
+        },
+        {
+            "id": "ce919c1f85f7478baa66c828e97cc321",
+            "action": "edited",
+            "actor": "admin",
+            "timestamp": "2026-05-23T08:31:41.869206Z",
+            "details": "đã xóa một bình luận."
+        }
+    ]
+}

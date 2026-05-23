@@ -1,0 +1,21 @@
+[
+    {
+        "author": "admin",
+        "createdAt": "2026-05-23T05:29:15.842Z",
+        "id": "2bb3923f-e0fd-4a9e-953d-662a26c36b80",
+        "text": "xx"
+    },
+    {
+        "author": "admin",
+        "createdAt": "2026-05-23T05:33:07.766Z",
+        "id": "b42be1e9-3a4f-42ae-a467-6cf729679147",
+        "text": "45"
+    },
+    {
+        "id": "6cd75672-203c-4305-b84c-5951a2e091af",
+        "text": "",
+        "author": "admin",
+        "createdAt": "2026-05-23T08:55:06.885Z",
+        "image": "/api/v1/kanban/uploads/1e25a431545645d394618ffd5b9963e5_buong_bo-1.webp"
+    }
+]

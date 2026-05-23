@@ -9,23 +9,29 @@
     "sprintIds": [],
     "items": [
         {
-            "text": "xx",
-            "completed": false
+            "completed": false,
+            "text": "xx"
         }
     ],
-    "comments": [],
-    "status": "todo",
+    "status": "in-progress",
     "createdAt": "2026-05-23T04:29:55.515Z",
     "completedAt": null,
     "locked": false,
     "ownerId": "admin",
     "history": [
         {
-            "id": "5dd93b8a-5105-4863-b3a0-a05ea42bed7c",
             "action": "created",
             "actor": "admin",
-            "timestamp": "2026-05-23T04:29:55.515Z",
-            "details": "đã tạo công việc này."
+            "details": "đã tạo công việc này.",
+            "id": "5dd93b8a-5105-4863-b3a0-a05ea42bed7c",
+            "timestamp": "2026-05-23T04:29:55.515Z"
+        },
+        {
+            "id": "fb2dbc51-6011-4436-9c0e-9da3f758bd63",
+            "action": "status_change",
+            "actor": "admin",
+            "timestamp": "2026-05-23T08:43:55.397Z",
+            "details": "đã chuyển trạng thái từ <strong>Việc cần làm</strong> sang <strong>Đang tiến hành</strong>."
         }
     ]
 }

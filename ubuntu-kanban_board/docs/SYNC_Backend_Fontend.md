@@ -9,6 +9,7 @@ Tài liệu này mô tả chi tiết cách hệ thống Kanban Board đảm bả
 Hệ thống không sử dụng WebSockets để duy trì kết nối liên tục nhằm tối giản việc cài đặt server. Thay vào đó, hệ thống sử dụng kết hợp 2 kỹ thuật chính:
 1. **Silent Polling (Hỏi thăm ngầm):** Định kỳ kiểm tra sự thay đổi ở cấp độ file hệ thống (mtime).
 2. **Fetch-Before-Write (Kiểm tra trước khi ghi):** Ngăn chặn ghi đè dữ liệu cục bộ lên dữ liệu mới của người khác.
+3. **Server-side Filtering:** Tối ưu hóa API lấy danh sách, giảm tải lượng dữ liệu khi đồng bộ.
 
 ---
 
@@ -51,13 +52,19 @@ Vì dữ liệu (Comments, Checklist, Description) được gom chung trong 1 fi
 **Giải pháp:**
 Trước khi thực hiện một hành động ghi (Write) vào Backend, Frontend luôn buộc phải gọi API lấy trạng thái mới nhất từ server, ghép thay đổi cục bộ vào rồi mới lưu.
 
-**Quy trình chuẩn khi Thêm Bình Luận / Cập nhật Checklist:**
+**Quy trình chuẩn khi Cập nhật Checklist hoặc Description:**
 1. Người dùng bấm Gửi/Check.
 2. Disable nút Gửi (Tránh spam click).
 3. Gọi `GET /tasks/<task_id>` lấy dữ liệu JSON mới nhất từ Backend về (Chỉ mất vài mili-giây).
-4. Nối Bình luận mới / Đổi trạng thái Checklist vào đối tượng mới lấy về.
+4. Đổi trạng thái Checklist vào đối tượng mới lấy về.
 5. Gọi `PUT /tasks/<task_id>` để lưu lại lên máy chủ.
 6. Cập nhật lại giao diện.
+
+**Lưu ý với Bình luận (Comments):**
+Để tối ưu hóa và chống ghi đè triệt để khi nhiều người cùng chat, chức năng Bình luận đã được tách thành API độc lập (`POST` và `DELETE` trên `/tasks/<task_id>/comments`). Backend sẽ chịu trách nhiệm tự động cập nhật file `comments` rời và ghi thêm log vào mảng `history` của file công việc gốc mà không yêu cầu client phải gửi lại (PUT) toàn bộ dữ liệu Task.
+
+**Lưu ý khi Đồng bộ Danh sách (Tasks):**
+Thay vì tải toàn bộ công việc về Frontend, hàm `loadTasks()` giờ đây luôn gắn kèm `projectId` và `sprintId` vào URL (`GET /tasks?projectId=...&sprintId=...`). Backend sẽ chủ động bỏ qua (skip) việc đọc các tệp công việc không khớp điều kiện để trả về mảng dữ liệu siêu nhỏ. Nhờ vậy, vòng lặp Auto-Refresh 30s diễn ra cực kỳ nhanh chóng và không làm treo hay ngốn RAM trình duyệt!
 
 ---
 

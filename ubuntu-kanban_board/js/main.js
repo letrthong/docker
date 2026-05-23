@@ -10,144 +10,25 @@ import {
     openModalBtn, taskModalOverlay, addTaskForm, taskTitleInput, taskDescriptionInput, taskAssigneeSelect,
     taskProjectSelect, taskPrioritySelect, taskStoryPointsSelect, checklistContainer, addChecklistItemBtn, cancelBtn, closeTaskModalIconBtn, modalTitle, submitBtn,
     confirmationModalOverlay, confirmTitle, confirmMessage, confirmActionBtn, cancelConfirmBtn,
-    detailModalOverlay, detailHeaderContainer, detailStatusBadge, detailTitle, detailDescription, detailDescriptionSection, detailOwner, detailAssignee, detailPriority, detailStoryPoints, detailCreatedAt,
-    detailCompletedAt, detailChecklistItems, detailCommentsList, newCommentInput, addCommentBtn, closeDetailModalBtn, completedAtSection, detailModalFooter,
-    commentImageBtn, commentImageInput, commentImagePreviewContainer, commentImagePreview, removeCommentImageBtn, closeDetailModalIconBtn, tabCommentsBtn, tabHistoryBtn, detailHistorySection, detailHistoryList, detailCommentsSection,
+    detailModalOverlay,
     projectFilter, assigneeFilter, statusFilterDropdown, statusDropdownList, statusDropdownButton,
     showMessage, dateFormatter, getAssigneeColor, trashDropdownItem
 } from './ui.js';
 import { initAuth } from './auth.js';
 import { initAdmin } from './admin.js';
-
-export let user_info;
-export let userPermission;
-export let currentUserId;
-export let currentUsername;
-
-export let user_list = [];
-export let project_list = [];
-export const setUserList = (list) => { user_list = list; };
-export const setProjectList = (list) => { project_list = list; };
+import { initProject } from './project.js';
+import { user_info, userPermission, currentUserId, currentUsername, user_list, project_list, setUserInfo, setUserList, setProjectList } from './state.js';
+import { initQuillEditor } from './editor.js';
+import { initSessionManager, resetActivityTimer } from './session.js';
+import { showTaskDetails, getViewingTaskId, refreshDetailModal } from './details.js';
 
 let draggedItemId = null;
 let editingTaskId = null;
-let viewingTaskId = null;
 let actionToConfirm = { id: null, type: null, itemIndex: null }; // Để xử lý cả xóa và nhân bản, và chỉ mục mục checklist
 let selectedStatuses = ['all']; // Mặc định hiển thị tất cả
-let currentDetailedTask = null; // Lưu chi tiết công việc hiện đang xem/sửa
 let lastSyncTimestamp = null; // Thời gian cập nhật gần nhất từ server
 
-// Khởi tạo Quill Editor
-let quill;
-if (document.getElementById('editor-container')) {
-    quill = new Quill('#editor-container', {
-        theme: 'snow',
-        placeholder: 'Mô tả chi tiết công việc...',
-        modules: {
-            table: true, // Kích hoạt module bảng tích hợp của Quill
-            toolbar: {
-                container: [
-                    [{ 'size': ['small', false, 'large', 'huge'] }],
-                    ['bold', 'italic', 'underline', 'strike'],
-                    [{ 'color': [] }, { 'background': [] }],
-                    [{ 'list': 'ordered'}, { 'list': 'bullet' }, { 'align': [] }],
-                    ['link', 'image', 'table'], // Thêm nút table
-                    ['table-insert-row', 'table-delete-row', 'table-insert-column', 'table-delete-column'],
-                    ['clean']
-                ],
-                handlers: {
-                    table: function() {
-                        // Mặc định tạo ngay một bảng gồm 2 dòng và 2 cột khi bấm nút
-                        this.quill.getModule('table').insertTable(2, 2);
-                    },
-                    'table-insert-row': function() {
-                        this.quill.getModule('table').insertRowBelow();
-                    },
-                    'table-insert-column': function() {
-                        this.quill.getModule('table').insertColumnRight();
-                    },
-                    'table-delete-row': function() {
-                        this.quill.getModule('table').deleteRow();
-                    },
-                    'table-delete-column': function() {
-                        this.quill.getModule('table').deleteColumn();
-                    },
-                    image: function() {
-                        const input = document.createElement('input');
-                        input.setAttribute('type', 'file');
-                        input.setAttribute('accept', 'image/*');
-                        input.click();
-
-                        input.onchange = () => {
-                            const file = input.files[0];
-                            if (file && file.type.startsWith('image/')) {
-                                const reader = new FileReader();
-                                reader.onload = (event) => {
-                                    const img = new Image();
-                                    img.onload = () => {
-                                        let width = img.width;
-                                        let height = img.height;
-                                        const MAX_DIMENSION = 1200;
-                                        
-                                        if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
-                                            if (width > height) {
-                                                height = Math.round(height * (MAX_DIMENSION / width));
-                                                width = MAX_DIMENSION;
-                                            } else {
-                                                width = Math.round(width * (MAX_DIMENSION / height));
-                                                height = MAX_DIMENSION;
-                                            }
-                                        }
-
-                                        const canvas = document.createElement('canvas');
-                                        canvas.width = width;
-                                        canvas.height = height;
-                                        const ctx = canvas.getContext('2d');
-                                        ctx.drawImage(img, 0, 0, width, height);
-                                        
-                                        // Chuyển đổi ảnh sang chuẩn WebP để nén tối ưu, chất lượng 80%
-                                        const webpData = canvas.toDataURL('image/webp', 0.8);
-                                        
-                                        const range = quill.getSelection(true);
-                                        quill.insertEmbed(range.index, 'image', webpData);
-                                        quill.setSelection(range.index + 1);
-                                    };
-                                    img.src = event.target.result;
-                                };
-                                reader.readAsDataURL(file);
-                            }
-                        };
-                    }
-                }
-            }
-        }
-    });
-    
-    quill.on('text-change', function() {
-        if (taskDescriptionInput) {
-            taskDescriptionInput.value = quill.root.innerHTML === '<p><br></p>' ? '' : quill.root.innerHTML;
-        }
-    });
-
-    // Bổ sung icon cho nút Table bằng FontAwesome (Do Quill 1.3 không có sẵn SVG cho bảng)
-    const tableBtn = document.querySelector('.ql-table');
-    if (tableBtn) {
-        tableBtn.innerHTML = '<i class="fas fa-table" style="color: #444; font-size: 15px;"></i>';
-    }
-
-    // Bổ sung giao diện cho các nút thao tác bảng (Thêm/Xóa dòng, cột)
-    const insertRowBtn = document.querySelector('.ql-table-insert-row');
-    if (insertRowBtn) { insertRowBtn.innerHTML = '<span class="font-bold text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-gray-700" title="Thêm dòng phía dưới">+ dòng</span>'; insertRowBtn.style.width = 'auto'; insertRowBtn.style.padding = '0 2px'; }
-    
-    const deleteRowBtn = document.querySelector('.ql-table-delete-row');
-    if (deleteRowBtn) { deleteRowBtn.innerHTML = '<span class="font-bold text-xs bg-red-50 hover:bg-red-100 px-2 py-1 rounded text-red-600" title="Xóa dòng hiện tại">- dòng</span>'; deleteRowBtn.style.width = 'auto'; deleteRowBtn.style.padding = '0 2px'; }
-
-    const insertColBtn = document.querySelector('.ql-table-insert-column');
-    if (insertColBtn) { insertColBtn.innerHTML = '<span class="font-bold text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-gray-700" title="Thêm cột bên phải">+ cột</span>'; insertColBtn.style.width = 'auto'; insertColBtn.style.padding = '0 2px'; }
-    
-    const deleteColBtn = document.querySelector('.ql-table-delete-column');
-    if (deleteColBtn) { deleteColBtn.innerHTML = '<span class="font-bold text-xs bg-red-50 hover:bg-red-100 px-2 py-1 rounded text-red-600" title="Xóa cột hiện tại">- cột</span>'; deleteColBtn.style.width = 'auto'; deleteColBtn.style.padding = '0 2px'; }
-}
+let quill = initQuillEditor('#editor-container', taskDescriptionInput);
 
 // Helpers kiểm tra quyền cục bộ
 export function isUserInProject(project, userId) {
@@ -194,7 +75,7 @@ function updateTotalTaskCount() {
 }
 
 // Cập nhật giao diện sau khi thay đổi dữ liệu
-function refreshUI() {
+export function refreshUI() {
     populateProjectFilter();
     populateSprintFilter();
     populateAssigneeFilter();
@@ -205,8 +86,8 @@ function refreshUI() {
 }
 
 // Tải dữ liệu từ backend
-async function loadTasks(projectId = null) {
-    const loadedTasks = await fetchAndLoadTasks(projectId);
+async function loadTasks(projectId = null, sprintId = null) {
+    const loadedTasks = await fetchAndLoadTasks(projectId, sprintId);
     // Khôi phục lại màu cho người thực hiện sau khi tải
     loadedTasks.forEach(task => {
         if (task.assignee) {
@@ -669,27 +550,6 @@ function createTaskCard(task) {
     return card;
 }
 
-// Cập nhật trạng thái của một mục trong checklist
-async function updateChecklistItem(taskId, itemIndex, completed) {
-    // Lấy dữ liệu mới nhất từ server trước khi thay đổi để tránh ghi đè
-    const task = await fetchTaskByIdAPI(taskId, true);
-    if (!task) return;
-    const isOwnerOrAssignee = (task.ownerId === currentUsername || task.assignee === currentUsername);
-    const projPerm = getProjectPermission(task ? task.projectId : null);
-    const canEdit = (projPerm === 'edit' || projPerm === 'create' || projPerm === 'owner' || isOwnerOrAssignee);
-
-    if (!canEdit) {
-        showMessage("Bạn không có quyền chỉnh sửa công việc này.", true);
-        return;
-    }
-    if (task && !task.locked) {
-        task.items[itemIndex].completed = completed;
-        await updateTaskData(taskId, task);
-        currentDetailedTask = task;
-        refreshUI();
-    }
-}
-
 // Xóa một mục trong checklist
 async function deleteChecklistItem(taskId, itemIndex) {
     // Lấy dữ liệu mới nhất từ server trước khi thay đổi
@@ -707,14 +567,16 @@ async function deleteChecklistItem(taskId, itemIndex) {
     if (task && task.items && task.items[itemIndex] && !task.locked) {
         task.items.splice(itemIndex, 1);
         await updateTaskData(taskId, task);
-        currentDetailedTask = task;
         refreshUI();
+        if (getViewingTaskId() === taskId) {
+            await refreshDetailModal();
+        }
     }
 }
 
 
 // Hiển thị modal xác nhận chung
-function showConfirmation(taskId, type, itemIndex = null) {
+export function showConfirmation(taskId, type, itemIndex = null) {
     const task = getTaskById(taskId);
     const isOwnerOrAssignee = task ? (task.ownerId === currentUsername || task.assignee === currentUsername) : false;
     const projPerm = getProjectPermission(task ? task.projectId : null);
@@ -792,471 +654,6 @@ async function performAction() {
     actionToConfirm.id = null;
     actionToConfirm.type = null;
     actionToConfirm.itemIndex = null;
-}
-
-// Mở popup hiển thị chi tiết công việc
-async function showTaskDetails(summaryTask, silent = false) {
-    const task = await fetchTaskByIdAPI(summaryTask.id, silent);
-    if (!task) {
-        showMessage("Không thể tải chi tiết công việc", true);
-        return;
-    }
-    currentDetailedTask = task;
-    // Áp dụng màu sắc của người thực hiện cho tiêu đề trong modal
-    detailTitle.style.color = getAssigneeColor(task.assignee);
-    detailTitle.textContent = task.title;
-
-    // Hiển thị trạng thái bằng badge và viền
-    if (detailHeaderContainer && detailStatusBadge) {
-        // Reset class
-        detailHeaderContainer.className = "flex justify-between items-start gap-4 mb-4 pb-4 border-b-4 mt-2 pt-1";
-        detailStatusBadge.className = "text-sm font-semibold px-3 py-1 rounded-full whitespace-nowrap";
-        
-        let statusText = '';
-        if (task.status === 'todo') {
-            statusText = 'Việc cần làm';
-            detailHeaderContainer.classList.add('border-gray-300');
-            detailStatusBadge.classList.add('bg-gray-200', 'text-gray-700');
-        } else if (task.status === 'in-progress') {
-            statusText = 'Đang tiến hành';
-            detailHeaderContainer.classList.add('border-blue-300');
-            detailStatusBadge.classList.add('bg-blue-100', 'text-blue-700');
-        } else if (task.status === 'blocked') {
-            statusText = 'Bị khóa';
-            detailHeaderContainer.classList.add('border-red-300');
-            detailStatusBadge.classList.add('bg-red-100', 'text-red-700');
-        } else if (task.status === 'review') {
-            statusText = 'Đánh giá';
-            detailHeaderContainer.classList.add('border-yellow-300');
-            detailStatusBadge.classList.add('bg-yellow-100', 'text-yellow-700');
-        } else if (task.status === 'done') {
-            statusText = 'Hoàn thành';
-            detailHeaderContainer.classList.add('border-green-300');
-            detailStatusBadge.classList.add('bg-green-100', 'text-green-700');
-        }
-        detailStatusBadge.textContent = statusText;
-    }
-
-    // Thêm người tạo
-    detailOwner.textContent = task.ownerId || 'Không có';
-
-    detailAssignee.innerHTML = '';
-    if (task.assignee) {
-        const colorDot = document.createElement('div');
-        colorDot.className = "w-3 h-3 rounded-full mr-2";
-        colorDot.style.backgroundColor = getAssigneeColor(task.assignee);
-        detailAssignee.appendChild(colorDot);
-        detailAssignee.innerHTML += task.assignee;
-    } else {
-        detailAssignee.textContent = 'Không có';
-    }
-
-    if (detailDescription && detailDescriptionSection) {
-        if (task.description) {
-            // Tương thích ngược: Nếu mô tả có chứa thẻ HTML (từ Quill), render HTML. Nếu là text thường, render giữ nguyên pre-wrap
-            if (/<[a-z][\s\S]*>/i.test(task.description)) {
-                detailDescription.innerHTML = task.description;
-                detailDescription.classList.remove('whitespace-pre-wrap');
-                    
-                    // Đảm bảo tất cả các link đều tự động mở tab mới và an toàn
-                    detailDescription.querySelectorAll('a').forEach(link => {
-                        link.setAttribute('target', '_blank');
-                        link.setAttribute('rel', 'noopener noreferrer');
-                    });
-            } else {
-                detailDescription.textContent = task.description;
-                detailDescription.classList.add('whitespace-pre-wrap');
-            }
-            detailDescriptionSection.classList.remove('hidden');
-        } else {
-            detailDescriptionSection.classList.add('hidden');
-        }
-    }
-
-    const priorityMap = { 'low': 'Thấp', 'medium': 'Trung bình', 'high': 'Cao' };
-    if (detailPriority) {
-        detailPriority.textContent = task.priority ? (priorityMap[task.priority] || task.priority) : 'Không có';
-    }
-    if (detailStoryPoints) {
-        detailStoryPoints.textContent = task.storyPoints || 'Không có';
-    }
-
-    // Hiển thị danh sách Sprints trong modal chi tiết
-    const detailSprints = document.getElementById('detailSprints');
-    if (detailSprints) {
-        detailSprints.classList.add('hidden');
-        if (task.sprintIds && task.sprintIds.length > 0 && task.projectId) {
-            const project = project_list.find(p => p.id === task.projectId);
-            if (project && project.sprints) {
-                const sprintNames = task.sprintIds.map(id => {
-                    const s = project.sprints.find(sp => sp.id === id);
-                    return getSprintDisplayText(s);
-                }).filter(Boolean);
-                if (sprintNames.length > 0) {
-                    detailSprints.textContent = sprintNames.join(', ');
-                    detailSprints.classList.remove('hidden');
-                }
-            }
-        }
-    }
-
-    detailCreatedAt.textContent = dateFormatter.format(new Date(task.createdAt));
-
-    if (task.completedAt) {
-        completedAtSection.style.display = 'block';
-        detailCompletedAt.textContent = dateFormatter.format(new Date(task.completedAt));
-    } else {
-        completedAtSection.style.display = 'none';
-    }
-
-    detailChecklistItems.innerHTML = '';
-    if (task.items && task.items.length > 0) {
-        task.items.forEach((item, index) => {
-            const listItem = document.createElement('li');
-            listItem.className = `flex items-center gap-2 text-gray-700 ${item.completed ? 'line-through text-gray-500' : ''}`;
-
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.checked = item.completed;
-
-            const currentTask = task;
-            const projPerm = getProjectPermission(currentTask ? currentTask.projectId : null);
-            const isOwnerOrAssignee = currentTask ? (currentTask.ownerId === currentUsername || currentTask.assignee === currentUsername) : false;
-            const canEditCheckbox = (projPerm === 'edit' || projPerm === 'create' || projPerm === 'owner' || isOwnerOrAssignee);
-
-            checkbox.disabled = !canEditCheckbox || task.locked;
-            checkbox.className = 'form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer';
-            checkbox.onchange = () => {
-                updateChecklistItem(task.id, index, checkbox.checked);
-            };
-
-            const textSpan = document.createElement('span');
-            textSpan.textContent = item.text;
-
-            listItem.appendChild(checkbox);
-            listItem.appendChild(textSpan);
-            detailChecklistItems.appendChild(listItem);
-        });
-    } else {
-        detailChecklistItems.innerHTML = `<li class="text-gray-500">Không có checklist</li>`;
-    }
-
-    viewingTaskId = task.id;
-    renderComments(task, true);
-    renderHistory(task, true);
-    
-    if (tabCommentsBtn) tabCommentsBtn.click();
-
-    // Xóa nút hành động cũ trong footer
-    const existingActionButtons = detailModalFooter.querySelectorAll('.dynamic-action-btn');
-    existingActionButtons.forEach(btn => btn.remove());
-
-    // Thêm nút hành động mới nếu task đang ở trạng thái "Đánh giá"
-    if (task.status === 'review' && (getProjectPermission(task.projectId) === 'edit' || getProjectPermission(task.projectId) === 'create' || getProjectPermission(task.projectId) === 'owner')) {
-        const acceptBtn = document.createElement('button');
-        acceptBtn.id = 'acceptDetailBtn';
-        acceptBtn.textContent = 'Chấp nhận';
-        acceptBtn.className = 'dynamic-action-btn bg-green-500 text-white font-semibold py-2 px-4 rounded-xl hover:bg-green-600 transition-colors mr-2';
-        acceptBtn.onclick = () => showConfirmation(task.id, 'accept-task');
-
-        const rejectBtn = document.createElement('button');
-        rejectBtn.id = 'rejectDetailBtn';
-        rejectBtn.textContent = 'Từ chối';
-        rejectBtn.className = 'dynamic-action-btn bg-red-500 text-white font-semibold py-2 px-4 rounded-xl hover:bg-red-600 transition-colors mr-2';
-        rejectBtn.onclick = () => showConfirmation(task.id, 'reject-task');
-
-        detailModalFooter.prepend(rejectBtn);
-        detailModalFooter.prepend(acceptBtn);
-    }
-
-    detailModalOverlay.classList.add('show');
-}
-
-function renderComments(task, clearAll = true) {
-    if (!detailCommentsList) return;
-    if (clearAll) detailCommentsList.innerHTML = '';
-    
-    if (task.comments && task.comments.length > 0) {
-        if (!clearAll) {
-            const emptyMsg = detailCommentsList.querySelector('.italic');
-            if (emptyMsg) emptyMsg.remove();
-        }
-        task.comments.forEach((comment, index) => {
-            const cid = comment.id || index;
-            if (!clearAll && document.getElementById(`comment-${cid}`)) return;
-            
-            const commentDiv = document.createElement('div');
-            commentDiv.id = `comment-${cid}`;
-            commentDiv.className = 'bg-gray-50 p-3 rounded-xl border border-gray-100';
-            
-            const header = document.createElement('div');
-            header.className = 'flex justify-between items-center mb-1';
-            
-            const authorSpan = document.createElement('span');
-            authorSpan.className = 'font-semibold text-sm text-gray-800 flex items-center gap-2';
-            const colorDot = document.createElement('div');
-            colorDot.className = "w-2 h-2 rounded-full";
-            colorDot.style.backgroundColor = getAssigneeColor(comment.author);
-            authorSpan.appendChild(colorDot);
-            authorSpan.appendChild(document.createTextNode(comment.author));
-            
-            const timeSpan = document.createElement('span');
-            timeSpan.className = 'text-xs text-gray-500';
-            timeSpan.textContent = dateFormatter.format(new Date(comment.createdAt));
-            
-            header.appendChild(authorSpan);
-            header.appendChild(timeSpan);
-            
-            const textP = document.createElement('p');
-            textP.className = 'text-sm text-gray-700 whitespace-pre-wrap mt-1';
-            textP.textContent = comment.text;
-            
-            commentDiv.appendChild(header);
-            if (comment.text) commentDiv.appendChild(textP);
-            
-            if (comment.image) {
-                const img = document.createElement('img');
-                img.src = comment.image;
-                img.className = 'mt-2 rounded-lg max-h-48 object-contain border border-gray-200 cursor-pointer hover:opacity-90';
-                img.onclick = () => window.open().document.write(`<img src="${comment.image}" style="max-width:100%; max-height:100%;">`);
-                commentDiv.appendChild(img);
-            }
-            
-            detailCommentsList.appendChild(commentDiv);
-        });
-    } else {
-        detailCommentsList.innerHTML = '<p class="text-sm text-gray-500 italic">Chưa có bình luận nào.</p>';
-    }
-}
-
-function renderHistory(task, clearAll = true) {
-    if (!detailHistoryList) return;
-    if (clearAll) detailHistoryList.innerHTML = '';
-    
-    if (task.history && task.history.length > 0) {
-        if (!clearAll) {
-            const emptyMsg = detailHistoryList.querySelector('.italic');
-            if (emptyMsg) emptyMsg.remove();
-        }
-        
-        const sortedHistory = [...task.history].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-        
-        sortedHistory.forEach((item, index) => {
-            const hid = item.id || new Date(item.timestamp).getTime() + index;
-            if (!clearAll && document.getElementById(`history-${hid}`)) return;
-            
-            const historyDiv = document.createElement('div');
-            historyDiv.id = `history-${hid}`;
-            historyDiv.className = 'flex items-start gap-3 p-2 bg-gray-50 rounded-xl border border-gray-100';
-            
-            const iconDiv = document.createElement('div');
-            iconDiv.className = 'mt-1 text-gray-400';
-            if (item.action === 'created') iconDiv.innerHTML = '<i class="fas fa-plus-circle text-green-500"></i>';
-            else if (item.action === 'status_change') iconDiv.innerHTML = '<i class="fas fa-exchange-alt text-blue-500"></i>';
-            else if (item.action === 'edited') iconDiv.innerHTML = '<i class="fas fa-pen text-yellow-500"></i>';
-            else if (item.action === 'commented') iconDiv.innerHTML = '<i class="fas fa-comment text-blue-500"></i>';
-            else iconDiv.innerHTML = '<i class="fas fa-history"></i>';
-            
-            const contentDiv = document.createElement('div');
-            contentDiv.className = 'flex-1';
-            
-            const headerP = document.createElement('p');
-            headerP.className = 'text-sm text-gray-800';
-            headerP.innerHTML = `<span class="font-semibold">${item.actor}</span> ${item.details}`;
-            
-            const timeP = document.createElement('p');
-            timeP.className = 'text-xs text-gray-500 mt-1';
-            timeP.textContent = dateFormatter.format(new Date(item.timestamp));
-            
-            contentDiv.appendChild(headerP);
-            contentDiv.appendChild(timeP);
-            historyDiv.appendChild(iconDiv);
-            historyDiv.appendChild(contentDiv);
-            
-            detailHistoryList.prepend(historyDiv);
-        });
-    } else {
-        detailHistoryList.innerHTML = '<p class="text-sm text-gray-500 italic">Chưa có lịch sử hoạt động.</p>';
-    }
-}
-
-let pendingCommentImage = null;
-
-if (commentImageBtn && commentImageInput) {
-    commentImageBtn.addEventListener('click', () => {
-        commentImageInput.click();
-    });
-    
-    commentImageInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file && file.type.startsWith('image/')) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                const img = new Image();
-                img.onload = () => {
-                    let width = img.width;
-                    let height = img.height;
-                    const MAX_DIMENSION = 1200; // Giới hạn kích thước tối đa để tránh lỗi bộ nhớ trên mobile
-                    
-                    if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
-                        if (width > height) {
-                            height = Math.round(height * (MAX_DIMENSION / width));
-                            width = MAX_DIMENSION;
-                        } else {
-                            width = Math.round(width * (MAX_DIMENSION / height));
-                            height = MAX_DIMENSION;
-                        }
-                    }
-
-                    const canvas = document.createElement('canvas');
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-                    // Chuyển đổi ảnh sang chuẩn WebP để nén tối ưu, chất lượng 80%
-                    const webpData = canvas.toDataURL('image/webp', 0.8);
-                    pendingCommentImage = webpData;
-                    
-                    if (commentImagePreviewContainer && commentImagePreview) {
-                        commentImagePreview.src = webpData;
-                        commentImagePreviewContainer.classList.remove('hidden');
-                    }
-                };
-                img.src = event.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
-        commentImageInput.value = '';
-    });
-}
-
-if (removeCommentImageBtn) {
-    removeCommentImageBtn.addEventListener('click', () => {
-        pendingCommentImage = null;
-        if (commentImagePreviewContainer) {
-            commentImagePreviewContainer.classList.add('hidden');
-            commentImagePreview.src = '';
-        }
-    });
-}
-
-// Đóng popup chi tiết công việc
-closeDetailModalBtn.addEventListener('click', () => {
-    detailModalOverlay.classList.remove('show');
-    viewingTaskId = null;
-    pendingCommentImage = null;
-    if (commentImagePreviewContainer) {
-        commentImagePreviewContainer.classList.add('hidden');
-        commentImagePreview.src = '';
-    }
-});
-
-if (closeDetailModalIconBtn) {
-    closeDetailModalIconBtn.addEventListener('click', () => {
-        detailModalOverlay.classList.remove('show');
-        viewingTaskId = null;
-        pendingCommentImage = null;
-        if (commentImagePreviewContainer) {
-            commentImagePreviewContainer.classList.add('hidden');
-            commentImagePreview.src = '';
-        }
-    });
-}
-
-// Xử lý chuyển tab Bình luận và Lịch sử
-if (tabCommentsBtn && tabHistoryBtn) {
-    tabCommentsBtn.addEventListener('click', () => {
-        tabCommentsBtn.classList.add('text-blue-600', 'border-blue-600');
-        tabCommentsBtn.classList.remove('text-gray-500', 'border-transparent');
-        tabHistoryBtn.classList.add('text-gray-500', 'border-transparent');
-        tabHistoryBtn.classList.remove('text-blue-600', 'border-blue-600');
-        if (detailCommentsSection) detailCommentsSection.classList.remove('hidden');
-        if (detailHistorySection) detailHistorySection.classList.add('hidden');
-    });
-    tabHistoryBtn.addEventListener('click', () => {
-        tabHistoryBtn.classList.add('text-blue-600', 'border-blue-600');
-        tabHistoryBtn.classList.remove('text-gray-500', 'border-transparent');
-        tabCommentsBtn.classList.add('text-gray-500', 'border-transparent');
-        tabCommentsBtn.classList.remove('text-blue-600', 'border-blue-600');
-        if (detailHistorySection) detailHistorySection.classList.remove('hidden');
-        if (detailCommentsSection) detailCommentsSection.classList.add('hidden');
-    });
-}
-
-if (addCommentBtn) {
-    addCommentBtn.addEventListener('click', async () => {
-        if (!viewingTaskId) return;
-        const text = newCommentInput.value.trim();
-        if (!text && !pendingCommentImage) return;
-        
-        addCommentBtn.disabled = true;
-        
-        // Luôn lấy dữ liệu mới nhất từ server trước khi thêm comment để tránh ghi đè
-        const latestTask = await fetchTaskByIdAPI(viewingTaskId, true);
-        if (!latestTask) {
-            addCommentBtn.disabled = false;
-            return;
-        }
-        
-        const projPerm = getProjectPermission(latestTask.projectId);
-        const isOwnerOrAssignee = (latestTask.ownerId === currentUsername || latestTask.assignee === currentUsername);
-        const canComment = (projPerm === 'edit' || projPerm === 'create' || projPerm === 'owner' || isOwnerOrAssignee);
-        
-        if (!canComment) {
-            showMessage("Bạn không có quyền bình luận trong công việc này.", true);
-            addCommentBtn.disabled = false;
-            return;
-        }
-
-        if (!latestTask.comments) {
-            latestTask.comments = [];
-        }
-        
-        const newComment = {
-            id: crypto.randomUUID(),
-            text: text,
-            author: currentUsername,
-            createdAt: new Date().toISOString()
-        };
-        
-        if (pendingCommentImage) {
-            newComment.image = pendingCommentImage;
-        }
-        
-        if (!latestTask.history) latestTask.history = [];
-        latestTask.history.push({
-            id: crypto.randomUUID(),
-            action: 'commented',
-            actor: currentUsername,
-            timestamp: new Date().toISOString(),
-            details: 'đã thêm một bình luận mới.'
-        });
-        
-        latestTask.comments.push(newComment);
-        
-        await updateTaskData(latestTask.id, latestTask);
-        currentDetailedTask = latestTask;
-        addCommentBtn.disabled = false;
-        
-        newCommentInput.value = '';
-        pendingCommentImage = null;
-        if (commentImagePreviewContainer) {
-            commentImagePreviewContainer.classList.add('hidden');
-            commentImagePreview.src = '';
-        }
-        renderComments(latestTask, false);
-        renderHistory(latestTask, false);
-        refreshUI();
-    });
-}
-
-if (newCommentInput) {
-    newCommentInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            addCommentBtn.click();
-        }
-    });
 }
 
 // Xóa một công việc
@@ -1814,16 +1211,18 @@ if (projectFilter) {
     projectFilter.addEventListener('change', async (e) => {
         const sprintFilterEl = document.getElementById('sprintFilter');
         if (sprintFilterEl) sprintFilterEl.dataset.initialized = 'false'; // Ép buộc lấy lại sprint mặc định
+        populateSprintFilter(true);
         updateButtonStates();
-        await loadTasks(e.target.value);
+        const sprintVal = sprintFilterEl ? sprintFilterEl.value : 'all';
+        await loadTasks(e.target.value, sprintVal);
     });
 }
 
 // Thêm sự kiện thay đổi cho bộ lọc sprint
 const sprintFilterEl = document.getElementById('sprintFilter');
 if (sprintFilterEl) {
-    sprintFilterEl.addEventListener('change', (e) => {
-        renderTasks(assigneeFilter.value, selectedStatuses, projectFilter.value, e.target.value);
+    sprintFilterEl.addEventListener('change', async (e) => {
+        await loadTasks(projectFilter.value, e.target.value);
     });
 }
 
@@ -1962,48 +1361,7 @@ function updateButtonStates() {
     }
 }
 
-// --- Quản lý phiên đăng nhập (Session Timeout do Inactivity) ---
-const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 phút
-
-export function resetActivityTimer() {
-    localStorage.setItem('last_activity', Date.now().toString());
-}
-
-function checkSessionInactivity() {
-    const token = localStorage.getItem('kanban_token');
-    if (!token) return; // Chưa đăng nhập thì bỏ qua
-
-    const lastActivity = localStorage.getItem('last_activity');
-    if (lastActivity) {
-        const elapsed = Date.now() - parseInt(lastActivity, 10);
-        if (elapsed > SESSION_TIMEOUT_MS) {
-            // Đã quá 30 phút không hoạt động -> Xóa session và tải lại trang
-            localStorage.removeItem('kanban_token');
-            localStorage.removeItem('last_activity');
-            showMessage("Phiên đăng nhập đã hết hạn do bạn không hoạt động trong 30 phút. Vui lòng đăng nhập lại.", true);
-            setTimeout(() => {
-                window.location.reload();
-            }, 2000);
-        }
-    }
-}
-
-// Kiểm tra timeout mỗi phút
-setInterval(checkSessionInactivity, 60000);
-
-// Cập nhật thời gian hoạt động cuối cùng khi người dùng tương tác (tối ưu hóa debounce 2s)
-let activityTimeout = null;
-['click', 'mousemove', 'keydown', 'scroll', 'touchstart'].forEach(event => {
-    document.addEventListener(event, () => {
-        if (!activityTimeout) {
-            activityTimeout = setTimeout(() => {
-                resetActivityTimer();
-                activityTimeout = null;
-            }, 2000); // Tối đa 2 giây mới ghi vào local storage 1 lần để tránh giật lag
-        }
-    }, { passive: true });
-});
-// --- Kết thúc Quản lý phiên ---
+initSessionManager();
 
 // --- Tính năng Auto-Refresh (Polling) ---
 setInterval(async () => {
@@ -2026,22 +1384,18 @@ setInterval(async () => {
 
     try {
         const currentProjectId = projectFilter ? projectFilter.value : null;
+        const currentSprintId = document.getElementById('sprintFilter') ? document.getElementById('sprintFilter').value : 'all';
         const res = await checkUpdatesAPI(currentProjectId, lastSyncTimestamp);
         if (res && res.changed) {
             console.log("[Auto-Refresh] Phát hiện dữ liệu thay đổi trên máy chủ. Đang tải lại...");
             
             // Nếu chỉ có hộp thoại chi tiết đang mở, cập nhật lại bình luận và lịch sử của công việc đó
-            if (isOnlyDetailModalOpen && viewingTaskId) {
-                const latestTask = await fetchTaskByIdAPI(viewingTaskId, true);
-                if (latestTask) {
-                    currentDetailedTask = latestTask;
-                    renderComments(latestTask, false);
-                    renderHistory(latestTask, false);
-                }
+                if (isOnlyDetailModalOpen && getViewingTaskId()) {
+                    await refreshDetailModal();
             }
 
             showMessage("Dữ liệu vừa được cập nhật từ máy chủ.");
-            await loadTasks(currentProjectId);
+            await loadTasks(currentProjectId, currentSprintId);
         } else if (res && res.timestamp) {
             lastSyncTimestamp = res.timestamp;
         }
@@ -2053,13 +1407,12 @@ setInterval(async () => {
 // Khởi tạo các module con
 initAuth();
 initAdmin();
+initProject();
 
 // Hàm gom lại chức năng khởi tạo Kanban sau khi Đăng nhập
 export async function initKanban() {
-    user_info = await getUserIdInfo();
-    userPermission = user_info.permission;
-    currentUserId = user_info.useruid;
-    currentUsername = user_info.username;
+    const info = await getUserIdInfo();
+    setUserInfo(info);
 
     // Hiển thị tên người dùng trên Header
     if (loggedInUserDisplay) loggedInUserDisplay.textContent = currentUsername;
@@ -2086,15 +1439,17 @@ export async function initKanban() {
     }
 
     // Tải danh sách user từ backend 1 lần duy nhất lúc khởi động
-    user_list = await getUserlist();
+    setUserList(await getUserlist());
 
     // Tải danh sách dự án từ backend
-    project_list = await fetchProjectsAPI();
+    setProjectList(await fetchProjectsAPI());
 
     populateProjectFilter(); // Khởi tạo trước danh sách dự án
+    populateSprintFilter(true);
     const initialProject = projectFilter && projectFilter.value ? projectFilter.value : null;
+    const initialSprint = document.getElementById('sprintFilter') ? document.getElementById('sprintFilter').value : 'all';
 
-    await loadTasks(initialProject); // Tải dữ liệu cho dự án mặc định
+    await loadTasks(initialProject, initialSprint); // Tải dữ liệu cho dự án mặc định
     updateButtonStates();
 
     kanbanBoard.classList.remove('hidden');
@@ -2114,69 +1469,3 @@ window.onload = async function() {
         loginScreen.classList.add('flex');
     }
 };
-
-// --- XỬ LÝ SPRINT CHO DỰ ÁN (UI hỗ trợ Modal Dự Án) ---
-const addProjectSprintBtn = document.getElementById('addProjectSprintBtn');
-const projectSprintsContainer = document.getElementById('projectSprintsContainer');
-
-export function addProjectSprintUI(sprint = null) {
-    if (!projectSprintsContainer) return;
-    const sprintId = sprint ? sprint.id : crypto.randomUUID();
-    const sprintName = sprint ? sprint.name : '';
-    const sprintStart = sprint && sprint.startDate ? sprint.startDate : '';
-    const sprintEnd = sprint && sprint.endDate ? sprint.endDate : '';
-    const isCurrent = sprint && sprint.isCurrent ? true : false;
-    
-    const sprintDiv = document.createElement('div');
-    sprintDiv.className = 'flex flex-wrap items-center gap-2 sprint-item p-2 bg-white border border-gray-200 rounded-lg';
-    sprintDiv.dataset.id = sprintId;
-    
-    const inputName = document.createElement('input');
-    inputName.type = 'text';
-    inputName.value = sprintName;
-    inputName.placeholder = 'Tên Sprint (VD: Sprint 1)';
-    inputName.className = 'flex-1 p-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 sprint-name-input min-w-[150px]';
-
-    const inputStart = document.createElement('input');
-    inputStart.type = 'date';
-    inputStart.value = sprintStart;
-    inputStart.title = 'Ngày bắt đầu';
-    inputStart.className = 'p-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 sprint-start-input text-sm text-gray-600 cursor-pointer';
-
-    const inputEnd = document.createElement('input');
-    inputEnd.type = 'date';
-    inputEnd.value = sprintEnd;
-    inputEnd.title = 'Ngày kết thúc';
-    inputEnd.className = 'p-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 sprint-end-input text-sm text-gray-600 cursor-pointer';
-    
-    const inputCurrentContainer = document.createElement('label');
-    inputCurrentContainer.className = 'flex items-center gap-1 text-sm text-gray-700 cursor-pointer mx-1';
-    
-    const inputCurrent = document.createElement('input');
-    inputCurrent.type = 'radio';
-    inputCurrent.name = 'currentSprintRadio'; // Giúp chỉ chọn 1 sprint hiện tại trong 1 form
-    inputCurrent.value = sprintId;
-    inputCurrent.title = 'Đặt làm Sprint hiện tại';
-    inputCurrent.className = 'sprint-current-radio form-radio h-4 w-4 text-purple-600 rounded cursor-pointer';
-    if (isCurrent) inputCurrent.checked = true;
-    
-    inputCurrentContainer.appendChild(inputCurrent);
-    inputCurrentContainer.appendChild(document.createTextNode('Hiện tại'));
-
-    const removeBtn = document.createElement('button');
-    removeBtn.type = 'button';
-    removeBtn.innerHTML = '<i class="fas fa-trash-alt text-red-500 hover:text-red-700"></i>';
-    removeBtn.className = 'p-2 rounded-full hover:bg-gray-200 ml-auto';
-    removeBtn.onclick = () => sprintDiv.remove();
-    
-    sprintDiv.appendChild(inputName);
-    sprintDiv.appendChild(inputStart);
-    sprintDiv.appendChild(inputEnd);
-    sprintDiv.appendChild(inputCurrentContainer);
-    sprintDiv.appendChild(removeBtn);
-    projectSprintsContainer.appendChild(sprintDiv);
-}
-
-if (addProjectSprintBtn) {
-    addProjectSprintBtn.addEventListener('click', () => addProjectSprintUI());
-}

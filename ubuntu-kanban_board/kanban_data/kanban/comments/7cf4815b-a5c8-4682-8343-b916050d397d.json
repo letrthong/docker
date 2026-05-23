@@ -1,0 +1,30 @@
+[
+    {
+        "id": "98521f2d-0795-4c51-a1cb-d5e3346266b0",
+        "text": "",
+        "author": "admin",
+        "createdAt": "2026-05-23T08:43:24.891Z",
+        "image": "/api/v1/kanban/uploads/4359c9154e2f476882958169e67cc6a2_Overview-1-1-1.webp"
+    },
+    {
+        "id": "19a6f37b-68d8-4e26-9fb7-560bc2815358",
+        "text": "",
+        "author": "admin",
+        "createdAt": "2026-05-23T08:43:33.060Z",
+        "image": "/api/v1/kanban/uploads/0da7a2e3da174fb1b187cab45f96c26d_DJI_0481_1_1_1772445810.webp"
+    },
+    {
+        "id": "21819165-0a46-4d0b-9c8e-54bad3489ce2",
+        "text": "",
+        "author": "admin",
+        "createdAt": "2026-05-23T08:43:41.386Z",
+        "image": "/api/v1/kanban/uploads/a3f6c1033cb34898bb9b34bb360d897f_logo_chanh_toi_02.webp"
+    },
+    {
+        "id": "617e0cd9-6312-4d42-ad63-2233ae31fadb",
+        "text": "",
+        "author": "admin",
+        "createdAt": "2026-05-23T08:43:51.310Z",
+        "image": "/api/v1/kanban/uploads/614cc92e22ab4199bf1d5ec017ed8954_vjeXSUdD5oqx8zdR2i12oG7h2PN3tvTYDXC3oRLv.webp"
+    }
+]

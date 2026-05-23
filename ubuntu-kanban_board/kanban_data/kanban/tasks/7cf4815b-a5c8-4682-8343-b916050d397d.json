@@ -1,0 +1,65 @@
+{
+    "id": "7cf4815b-a5c8-4682-8343-b916050d397d",
+    "title": "xxxxx 123 2 2132321 3",
+    "description": "<p>xxxx</p>",
+    "projectId": "eafdf6ef379b45fe98b2a30c451ad900",
+    "assignee": "admin",
+    "priority": "medium",
+    "storyPoints": "",
+    "sprintIds": [],
+    "items": [
+        {
+            "completed": false,
+            "text": "xxxx"
+        }
+    ],
+    "status": "in-progress",
+    "createdAt": "2026-05-23T08:43:04.430Z",
+    "completedAt": null,
+    "locked": false,
+    "ownerId": "admin",
+    "history": [
+        {
+            "action": "created",
+            "actor": "admin",
+            "details": "đã tạo công việc này.",
+            "id": "b74324c5-dea8-4a56-a65f-6aef307c5727",
+            "timestamp": "2026-05-23T08:43:04.430Z"
+        },
+        {
+            "action": "commented",
+            "actor": "admin",
+            "details": "đã thêm một bình luận mới.",
+            "id": "10d7a7ae64e34495963bdba0df40c88d",
+            "timestamp": "2026-05-23T08:43:24.891Z"
+        },
+        {
+            "action": "commented",
+            "actor": "admin",
+            "details": "đã thêm một bình luận mới.",
+            "id": "6398ac3aa0ba4cc69070e006f64a7398",
+            "timestamp": "2026-05-23T08:43:33.060Z"
+        },
+        {
+            "action": "commented",
+            "actor": "admin",
+            "details": "đã thêm một bình luận mới.",
+            "id": "3d98dd8dcbd54b4897cd276145ea530f",
+            "timestamp": "2026-05-23T08:43:41.386Z"
+        },
+        {
+            "action": "commented",
+            "actor": "admin",
+            "details": "đã thêm một bình luận mới.",
+            "id": "d30415968d794e5ab65e1833df14c5e3",
+            "timestamp": "2026-05-23T08:43:51.310Z"
+        },
+        {
+            "id": "705ed53c-3aae-4f4d-adec-64157f131681",
+            "action": "status_change",
+            "actor": "admin",
+            "timestamp": "2026-05-23T08:44:10.377Z",
+            "details": "đã chuyển trạng thái từ <strong>Việc cần làm</strong> sang <strong>Đang tiến hành</strong>."
+        }
+    ]
+}

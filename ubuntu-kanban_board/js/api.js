@@ -128,10 +128,13 @@ export async function restoreProjectAPI(projectId) {
 
 // --- 2. API CÔNG VIỆC (TASKS) ---
 
-export async function fetchTasksAPI(projectId = null) {
+export async function fetchTasksAPI(projectId = null, sprintId = null) {
     let endpoint = '/tasks?view=summary';
     if (projectId) {
         endpoint += `&projectId=${projectId}`;
+    }
+    if (sprintId) {
+        endpoint += `&sprintId=${sprintId}`;
     }
     return await apiFetch(endpoint);
 }
@@ -169,4 +172,37 @@ export async function checkUpdatesAPI(projectId, lastSync) {
         endpoint += `&projectId=${projectId}`;
     }
     return await apiFetch(endpoint, { silent: true });
+}
+
+export async function uploadFileAPI(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    // fetch tự thiết lập Content-Type khi body là FormData
+    return await apiFetch('/upload', {
+        method: 'POST',
+        body: formData
+    });
+}
+
+export async function addTaskCommentAPI(taskId, commentData) {
+    return await apiFetch(`/tasks/${taskId}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(commentData)
+    });
+}
+
+export async function deleteTaskCommentAPI(taskId, commentId, actor = '') {
+    return await apiFetch(`/tasks/${taskId}/comments/${commentId}?actor=${encodeURIComponent(actor)}`, {
+        method: 'DELETE'
+    });
+}
+
+export async function updateTaskCommentAPI(taskId, commentId, commentData, actor = '') {
+    return await apiFetch(`/tasks/${taskId}/comments/${commentId}?actor=${encodeURIComponent(actor)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(commentData)
+    });
 }

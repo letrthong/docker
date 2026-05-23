@@ -4,7 +4,9 @@ import {
     openChangePasswordBtn, changePasswordModalOverlay, changePasswordForm, newPasswordInput, confirmPasswordInput,
     cancelChangePasswordBtn, userInfoDropdown, showMessage
 } from './ui.js';
-import { initKanban, currentUserId, resetActivityTimer } from './main.js';
+import { initKanban } from './main.js';
+import { currentUserId } from './state.js';
+import { resetActivityTimer } from './session.js';
 
 export function initAuth() {
     // Xử lý sự kiện gửi Form Đăng nhập
