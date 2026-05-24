@@ -62,6 +62,13 @@
             "actor": "admin",
             "timestamp": "2026-05-24T04:15:38.280Z",
             "details": "đã chuyển trạng thái từ <strong>Đánh giá</strong> sang <strong>Đang tiến hành</strong>."
+        },
+        {
+            "id": "311e55120b49455a95c8e22b7e0ab039",
+            "action": "commented",
+            "actor": "admin",
+            "timestamp": "2026-05-24T04:24:21.373Z",
+            "details": "đã thêm một bình luận mới."
         }
     ]
 }

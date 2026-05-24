@@ -45,7 +45,10 @@ Tất cả các API endpoints sẽ bắt đầu với: `http://localhost:5000/ap
 {
   "id": "string (UUID)",
   "title": "string",
+  "description": "string (HTML Rich Text)",
   "assignee": "string (username)",
+  "priority": "string (low, medium, high, hoặc rỗng)",
+  "storyPoints": "string (1, 2, 3, 5, 7, 10, hoặc rỗng)",
   "sprintIds": ["string (sprint_id 1)", "string (sprint_id 2)"],
   "items": [
     {"text": "string", "completed": "boolean"}
@@ -54,7 +57,9 @@ Tất cả các API endpoints sẽ bắt đầu với: `http://localhost:5000/ap
   "createdAt": "string (ISO 8601 Datetime)",
   "completedAt": "string (ISO 8601 Datetime) hoặc null",
   "locked": "boolean",
-  "ownerId": "string (username)"
+  "ownerId": "string (username)",
+  "history": ["array of history objects"],
+  "comments": ["array of comment objects"]
 }
 ```
 

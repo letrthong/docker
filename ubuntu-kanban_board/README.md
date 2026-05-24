@@ -4,7 +4,7 @@
 
 ## Tính năng chính
 
-- **Quản lý Công việc (Tasks):** Thêm, sửa, xóa, kéo thả công việc giữa các cột trạng thái. Hỗ trợ mô tả phong phú (Rich text), checklist, bình luận, và lịch sử hoạt động.
+- **Quản lý Công việc (Tasks):** Thêm, sửa, xóa, kéo thả công việc giữa các cột trạng thái. Hỗ trợ mô tả phong phú (Rich text), checklist, độ ưu tiên (Priority), Story Points, bình luận, và lịch sử hoạt động.
 - **Quản lý Dự án & Sprint:** Tạo dự án, phân công thành viên vào dự án, lên kế hoạch các đợt chạy nước rút (sprints).
 - **Phân quyền (Role-Based Access Control):** Hỗ trợ chi tiết các nhóm quyền: Owner, Create, Edit, View.
 - **Đồng bộ:** Cơ chế Auto-refresh và Anti-overwrite an toàn, giúp nhiều người dùng có thể tương tác đồng thời.
