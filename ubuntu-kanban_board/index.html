@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
@@ -99,11 +99,11 @@
         }
         .message-box {
             position: fixed;
-            top: 2rem;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 1rem 2rem;
-            border-radius: 0.5rem;
+            bottom: 2rem;
+            left: 2rem;
+            transform: translateY(20px);
+            padding: 1rem 1.5rem;
+            border-radius: 0.75rem;
             font-weight: 500;
             transition: all 0.3s ease-in-out;
             opacity: 0;
@@ -111,10 +111,12 @@
             background-color: #4CAF50;
             color: white;
             z-index: 10000; /* Đảm bảo hộp thông báo ở trên cùng */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
         .message-box.show {
             opacity: 1;
             visibility: visible;
+            transform: translateY(0);
         }
         .multiselect-dropdown {
             position: relative;
@@ -181,11 +183,17 @@
             <div class="bg-white p-8 rounded-2xl shadow-xl w-[90%] max-w-sm">
                 <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Đăng nhập Kanban</h2>
                 <form id="loginForm" class="flex flex-col gap-4" autocomplete="off">
-                    <input type="text" id="loginUsername" placeholder="Tên đăng nhập (VD: alice)" required class="p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500" autocomplete="off">
-                    <input type="password" id="loginPassword" placeholder="Mật khẩu" required class="p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500" autocomplete="new-password">
-                    <button type="submit" class="bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition mt-2">Đăng nhập</button>
+                    <input type="text" id="loginUsername" placeholder="Tên đăng nhập (VD: alice)" required class="p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-500" autocomplete="off">
+                    <div class="relative w-full">
+                        <input type="password" id="loginPassword" placeholder="Mật khẩu" required class="w-full p-3 pr-10 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-500" autocomplete="new-password">
+                        <button type="button" id="togglePasswordBtn" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-blue-500 focus:outline-none">
+                            <i class="fas fa-eye" id="togglePasswordIcon"></i>
+                        </button>
+                    </div>
+                    <p id="loginErrorMsg" class="text-red-500 text-sm hidden text-center"></p>
+                    <button type="submit" id="loginSubmitBtn" class="bg-teal-600 text-white font-semibold py-3 rounded-xl hover:bg-teal-700 transition mt-2">Đăng nhập</button>
                 </form>
-                <p class="mt-4 text-xs text-center text-gray-500">Được phát triển bởi <a href="https://telua.vn" target="_blank" class="text-blue-500 hover:underline">Telua</a></p>
+                <p class="mt-4 text-xs text-center text-gray-500">Được phát triển bởi <a href="https://telua.vn" target="_blank" class="text-blue-500 hover:underline">Telua</a> @2026</p>
             </div>
         </div>
 
@@ -197,7 +205,7 @@
         <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100 hidden sm:block">Kanban</h1>
         <div class="flex flex-row items-center justify-end gap-2 w-full sm:w-auto">
             <!-- Nút Thêm Công việc -->
-            <button id="openModalBtn" class="bg-blue-600 text-white px-4 h-10 flex items-center justify-center rounded-full transition duration-300 ease-in-out hover:bg-blue-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 flex-shrink-0" title="Thêm Công việc">
+            <button id="openModalBtn" class="bg-teal-600 text-white px-4 h-10 flex items-center justify-center rounded-full transition duration-300 ease-in-out hover:bg-teal-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-opacity-50 flex-shrink-0" title="Thêm Công việc">
                 <i class="fas fa-plus mr-2"></i>
                 <span class="font-semibold text-sm whitespace-nowrap">Thêm việc</span>
             </button>
@@ -453,7 +461,7 @@
                     <button type="button" id="cancelBtn" class="bg-gray-300 text-gray-800 font-semibold py-2 px-6 rounded-xl transition duration-300 hover:bg-gray-400">
                         Hủy
                     </button>
-                    <button type="submit" id="submitBtn" class="bg-blue-600 text-white font-semibold py-2 px-6 rounded-xl transition duration-300 hover:bg-blue-700">
+                    <button type="submit" id="submitBtn" class="bg-teal-600 text-white font-semibold py-2 px-6 rounded-xl transition duration-300 hover:bg-teal-700">
                         Thêm Công Việc
                     </button>
                 </div>

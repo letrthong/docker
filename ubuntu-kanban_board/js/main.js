@@ -1890,11 +1890,22 @@ export async function initKanban() {
 // Kiểm tra trạng thái đăng nhập khi trang được tải
 window.onload = async function() {
     const token = localStorage.getItem('kanban_token');
+    const lastActivity = localStorage.getItem('last_activity');
+    const INACTIVITY_LIMIT = 30 * 60 * 1000; // 30 phút
+
     if (token) {
-        resetActivityTimer(); // Cập nhật lại thời gian hoạt động khi tải hoặc refresh trang
-        loginScreen.classList.add('hidden');
-        loginScreen.classList.remove('flex');
-        await initKanban();
+        if (lastActivity && (Date.now() - parseInt(lastActivity, 10) > INACTIVITY_LIMIT)) {
+            localStorage.removeItem('kanban_token');
+            localStorage.removeItem('last_activity');
+            loginScreen.classList.remove('hidden');
+            loginScreen.classList.add('flex');
+            showMessage("Phiên đăng nhập đã hết hạn do quá 30 phút không hoạt động.", true);
+        } else {
+            resetActivityTimer(); // Cập nhật lại thời gian hoạt động khi tải hoặc refresh trang
+            loginScreen.classList.add('hidden');
+            loginScreen.classList.remove('flex');
+            await initKanban();
+        }
     } else {
         loginScreen.classList.remove('hidden');
         loginScreen.classList.add('flex');

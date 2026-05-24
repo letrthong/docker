@@ -38,6 +38,10 @@ export const kanbanBoard = document.getElementById('kanbanBoard');
 export const loginForm = document.getElementById('loginForm');
 export const loginUsername = document.getElementById('loginUsername');
 export const loginPassword = document.getElementById('loginPassword');
+export const togglePasswordBtn = document.getElementById('togglePasswordBtn');
+export const togglePasswordIcon = document.getElementById('togglePasswordIcon');
+export const loginErrorMsg = document.getElementById('loginErrorMsg');
+export const loginSubmitBtn = document.getElementById('loginSubmitBtn');
 export const logoutBtn = document.getElementById('logoutBtn');
 export const loggedInUserDisplay = document.getElementById('loggedInUserDisplay');
 
