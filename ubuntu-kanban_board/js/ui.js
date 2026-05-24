@@ -81,6 +81,7 @@ export const openSettingsBtn = document.getElementById('openSettingsBtn');
 export const settingsModalOverlay = document.getElementById('settingsModalOverlay');
 export const closeSettingsBtn = document.getElementById('closeSettingsBtn');
 export const showFilterBarCheckbox = document.getElementById('showFilterBarCheckbox');
+export const showStoryPointsCheckbox = document.getElementById('showStoryPointsCheckbox');
 export const filterBarContainer = document.getElementById('filterBarContainer');
 export const darkModeCheckbox = document.getElementById('darkModeCheckbox');
 

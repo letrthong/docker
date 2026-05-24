@@ -161,8 +161,42 @@ export async function showTaskDetails(summaryTask, silent = false) {
     }
 
     const priorityMap = { 'low': 'Thấp', 'medium': 'Trung bình', 'high': 'Cao' };
-    if (detailPriority) detailPriority.textContent = task.priority ? (priorityMap[task.priority] || task.priority) : 'Không có';
-    if (detailStoryPoints) detailStoryPoints.textContent = task.storyPoints || 'Không có';
+
+    let pEl = detailPriority || document.getElementById('dynamicDetailPriority');
+    let spEl = detailStoryPoints || document.getElementById('dynamicDetailStoryPoints');
+
+    // Nếu giao diện đang chạy bản build cũ (chưa có HTML), ta sẽ tạo động HTML
+    if (!pEl && detailAssignee && detailAssignee.parentElement) {
+        const container = document.createElement('div');
+        container.className = "flex flex-wrap items-center gap-4 sm:gap-6";
+        container.innerHTML = `
+            <p class="font-semibold flex items-center gap-2"><i class="fas fa-flag mr-2 text-gray-500"></i>Độ ưu tiên: <span id="dynamicDetailPriority" class="font-normal"></span></p>
+            <p class="font-semibold flex items-center gap-2"><i class="fas fa-star mr-2 text-yellow-500"></i>Story Points: <span id="dynamicDetailStoryPoints" class="font-normal"></span></p>
+        `;
+        detailAssignee.parentElement.insertAdjacentElement('afterend', container);
+        pEl = document.getElementById('dynamicDetailPriority');
+        spEl = document.getElementById('dynamicDetailStoryPoints');
+    }
+
+    if (pEl) {
+        pEl.textContent = task.priority ? (priorityMap[task.priority] || task.priority) : 'Không có';
+        pEl.parentElement.style.display = 'flex';
+    }
+
+    if (spEl) {
+        const isStoryPointsVisible = localStorage.getItem('kanban_show_story_points') === 'true';
+        if (isStoryPointsVisible) {
+            spEl.textContent = task.storyPoints ? task.storyPoints : 'Không có';
+            spEl.parentElement.style.display = 'flex';
+        } else {
+            spEl.parentElement.style.display = 'none';
+        }
+    }
+    
+    if (pEl && spEl) {
+        const container = pEl.parentElement.parentElement;
+        container.style.display = 'flex';
+    }
 
     const detailSprints = document.getElementById('detailSprints');
     if (detailSprints) {

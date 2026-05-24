@@ -5,7 +5,7 @@
     "projectId": "eafdf6ef379b45fe98b2a30c451ad900",
     "assignee": "test",
     "priority": "medium",
-    "storyPoints": "",
+    "storyPoints": "3",
     "sprintIds": [
         "0c7082c6-155c-421c-b90c-50bec02626d7"
     ],
@@ -106,10 +106,17 @@
             "timestamp": "2026-05-23T15:13:50.335Z"
         },
         {
-            "id": "abd9db8e-7bc4-4543-abf8-47a7ffaafcb7",
             "action": "edited",
             "actor": "admin",
-            "timestamp": "2026-05-23T15:14:12.908Z",
+            "details": "đã cập nhật thông tin công việc.",
+            "id": "abd9db8e-7bc4-4543-abf8-47a7ffaafcb7",
+            "timestamp": "2026-05-23T15:14:12.908Z"
+        },
+        {
+            "id": "dd1ba4ed-beb9-4548-8949-ab36516b411a",
+            "action": "edited",
+            "actor": "admin",
+            "timestamp": "2026-05-24T04:07:47.564Z",
             "details": "đã cập nhật thông tin công việc."
         }
     ]

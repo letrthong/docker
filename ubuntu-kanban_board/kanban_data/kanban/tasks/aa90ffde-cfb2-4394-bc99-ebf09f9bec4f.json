@@ -3,16 +3,16 @@
     "title": "xxxx 67",
     "description": "<p>xxx</p>",
     "projectId": "eafdf6ef379b45fe98b2a30c451ad900",
-    "assignee": "admin",
-    "priority": "medium",
-    "storyPoints": "",
+    "assignee": "test",
+    "priority": "low",
+    "storyPoints": "1",
     "sprintIds": [
         "0c7082c6-155c-421c-b90c-50bec02626d7"
     ],
     "items": [
         {
-            "completed": false,
-            "text": "xxx"
+            "text": "xxx",
+            "completed": false
         }
     ],
     "status": "todo",
@@ -50,11 +50,32 @@
             "timestamp": "2026-05-23T16:19:38.210Z"
         },
         {
-            "id": "70a2aec4-006f-4b79-a8f2-84256bca038c",
             "action": "status_change",
             "actor": "admin",
-            "timestamp": "2026-05-23T16:19:39.720Z",
-            "details": "đã chuyển trạng thái từ <strong>Đánh giá</strong> sang <strong>Việc cần làm</strong>."
+            "details": "đã chuyển trạng thái từ <strong>Đánh giá</strong> sang <strong>Việc cần làm</strong>.",
+            "id": "70a2aec4-006f-4b79-a8f2-84256bca038c",
+            "timestamp": "2026-05-23T16:19:39.720Z"
+        },
+        {
+            "action": "edited",
+            "actor": "admin",
+            "details": "đã cập nhật thông tin công việc.",
+            "id": "39c3bd71-f1f9-4d81-afa7-b8596f049d48",
+            "timestamp": "2026-05-24T03:59:20.235Z"
+        },
+        {
+            "action": "commented",
+            "actor": "admin",
+            "details": "đã thêm một bình luận mới.",
+            "id": "cd2b00140305475d8272001f289815d0",
+            "timestamp": "2026-05-24T04:00:41.634Z"
+        },
+        {
+            "id": "8035201f-1b15-43eb-b3c8-003a33a7f7b3",
+            "action": "edited",
+            "actor": "admin",
+            "timestamp": "2026-05-24T04:07:30.477Z",
+            "details": "đã cập nhật thông tin công việc."
         }
     ]
 }

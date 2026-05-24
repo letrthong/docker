@@ -5,15 +5,18 @@
     "projectId": "eafdf6ef379b45fe98b2a30c451ad900",
     "assignee": "admin",
     "priority": "medium",
-    "storyPoints": "",
-    "sprintIds": [],
+    "storyPoints": "7",
+    "sprintIds": [
+        "0c7082c6-155c-421c-b90c-50bec02626d7",
+        "514d6367-1fad-4545-a62b-47fc609159c0"
+    ],
     "items": [
         {
             "completed": false,
             "text": "xxxx"
         }
     ],
-    "status": "in-progress",
+    "status": "review",
     "createdAt": "2026-05-23T08:43:04.430Z",
     "completedAt": null,
     "locked": false,
@@ -55,11 +58,39 @@
             "timestamp": "2026-05-23T08:43:51.310Z"
         },
         {
-            "id": "705ed53c-3aae-4f4d-adec-64157f131681",
             "action": "status_change",
             "actor": "admin",
-            "timestamp": "2026-05-23T08:44:10.377Z",
-            "details": "đã chuyển trạng thái từ <strong>Việc cần làm</strong> sang <strong>Đang tiến hành</strong>."
+            "details": "đã chuyển trạng thái từ <strong>Việc cần làm</strong> sang <strong>Đang tiến hành</strong>.",
+            "id": "705ed53c-3aae-4f4d-adec-64157f131681",
+            "timestamp": "2026-05-23T08:44:10.377Z"
+        },
+        {
+            "action": "edited",
+            "actor": "admin",
+            "details": "đã cập nhật thông tin công việc.",
+            "id": "30068f5a-5cfb-4b84-ba5e-6c69e7f144d8",
+            "timestamp": "2026-05-24T04:09:38.376Z"
+        },
+        {
+            "action": "status_change",
+            "actor": "admin",
+            "details": "đã chuyển trạng thái từ <strong>Đang tiến hành</strong> sang <strong>Đánh giá</strong>.",
+            "id": "ebeab478-cfc2-475e-823b-9a3ae885c620",
+            "timestamp": "2026-05-24T04:15:30.551Z"
+        },
+        {
+            "action": "status_change",
+            "actor": "admin",
+            "details": "đã chuyển trạng thái từ <strong>Đánh giá</strong> sang <strong>Bị khóa</strong>.",
+            "id": "61d216c5-fe4e-438f-b596-25f0c7e6b73d",
+            "timestamp": "2026-05-24T04:15:39.712Z"
+        },
+        {
+            "id": "d8a13721-e33b-46e6-84af-24da4bf9929c",
+            "action": "status_change",
+            "actor": "admin",
+            "timestamp": "2026-05-24T04:16:01.460Z",
+            "details": "đã chuyển trạng thái từ <strong>Bị khóa</strong> sang <strong>Đánh giá</strong>."
         }
     ]
 }

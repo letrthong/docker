@@ -13,7 +13,7 @@ import {
     detailModalOverlay,
     projectFilter, assigneeFilter, statusFilterDropdown, statusDropdownList, statusDropdownButton,
     showMessage, dateFormatter, getAssigneeColor, trashDropdownItem,
-    settingsDropdownItem, openSettingsBtn, settingsModalOverlay, closeSettingsBtn, showFilterBarCheckbox, filterBarContainer,
+    settingsDropdownItem, openSettingsBtn, settingsModalOverlay, closeSettingsBtn, showFilterBarCheckbox, showStoryPointsCheckbox, filterBarContainer,
     showLoading, hideLoading
 } from './ui.js';
 import { initAuth } from './auth.js';
@@ -71,17 +71,11 @@ export function getSprintDisplayText(sprint) {
     return text;
 }
 
-// Cập nhật tổng số công việc
-function updateTotalTaskCount() {
-    totalTasksCount.textContent = getTasks().length;
-}
-
 // Cập nhật giao diện sau khi thay đổi dữ liệu
 export function refreshUI() {
     populateProjectFilter();
     populateSprintFilter();
     populateAssigneeFilter();
-    updateTotalTaskCount();
     const sprintFilterEl = document.getElementById('sprintFilter');
     const sfValue = sprintFilterEl ? sprintFilterEl.value : 'all';
     renderTasks(assigneeFilter.value, selectedStatuses, projectFilter.value, sfValue);
@@ -116,12 +110,6 @@ function renderTasks(assigneeFilterValue = 'all', statusFilterValues = ['all'], 
     reviewColumn.innerHTML = '';
     doneColumn.innerHTML = '';
 
-    let todoSP = 0;
-    let inprogressSP = 0;
-    let blockedSP = 0;
-    let reviewSP = 0;
-    let doneSP = 0;
-
     // Lọc công việc
     const filteredTasks = getTasks().filter(task => {
         // Nếu không phải owner, cô lập hoàn toàn dữ liệu
@@ -150,46 +138,43 @@ function renderTasks(assigneeFilterValue = 'all', statusFilterValues = ['all'], 
         return assigneeMatch && statusMatch && projectMatch && sprintMatch;
     });
 
+    // Cập nhật tổng số công việc hiển thị trên UI theo kết quả đã lọc
+    if (totalTasksCount) {
+        totalTasksCount.textContent = filteredTasks.length;
+    }
+
+    const isStoryPointsVisible = localStorage.getItem('kanban_show_story_points') === 'true';
+    let totalSP = 0;
+
     // Hiển thị các task đã lọc
     filteredTasks.forEach(task => {
         const card = createTaskCard(task);
         const sp = parseInt(task.storyPoints) || 0;
+        totalSP += sp;
         
         if (task.status === 'todo') {
             todoColumn.appendChild(card);
-            todoSP += sp;
         } else if (task.status === 'in-progress') {
             inprogressColumn.appendChild(card);
-            inprogressSP += sp;
         } else if (task.status === 'blocked') {
             blockedColumn.appendChild(card);
-            blockedSP += sp;
         } else if (task.status === 'review') {
             reviewColumn.appendChild(card);
-            reviewSP += sp;
         } else if (task.status === 'done') {
             doneColumn.appendChild(card);
-            doneSP += sp;
         }
     });
 
-    const updateSP = (id, total) => {
-        const el = document.getElementById(id);
-        if (el) {
-            if (total > 0) {
-                el.innerHTML = `<i class="fas fa-star text-yellow-500 mr-1"></i>${total}`;
-                el.classList.remove('hidden');
-            } else {
-                el.classList.add('hidden');
-            }
+    const spCountEl = document.getElementById('totalStoryPointsCount');
+    const spContainerEl = document.getElementById('totalStoryPointsContainer');
+    if (spCountEl && spContainerEl) {
+        if (isStoryPointsVisible && totalSP > 0) {
+            spCountEl.innerHTML = `<i class="fas fa-star text-yellow-500 mr-1 text-sm"></i>${totalSP}`;
+            spContainerEl.classList.remove('hidden');
+        } else {
+            spContainerEl.classList.add('hidden');
         }
-    };
-
-    updateSP('todo-sp-total', todoSP);
-    updateSP('inprogress-sp-total', inprogressSP);
-    updateSP('blocked-sp-total', blockedSP);
-    updateSP('review-sp-total', reviewSP);
-    updateSP('done-sp-total', doneSP);
+    }
 }
 
 // Biến lưu trữ tùy chọn dự án để search
@@ -616,8 +601,9 @@ function createTaskCard(task) {
         }
     }
 
+    const isStoryPointsVisible = localStorage.getItem('kanban_show_story_points') === 'true';
     const count = task.commentsCount !== undefined ? task.commentsCount : (task.comments ? task.comments.length : 0);
-    if (task.priority || task.storyPoints || count > 0) {
+    if (task.priority || (isStoryPointsVisible && task.storyPoints) || count > 0) {
         const extraTags = document.createElement('div');
         extraTags.className = "flex gap-2 mb-2";
         if (task.priority) {
@@ -628,7 +614,7 @@ function createTaskCard(task) {
             pTag.textContent = priorityMap[task.priority] || task.priority;
             extraTags.appendChild(pTag);
         }
-        if (task.storyPoints) {
+        if (isStoryPointsVisible && task.storyPoints) {
             const spTag = document.createElement('div');
             spTag.className = "text-xs font-semibold text-gray-600 dark:text-gray-300 bg-gray-200 dark:bg-gray-600 rounded-md px-2 py-1 inline-block";
             spTag.innerHTML = `<i class="fas fa-star text-yellow-500 mr-1"></i>${task.storyPoints}`;
@@ -1685,6 +1671,7 @@ initSessionManager();
 // --- Logic Cài đặt hiển thị ---
 const FILTER_BAR_VISIBLE_KEY = 'kanban_filter_bar_visible';
 const DARK_MODE_KEY = 'kanban_dark_mode';
+const SHOW_STORY_POINTS_KEY = 'kanban_show_story_points';
 
 function initSettings() {
     const isFilterBarVisible = localStorage.getItem(FILTER_BAR_VISIBLE_KEY) !== 'false';
@@ -1704,6 +1691,11 @@ function initSettings() {
     const isDarkMode = localStorage.getItem(DARK_MODE_KEY) === 'true';
     if (darkModeCheckbox) {
         darkModeCheckbox.checked = isDarkMode;
+    }
+
+    const isStoryPointsVisible = localStorage.getItem(SHOW_STORY_POINTS_KEY) === 'true';
+    if (showStoryPointsCheckbox) {
+        showStoryPointsCheckbox.checked = isStoryPointsVisible;
     }
 
     if (openSettingsBtn) {
@@ -1750,6 +1742,14 @@ function initSettings() {
             } else {
                 document.documentElement.classList.remove('dark');
             }
+        });
+    }
+
+    if (showStoryPointsCheckbox) {
+        showStoryPointsCheckbox.addEventListener('change', (e) => {
+            const isVisible = e.target.checked;
+            localStorage.setItem(SHOW_STORY_POINTS_KEY, isVisible);
+            refreshUI(); // Cập nhật lại giao diện ngay khi thay đổi cài đặt
         });
     }
 }
