@@ -1,0 +1,28 @@
+{
+    "id": "30791d7e-d6d7-432b-b414-d794c866a6e8",
+    "title": "ss",
+    "description": "",
+    "projectId": "eafdf6ef379b45fe98b2a30c451ad900",
+    "assignee": "admin",
+    "priority": "medium",
+    "storyPoints": "",
+    "sprintIds": [
+        "0c7082c6-155c-421c-b90c-50bec02626d7",
+        "872de185-287d-4f8d-a05c-00ab5667d543"
+    ],
+    "items": [],
+    "status": "todo",
+    "createdAt": "2026-05-24T03:45:36.561Z",
+    "completedAt": null,
+    "locked": false,
+    "ownerId": "admin",
+    "history": [
+        {
+            "id": "1f4d3dbe-4f92-4847-bb9c-c8bf3536261d",
+            "action": "created",
+            "actor": "admin",
+            "timestamp": "2026-05-24T03:45:36.561Z",
+            "details": "đã tạo công việc này."
+        }
+    ]
+}

@@ -856,7 +856,7 @@ async function cloneTask(taskId) {
             description: originalTask.description || '',
             projectId: originalTask.projectId || null,
             assignee: originalTask.assignee,
-            priority: originalTask.priority || 'medium',
+            priority: originalTask.priority || '',
             storyPoints: originalTask.storyPoints || '',
             sprintIds: originalTask.sprintIds ? [...originalTask.sprintIds] : [],
             comments: [],
@@ -1062,7 +1062,7 @@ openModalBtn.addEventListener('click', () => {
         populateProjectSelect(defaultProject);
         populateAssigneeSelect('', taskProjectSelect.value);
         populateSprintSelect([], taskProjectSelect.value);
-        if (taskPrioritySelect) taskPrioritySelect.value = 'medium';
+        if (taskPrioritySelect) taskPrioritySelect.value = '';
         if (taskStoryPointsSelect) taskStoryPointsSelect.value = '';
         taskModalOverlay.classList.add('show');
     } else {
@@ -1105,7 +1105,7 @@ async function openEditModal(taskId, silent = false) {
         populateProjectSelect(task.projectId);
         populateAssigneeSelect(task.assignee, task.projectId);
         populateSprintSelect(task.sprintIds || [], task.projectId);
-            if (taskPrioritySelect) taskPrioritySelect.value = task.priority || 'medium';
+            if (taskPrioritySelect) taskPrioritySelect.value = task.priority || '';
             if (taskStoryPointsSelect) taskStoryPointsSelect.value = task.storyPoints || '';
         checklistContainer.innerHTML = '';
 
@@ -1197,7 +1197,7 @@ addTaskForm.addEventListener('submit', async (e) => {
     const description = taskDescriptionInput ? taskDescriptionInput.value.trim() : '';
     const projectId = taskProjectSelect.value;
     const assignee = taskAssigneeSelect.value.trim();
-    const priority = taskPrioritySelect ? taskPrioritySelect.value : 'medium';
+    const priority = taskPrioritySelect ? taskPrioritySelect.value : '';
     const storyPoints = taskStoryPointsSelect ? taskStoryPointsSelect.value : '';
     
     if (!projectId) {
