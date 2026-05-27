@@ -16,11 +16,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-
-      # - name: Run unit tests
-      #   run: |
-      #     pytest || echo "No tests found"
-
+ 
       - name: Build the Docker image
         run: |
           docker build -t kanban-board:latest -f ubuntu-kanban_board/Dockerfile ubuntu-kanban_board
@@ -28,11 +24,20 @@ jobs:
       - name: Run container
         run: |
           docker run -d --name kanban_temp kanban-board:latest
-
+      
       - name: Copy index.html from container
         run: |
           mkdir -p ubuntu-kanban_board/dist
           docker cp kanban_temp:/app/dist/index.html ubuntu-kanban_board/dist/index.html
+      - name: Run unit tests
+        run: python ubuntu-kanban_board/src/unittest/test_app.py
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unittest-results
+          path: test-reports/
 
       - name: Stop and remove container
         if: always()
