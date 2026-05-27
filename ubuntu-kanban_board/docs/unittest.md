@@ -8,7 +8,7 @@ Tài liệu này mô tả kịch bản kiểm thử tự động (Unit Tests) ch
 
 ```bash
 cd src
-python unittest/test_app.py
+python -m unittest discover -s unittest -p "test_*.py"
 ```
 
 *Lưu ý:* Các dữ liệu kiểm thử được sinh ra trong một thư mục tạm thời của hệ điều hành (tempfile) và sẽ được tự động dọn dẹp sau khi kiểm thử kết thúc. Điều này đảm bảo quá trình test không bao giờ làm hỏng hay ghi đè lên dữ liệu thật của ứng dụng.
