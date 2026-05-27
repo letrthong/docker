@@ -29,6 +29,7 @@ jobs:
         run: |
           mkdir -p ubuntu-kanban_board/dist
           docker cp kanban_temp:/app/dist/index.html ubuntu-kanban_board/dist/index.html
+      
       - name: Run unit tests
         run: python ubuntu-kanban_board/src/unittest/test_app.py
 
