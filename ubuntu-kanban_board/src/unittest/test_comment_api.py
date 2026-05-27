@@ -47,13 +47,25 @@ class CommentApiTestCase(unittest.TestCase):
         }
         res_comment = self.client.post(f'/api/v1/kanban/tasks/{task_id}/comments', json=comment_payload)
         self.assertIn(res_comment.status_code, [200, 201])
+
+        # Kiểm tra history sau khi thêm bình luận
+        res_get_task = self.client.get(f'/api/v1/kanban/tasks/{task_id}')
+        task_data = json.loads(res_get_task.data)
+        history = task_data.get("history", [])
+        self.assertTrue(any(h.get("action") == "commented" for h in history), "Lịch sử phải ghi nhận hành động thêm bình luận")
         
         # (Tùy chọn) 3. Xóa bình luận nếu hệ thống hỗ trợ API xóa comment độc lập
         if "comment" in json.loads(res_comment.data):
             comment_id = json.loads(res_comment.data)["comment"]["id"]
-            res_del_comment = self.client.delete(f'/api/v1/kanban/tasks/{task_id}/comments/{comment_id}')
+            res_del_comment = self.client.delete(f'/api/v1/kanban/tasks/{task_id}/comments/{comment_id}?actor=test_user')
             # Kỳ vọng mã 200 hoặc 204 tùy thuộc vào thiết kế API của bạn
             self.assertIn(res_del_comment.status_code, [200, 204])
+
+            # Kiểm tra history sau khi xóa bình luận
+            res_get_task_after_del = self.client.get(f'/api/v1/kanban/tasks/{task_id}')
+            task_data_after_del = json.loads(res_get_task_after_del.data)
+            history_after_del = task_data_after_del.get("history", [])
+            self.assertTrue(any(h.get("details", "") == "đã xóa một bình luận." for h in history_after_del), "Lịch sử phải ghi nhận hành động xóa bình luận")
 
     def test_2_add_and_delete_comment_with_image(self):
         # 1. Tạo task giả
@@ -88,3 +100,9 @@ class CommentApiTestCase(unittest.TestCase):
 
         # 5. Kiểm tra file ảnh đã bị thu gom dọn dẹp chưa
         self.assertFalse(os.path.exists(file_path), "File ảnh phải bị xóa đi sau khi bình luận chứa nó bị xóa")
+
+        # 6. Đảm bảo Backend có lưu history cho việc xóa bình luận ảnh
+        res_get_task_after_del = self.client.get(f'/api/v1/kanban/tasks/{task_id}')
+        task_data_after_del = json.loads(res_get_task_after_del.data)
+        history_after_del = task_data_after_del.get("history", [])
+        self.assertTrue(any(h.get("details", "") == "đã xóa một bình luận." for h in history_after_del), "Lịch sử phải ghi nhận hành động xóa bình luận ảnh")
