@@ -88,3 +88,28 @@ class ProjectApiTestCase(unittest.TestCase):
         res_get = self.client.get('/api/v1/kanban/projects')
         active_projects = json.loads(res_get.data)
         self.assertTrue(any(p['id'] == project_id for p in active_projects), "Dự án phải được giữ nguyên, không bị xóa")
+
+    def test_3_regular_user_cannot_create_project(self):
+        # 1. Tạo một User với quyền thấp ("user" hoặc "view")
+        user_payload = {
+            "username": "normal_user_create",
+            "password": "password123",
+            "permission": "user" 
+        }
+        self.client.post('/api/v1/kanban/users', json=user_payload)
+        
+        # 2. Đăng nhập để lấy Token của user bình thường
+        login_payload = {"username": "normal_user_create", "password": "password123"}
+        res_login = self.client.post('/api/v1/kanban/login', json=login_payload)
+        
+        headers = {}
+        if res_login.status_code == 200:
+            token = json.loads(res_login.data).get("token", "")
+            headers = {"Authorization": f"Bearer {token}"}
+            
+        # 3. Thử tạo dự án bằng Token của user quyền thấp
+        project_payload = {"name": "Dự án Không Thể Tạo", "users": []}
+        res_post = self.client.post('/api/v1/kanban/projects', json=project_payload, headers=headers)
+        
+        # 4. Kỳ vọng Backend chặn lại, trả về mã 403 Forbidden (hoặc 401)
+        self.assertIn(res_post.status_code, [403, 401], "User bình thường không được phép tạo dự án")
