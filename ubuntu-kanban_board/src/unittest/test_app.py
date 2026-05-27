@@ -141,4 +141,10 @@ class KanbanAppTestCase(unittest.TestCase):
         self.assertTrue(any(p['id'] == project_id for p in deleted_projects))
 
 if __name__ == '__main__':
-    unittest.main()
+    try:
+        import xmlrunner
+        runner = xmlrunner.XMLTestRunner(output='test-reports')
+        unittest.main(testRunner=runner)
+    except ImportError:
+        print("Cảnh báo: Không tìm thấy thư viện xmlrunner. Đang chạy test bằng giao diện console mặc định...")
+        unittest.main()
