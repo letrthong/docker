@@ -31,7 +31,11 @@ jobs:
           docker cp kanban_temp:/app/dist/index.html ubuntu-kanban_board/dist/index.html
       
       - name: Run unit tests
-        run: python ubuntu-kanban_board/src/unittest/test_app.py
+        run: docker exec kanban_temp python /app/src/unittest/test_app.py
+
+      - name: Copy test reports from container
+        if: always()
+        run: docker cp kanban_temp:/app/test-reports ./test-reports || true
 
       - name: Upload test results
         if: always()
