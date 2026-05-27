@@ -1,11 +1,13 @@
 from flask import Flask, send_from_directory, request
 import os
 from uhes_restful_blueprint_kanban import kanban_api, init_kanban_db
+from uhes_restful_blueprint_user import user_api
 
 app = Flask(__name__, static_folder="static")
 
 # Đăng ký blueprint với tiền tố /api/v1/kanban
 app.register_blueprint(kanban_api, url_prefix='/api/v1/kanban')
+app.register_blueprint(user_api, url_prefix='/api/v1/kanban')
 
 # --- MIDDLEWARE ---
 
