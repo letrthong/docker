@@ -139,6 +139,9 @@ class KanbanAppTestCase(unittest.TestCase):
         res_get_deleted = self.client.get('/api/v1/kanban/projects?status=deleted')
         deleted_projects = json.loads(res_get_deleted.data)
         self.assertTrue(any(p['id'] == project_id for p in deleted_projects))
+        
+    def test_4_failing_test(self):
+        self.assertEqual(1 + 1, 3, "Test case cố ý tạo lỗi: 1 + 1 không thể bằng 3")
 
 if __name__ == '__main__':
     try:
