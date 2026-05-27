@@ -106,3 +106,33 @@ class CommentApiTestCase(unittest.TestCase):
         task_data_after_del = json.loads(res_get_task_after_del.data)
         history_after_del = task_data_after_del.get("history", [])
         self.assertTrue(any(h.get("details", "") == "đã xóa một bình luận." for h in history_after_del), "Lịch sử phải ghi nhận hành động xóa bình luận ảnh")
+
+    def test_3_edit_comment_history(self):
+        # 1. Tạo task giả
+        task_payload = {"title": "Task để test edit comment", "status": "todo"}
+        res_task = self.client.post('/api/v1/kanban/tasks', json=task_payload)
+        self.assertEqual(res_task.status_code, 201)
+        task_id = json.loads(res_task.data)["task"]["id"]
+        
+        # 2. Thêm bình luận
+        comment_payload = {
+            "text": "Bình luận ban đầu",
+            "author": "test_user"
+        }
+        res_comment = self.client.post(f'/api/v1/kanban/tasks/{task_id}/comments', json=comment_payload)
+        self.assertIn(res_comment.status_code, [200, 201])
+        comment_id = json.loads(res_comment.data)["comment"]["id"]
+        
+        # 3. Chỉnh sửa bình luận
+        update_payload = {"text": "Bình luận đã được sửa"}
+        res_put = self.client.put(f'/api/v1/kanban/tasks/{task_id}/comments/{comment_id}?actor=test_user', json=update_payload)
+        self.assertEqual(res_put.status_code, 200)
+        
+        # 4. Kiểm tra history xem có ghi nhận hành động chỉnh sửa không
+        res_get_task = self.client.get(f'/api/v1/kanban/tasks/{task_id}')
+        task_data = json.loads(res_get_task.data)
+        history = task_data.get("history", [])
+        self.assertTrue(
+            any(h.get("details", "") == "đã chỉnh sửa một bình luận." for h in history), 
+            "Lịch sử phải ghi nhận hành động chỉnh sửa bình luận"
+        )
