@@ -143,8 +143,11 @@ class KanbanAppTestCase(unittest.TestCase):
 if __name__ == '__main__':
     try:
         import xmlrunner
-        runner = xmlrunner.XMLTestRunner(output='test-reports')
-        unittest.main(testRunner=runner)
+        os.makedirs('test-reports', exist_ok=True)
+        with open('test-reports/results.xml', 'wb') as output:
+            runner = xmlrunner.XMLTestRunner(output=output)
+            result = unittest.main(testRunner=runner, exit=False)
+        sys.exit(not result.result.wasSuccessful())
     except ImportError:
         print("Cảnh báo: Không tìm thấy thư viện xmlrunner. Đang chạy test bằng giao diện console mặc định...")
         unittest.main()
