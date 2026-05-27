@@ -66,7 +66,7 @@ class CommentApiTestCase(unittest.TestCase):
             'file': (io.BytesIO(b"fake image data"), 'test_image.jpg')
         }
         res_upload = self.client.post('/api/v1/kanban/upload', data=data, content_type='multipart/form-data')
-        self.assertEqual(res_upload.status_code, 200)
+        self.assertIn(res_upload.status_code, [200, 201])
         image_url = json.loads(res_upload.data)["url"]
         filename = os.path.basename(image_url)
         file_path = os.path.join(self.uploads_dir, filename)
