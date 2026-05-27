@@ -8,7 +8,7 @@ echo "===================================================="
 docker exec -it telua_python_kanban_board pip install unittest-xml-reporting
 
 # Thực thi unit test
-docker exec -it -w /app/src telua_python_kanban_board python unittest/test_app.py
+docker exec -it -w /app/src telua_python_kanban_board python -m xmlrunner discover -s unittest -p "test_*.py" -o test-reports
 
 # Copy file XML report từ container ra ngoài máy host
 echo "===================================================="
