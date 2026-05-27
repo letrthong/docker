@@ -32,6 +32,7 @@ Các tài liệu phân tích kỹ thuật và định nghĩa API được đặt
 - Cơ chế Đồng bộ Dữ liệu
 - Phân tích Kiến trúc Hệ thống
 - Hướng dẫn Simulator Docker
+- Hướng dẫn và Kịch bản Kiểm thử (Unit Tests)
 
 ---
 
