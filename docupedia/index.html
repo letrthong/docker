@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="vi" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QuillFlow - Trình soạn thảo văn bản chuyên nghiệp</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts & FontAwesome Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Highlight.js for Code Block Syntax Highlighting (Atom One Dark theme) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+  <!-- Quill.js CSS (Theme Snow) -->
+  <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet" />
+
+  <!-- Custom CSS for Quill Dark Mode Override & Transitions -->
+  <style>
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    .dark ::-webkit-scrollbar-thumb {
+      background: #475569;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    /* Quill Editor Interface Overrides for Premium Aesthetic */
+    .ql-toolbar.ql-snow {
+      border: 1px solid #e2e8f0 !important;
+      border-top-left-radius: 0.5rem;
+      border-top-right-radius: 0.5rem;
+      background-color: #f8fafc;
+      transition: all 0.2s ease;
+    }
+    .ql-container.ql-snow {
+      border: 1px solid #e2e8f0 !important;
+      border-bottom-left-radius: 0.5rem;
+      border-bottom-right-radius: 0.5rem;
+      font-family: 'Inter', sans-serif !important;
+      font-size: 1rem;
+      background-color: #ffffff;
+      transition: all 0.2s ease;
+    }
+    .ql-editor {
+      min-height: 350px;
+    }
+    .ql-editor.ql-blank::before {
+      color: #94a3b8;
+      font-style: italic;
+    }
+
+    /* Beautiful Table Styling for Quill v2 & Readers */
+    .ql-editor table, #view-mode-content table, #preview-read-content table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 1.5rem 0;
+      border: 1px solid #cbd5e1;
+    }
+    .dark .ql-editor table, .dark #view-mode-content table, .dark #preview-read-content table {
+      border-color: #475569;
+    }
+    .ql-editor td, .ql-editor th, 
+    #view-mode-content td, #preview-read-content td,
+    #view-mode-content th, #preview-read-content th {
+      border: 1px solid #cbd5e1;
+      padding: 0.6rem 1rem;
+      min-width: 60px;
+      vertical-align: top;
+      text-align: left;
+    }
+    .dark .ql-editor td, .dark .ql-editor th,
+    .dark #view-mode-content td, .dark #preview-read-content td,
+    .dark #view-mode-content th, .dark #preview-read-content th {
+      border-color: #475569;
+    }
+
+    /* Code Block inside Editor & View Panels */
+    .ql-editor pre.ql-syntax, #view-mode-content pre, #preview-read-content pre {
+      background-color: #1e293b !important;
+      color: #f1f5f9 !important;
+      border-radius: 0.5rem;
+      padding: 1rem !important;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+      font-size: 0.9em !important;
+      overflow-x: auto;
+      box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+    }
+
+    /* */
+    /* Style cho khung soạn thảo Code Block trực tiếp trong Editor của Quill v2 */
+    .ql-editor .ql-code-block-container {
+      background-color: #1e293b !important;
+      color: #f1f5f9 !important;
+      border-radius: 0.5rem;
+      padding: 1rem !important;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+      font-size: 0.9em !important;
+      margin: 1rem 0 !important;
+      position: relative;
+    }
+
+    /* Style cố định chữ và nền cho SelectBox chọn ngôn ngữ lập trình (C++, Java, Python...) */
+    .ql-editor .ql-code-block-container select.ql-ui {
+      background-color: #334155 !important;
+      color: #f1f5f9 !important;
+      border: 1px solid #475569 !important;
+      border-radius: 0.375rem !important;
+      padding: 2px 8px !important;
+      font-size: 0.75rem !important;
+      font-weight: 500 !important;
+      cursor: pointer !important;
+      outline: none !important;
+      margin-bottom: 0.5rem;
+      display: inline-block;
+    }
+
+    /* Cố định chữ hiển thị cho các thẻ option bên trong select box */
+    .ql-editor .ql-code-block-container select.ql-ui option {
+      background-color: #1e293b !important;
+      color: #f1f5f9 !important;
+    }
+
+    /* Dark Mode overrides for Quill */
+    .dark .ql-toolbar.ql-snow {
+      background-color: #1e293b !important;
+      border-color: #334155 !important;
+    }
+    .dark .ql-container.ql-snow {
+      background-color: #0f172a !important;
+      border-color: #334155 !important;
+      color: #f1f5f9;
+    }
+    .dark .ql-stroke {
+      stroke: #94a3b8 !important;
+    }
+    .dark .ql-fill {
+      fill: #94a3b8 !important;
+    }
+    .dark .ql-picker {
+      color: #94a3b8 !important;
+    }
+    .dark .ql-picker-options {
+      background-color: #1e293b !important;
+      border-color: #334155 !important;
+    }
+    .dark .ql-picker-item {
+      color: #94a3b8 !important;
+    }
+    .dark .ql-picker-item:hover {
+      color: #f1f5f9 !important;
+    }
+    .dark .ql-snow .ql-picker.ql-expanded .ql-picker-label {
+      border-color: #475569 !important;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-200 min-h-screen flex flex-col font-sans">
+
+  <!-- Top Navigation Bar -->
+  <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 py-3 px-6 flex items-center justify-between sticky top-0 z-40 transition-colors duration-200">
+    <div class="flex items-center space-x-3">
+      <div class="bg-indigo-600 text-white p-2 rounded-lg flex items-center justify-center shadow-md shadow-indigo-200 dark:shadow-none">
+        <i class="fa-solid fa-file-pen text-xl"></i>
+      </div>
+      <div>
+        <h1 class="text-lg font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+          QuillFlow <span class="text-xs bg-indigo-100 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300 font-semibold px-2 py-0.5 rounded-full">v2.2 Tree</span>
+        </h1>
+        <p class="text-xs text-slate-400 dark:text-slate-500">Hệ thống quản lý tài liệu thông minh</p>
+      </div>
+    </div>
+
+    <!-- Active Document Title Input -->
+    <div class="hidden md:flex items-center space-x-2 flex-1 max-w-md mx-8">
+      <span class="text-slate-400 dark:text-slate-500"><i class="fa-regular fa-file-alt"></i></span>
+      <input type="text" id="doc-title-input" value="Tài liệu chưa đặt tên" 
+        class="bg-transparent border-b border-transparent hover:border-slate-300 focus:border-indigo-500 focus:outline-none font-medium px-1 py-0.5 w-full text-slate-700 dark:text-slate-200 text-sm transition-all"
+        placeholder="Nhập tên tài liệu..." />
+    </div>
+
+    <!-- Controls Actions -->
+    <div class="flex items-center space-x-3">
+      <!-- Auto-save status -->
+      <span id="save-status" class="text-xs text-slate-400 dark:text-slate-500 hidden sm:inline-flex items-center gap-1.5">
+        <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        Đã lưu tự động
+      </span>
+
+      <!-- Dark Mode Toggle -->
+      <button id="theme-toggle" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition" title="Chuyển chế độ Sáng/Tối">
+        <i class="fa-solid fa-moon dark:hidden text-lg"></i>
+        <i class="fa-solid fa-sun hidden dark:block text-lg text-amber-400"></i>
+      </button>
+
+      <!-- Sidebar Toggle for Mobile -->
+      <button id="sidebar-toggle-btn" class="p-2 lg:hidden rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition">
+        <i class="fa-solid fa-bars text-lg"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Workspace Area -->
+  <div class="flex flex-1 overflow-hidden relative">
+    
+    <!-- Sidebar Panel: Document Tree & Tools -->
+    <aside id="sidebar-panel" class="fixed inset-y-0 left-0 transform -translate-x-full lg:relative lg:translate-x-0 transition-transform duration-300 z-30 w-80 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col h-[calc(100vh-65px)]">
+      <!-- Sidebar Header with Action Buttons -->
+      <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex flex-col gap-2">
+        <div class="flex items-center justify-between">
+          <h2 class="font-bold text-xs text-slate-400 dark:text-slate-500 uppercase tracking-wider">Cấu trúc thư mục</h2>
+          <span class="text-[10px] bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-500 dark:text-slate-400 font-semibold" id="total-nodes-badge">0 mục</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2 mt-1">
+          <button onclick="openCreateModal('file', 'root')" class="text-xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-950 px-2 py-2 rounded-md font-medium flex items-center justify-center gap-1.5 transition-all">
+            <i class="fa-regular fa-file-lines"></i> + Tài liệu gốc
+          </button>
+          <button onclick="openCreateModal('folder', 'root')" class="text-xs bg-amber-50 text-amber-600 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-indigo-300 dark:hover:bg-indigo-950 px-2 py-2 rounded-md font-medium flex items-center justify-center gap-1.5 transition-all">
+            <i class="fa-regular fa-folder"></i> + Thư mục gốc
+          </button>
+        </div>
+      </div>
+
+      <!-- Scrollable Tree View Container -->
+      <div class="flex-1 overflow-y-auto p-3 space-y-1" id="tree-container">
+        <!-- Dynamic Tree structure will be rendered here -->
+        <div class="text-center py-8 text-slate-400 dark:text-slate-500 text-sm">
+          <i class="fa-solid fa-folder-open text-2xl mb-2 block animate-pulse"></i>
+          Đang tải cấu trúc thư mục...
+        </div>
+      </div>
+
+      <!-- Quick Document Stats -->
+      <div class="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-3">
+        <h3 class="font-semibold text-xs text-slate-400 dark:text-slate-500 uppercase tracking-wider">Thống kê tài liệu</h3>
+        <div class="grid grid-cols-2 gap-2 text-center">
+          <div class="bg-white dark:bg-slate-800 p-2.5 rounded-lg border border-slate-100 dark:border-slate-800/80 shadow-sm">
+            <span class="block text-xl font-bold text-slate-800 dark:text-white" id="stat-words">0</span>
+            <span class="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-medium">Từ</span>
+          </div>
+          <div class="bg-white dark:bg-slate-800 p-2.5 rounded-lg border border-slate-100 dark:border-slate-800/80 shadow-sm">
+            <span class="block text-xl font-bold text-slate-800 dark:text-white" id="stat-chars">0</span>
+            <span class="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-medium">Kí tự</span>
+          </div>
+        </div>
+        <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-1 px-1">
+          <span>Ước lượng đọc:</span>
+          <span class="font-medium text-slate-800 dark:text-slate-200" id="stat-read-time">~ 0 phút</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Overlay for mobile sidebar -->
+    <div id="sidebar-overlay" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-20 lg:hidden"></div>
+
+    <!-- Center Editor Section -->
+    <main class="flex-1 flex flex-col p-4 md:p-6 overflow-y-auto space-y-4">
+      <!-- Top controls within editor space -->
+      <div class="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div class="flex items-center space-x-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+          <span class="text-sm font-semibold truncate max-w-[140px] md:max-w-[300px]" id="active-filename">Tài liệu chưa đặt tên</span>
+        </div>
+
+        <div class="flex items-center space-x-2">
+          <!-- Premium Insert Table Helper Button -->
+          <button id="insert-table-btn" class="bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/40 dark:hover:bg-teal-950 text-teal-700 dark:text-teal-300 text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5 transition" title="Chèn bảng tùy chỉnh vào tài liệu">
+            <i class="fa-solid fa-table"></i> Thêm Bảng
+          </button>
+
+          <!-- Toggle View Mode Button -->
+          <button id="view-mode-btn" class="bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-950 text-amber-700 dark:text-amber-300 text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5 transition" title="Chế độ xem đọc thử">
+            <i class="fa-regular fa-eye"></i> Xem tài liệu
+          </button>
+
+          <!-- Save Manual Button -->
+          <button id="save-doc-btn" class="bg-indigo-600 text-white text-xs font-semibold px-3 py-2 rounded-lg hover:bg-indigo-700 shadow-md shadow-indigo-200 dark:shadow-none flex items-center gap-1.5 transition" title="Lưu thủ công (Ctrl+S)">
+            <i class="fa-solid fa-cloud-arrow-up"></i> Lưu lại
+          </button>
+          
+          <!-- Copy HTML Button -->
+          <button id="copy-html-btn" class="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5 transition">
+            <i class="fa-regular fa-copy"></i> Sao chép HTML
+          </button>
+
+          <!-- Export Dropdown Trigger -->
+          <div class="relative">
+            <button id="export-dropdown-btn" class="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5 transition">
+              <i class="fa-solid fa-download"></i> Tải về <i class="fa-solid fa-chevron-down text-[10px]"></i>
+            </button>
+            
+            <!-- Export Dropdown Content -->
+            <div id="export-dropdown" class="hidden absolute right-0 mt-2 w-44 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg z-50">
+              <button onclick="exportAs('html')" class="w-full text-left px-4 py-2 text-xs hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 rounded-t-lg">
+                <i class="fa-brands fa-html5 text-orange-500 text-sm"></i> Tệp HTML (.html)
+              </button>
+              <button onclick="exportAs('txt')" class="w-full text-left px-4 py-2 text-xs hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 rounded-b-lg">
+                <i class="fa-regular fa-file-lines text-blue-500 text-sm"></i> Tệp Văn bản (.txt)
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- The Real Quill Editor Wrapper -->
+      <div class="flex-1 flex flex-col">
+        <div id="editor-container" class="shadow-sm">
+          <!-- Quill core loads in this node -->
+          <div id="editor">
+            <h1>Chào mừng bạn đến với QuillFlow! 🖊️</h1>
+            <p>Đây là <strong>phiên bản Quill v2</strong> chuyên nghiệp, đã được tích hợp bộ tô màu mã nguồn và bảng biểu.</p>
+            <p><br></p>
+              <h3>1. Trình diễn Code Block (Tự động tô màu cú pháp):</h3>
+              <pre class="ql-syntax" spellcheck="false">// Hàm tính toán đệ quy Fibonacci bằng Javascript
+  function fibonacci(n) {
+    if (n &lt;= 1) return n;
+    return fibonacci(n - 1) + fibonacci(n - 2);
+  }
+  console.log("Fibonacci(10) =", fibonacci(10));
+              </pre>
+            <p><br></p>
+            <h3>2. Trình diễn Bảng biểu (Table):</h3>
+            <p>Sử dụng nút <strong>"Thêm Bảng"</strong> ở góc trên bên phải để chèn bảng tùy chỉnh vào vị trí hiện tại của con trỏ chuột.</p>
+            <p><br></p>
+            <p class="ql-align-center"><em>Chúc bạn có những trải nghiệm quản lý tài liệu tuyệt vời! 🚀</em></p>
+          </div>
+        </div>
+
+        <!-- View Mode WorkSpace Container (Clean Reading layout) -->
+        <div id="view-mode-container" class="hidden flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 md:p-8 shadow-sm relative min-h-[350px] overflow-y-auto">
+          <!-- Back to edit badge -->
+          <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-6">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-1.5">
+              <i class="fa-solid fa-book-open text-indigo-500"></i> Chế độ đọc thử tài liệu
+            </span>
+            <button onclick="toggleViewMode(false)" class="text-xs bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900 text-indigo-600 dark:text-indigo-300 font-semibold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1">
+              <i class="fa-solid fa-pen text-[10px]"></i> Chỉnh sửa tài liệu
+            </button>
+          </div>
+          
+          <!-- Read-only prose body -->
+          <article id="view-mode-content" class="prose dark:prose-invert max-w-none focus:outline-none">
+            <!-- Dynamic read-only HTML loads here -->
+          </article>
+
+          <!-- Beautiful Floating Edit Button -->
+          <button id="floating-edit-btn" onclick="toggleViewMode(false)" class="fixed bottom-8 right-8 z-50 bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-full shadow-lg shadow-indigo-300 dark:shadow-none hover:scale-105 transition-all flex items-center justify-center group" title="Chỉnh sửa tài liệu này">
+            <i class="fa-solid fa-pen text-base"></i>
+            <span class="max-w-0 overflow-hidden group-hover:max-w-xs group-hover:ml-2 transition-all duration-300 ease-out font-semibold text-sm whitespace-nowrap">Chỉnh sửa</span>
+          </button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- CUSTOM MODALS (Replacements for prompt/confirm) -->
+  
+  <!-- 1. Create Folder/File Modal -->
+  <div id="modal-create" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden transform scale-95 transition-all">
+      <div class="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+        <h3 class="font-bold text-slate-900 dark:text-white flex items-center gap-2" id="modal-create-title">
+          <i class="fa-regular fa-folder-open text-amber-500"></i> Tạo thư mục mới
+        </h3>
+        <button onclick="closeModal('modal-create')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="p-5 space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-1" id="modal-create-label">Tên mục mới</label>
+          <input type="text" id="modal-create-input" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500 text-slate-800 dark:text-white" placeholder="Nhập tên tại đây..." />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-1">Thư mục cha</label>
+          <select id="modal-create-parent" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500 text-slate-800 dark:text-white">
+            <option value="root">Thư mục gốc (Root)</option>
+          </select>
+        </div>
+      </div>
+      <div class="p-5 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2.5">
+        <button onclick="closeModal('modal-create')" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 transition">Hủy</button>
+        <button id="modal-create-submit" class="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition">Xác nhận</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Rename Modal -->
+  <div id="modal-rename" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden transform scale-95 transition-all">
+      <div class="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+        <h3 class="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <i class="fa-regular fa-pen-to-square text-indigo-500"></i> Đổi tên danh mục
+        </h3>
+        <button onclick="closeModal('modal-rename')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="p-5">
+        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-1">Tên mới</label>
+        <input type="text" id="modal-rename-input" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500 text-slate-800 dark:text-white" />
+      </div>
+      <div class="p-5 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2.5">
+        <button onclick="closeModal('modal-rename')" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 transition">Hủy</button>
+        <button id="modal-rename-submit" class="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition">Thay đổi</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Move Item Modal -->
+  <div id="modal-move" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden transform scale-95 transition-all">
+      <div class="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+        <h3 class="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <i class="fa-solid fa-arrows-up-down-left-right text-teal-500"></i> Di chuyển tệp tin
+        </h3>
+        <button onclick="closeModal('modal-move')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="p-5">
+        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-1">Chọn thư mục đích</label>
+        <select id="modal-move-select" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500 text-slate-800 dark:text-white">
+          <option value="root">Thư mục gốc (Root)</option>
+        </select>
+      </div>
+      <div class="p-5 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2.5">
+        <button onclick="closeModal('modal-move')" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 transition">Hủy</button>
+        <button id="modal-move-submit" class="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition">Di chuyển</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Delete Confirmation Modal -->
+  <div id="modal-delete" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden transform scale-95 transition-all">
+      <div class="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+        <h3 class="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-rose-500">
+          <i class="fa-solid fa-triangle-exclamation"></i> Xác nhận xóa
+        </h3>
+        <button onclick="closeModal('modal-delete')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="p-5 space-y-2">
+        <p class="text-sm text-slate-600 dark:text-slate-300" id="modal-delete-warning">Bạn có chắc chắn muốn xóa mục này?</p>
+        <p class="text-xs text-rose-500 font-medium">* Lưu ý: Các tệp tin con bên trong thư mục này (nếu có) cũng sẽ bị xóa vĩnh viễn và không thể khôi phục.</p>
+      </div>
+      <div class="p-5 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2.5">
+        <button onclick="closeModal('modal-delete')" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 transition">Hủy</button>
+        <button id="modal-delete-submit" class="px-4 py-2 rounded-xl text-xs font-semibold bg-rose-600 text-white hover:bg-rose-700 transition">Chắc chắn xóa</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Insert Table Modal -->
+  <div id="modal-insert-table" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden transform scale-95 transition-all">
+      <div class="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+        <h3 class="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-teal-600 dark:text-teal-400">
+          <i class="fa-solid fa-table"></i> Cấu hình chèn Bảng
+        </h3>
+        <button onclick="closeModal('modal-insert-table')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="p-5 space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-1">Số hàng (Rows)</label>
+          <input type="number" id="table-rows" min="1" max="20" value="3" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-1">Số cột (Columns)</label>
+          <input type="number" id="table-cols" min="1" max="20" value="3" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
+        </div>
+      </div>
+      <div class="p-5 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2.5">
+        <button onclick="closeModal('modal-insert-table')" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 transition">Hủy</button>
+        <button id="modal-insert-table-submit" class="px-4 py-2 rounded-xl text-xs font-semibold bg-teal-600 hover:bg-teal-700 text-white transition">Chèn ngay</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Toast Message Box -->
+  <div id="toast-message" class="fixed bottom-5 right-5 z-50 transform translate-y-10 opacity-0 pointer-events-none transition-all duration-300 bg-slate-900 dark:bg-indigo-600 text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-2.5 text-sm font-medium">
+    <i id="toast-icon" class="fa-solid fa-circle-check text-emerald-400 dark:text-white text-base"></i>
+    <span id="toast-text">Đã hoàn thành thao tác!</span>
+  </div>
+
+  <!-- Quill core library -->
+  <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
