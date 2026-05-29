@@ -22,6 +22,12 @@ class ProjectApiTestCase(unittest.TestCase):
         uhes_restful_blueprint_kanban.USERS_DIR = cls.users_dir
         uhes_restful_blueprint_user.USERS_DIR = cls.users_dir
         
+        uhes_restful_blueprint_kanban.init_kanban_db()
+        
+        # Đảm bảo tài khoản admin luôn tồn tại trong DB Test với mật khẩu gốc
+        admin_user = {"useruid": "admin", "username": "admin", "permission": "owner", "password": "admin"}
+        uhes_restful_blueprint_kanban.write_json(os.path.join(cls.users_dir, "admin.json"), admin_user)
+        
         from app import app
         app.config['TESTING'] = True
         cls.app = app
@@ -32,19 +38,26 @@ class ProjectApiTestCase(unittest.TestCase):
         shutil.rmtree(cls.test_dir)
 
     def test_1_add_edit_delete_project(self):
+        # Lấy token Admin
+        login_payload = {"username": "admin", "password": "admin"}
+        res_login = self.client.post('/api/v1/kanban/users/login', json=login_payload)
+        self.assertEqual(res_login.status_code, 200)
+        token = json.loads(res_login.data).get("token", "")
+        headers = {"Authorization": f"Bearer {token}"}
+
         project_payload = {"name": "Test Project", "users": []}
         
         # Tạo
-        res_post = self.client.post('/api/v1/kanban/projects', json=project_payload)
+        res_post = self.client.post('/api/v1/kanban/projects', json=project_payload, headers=headers)
         self.assertEqual(res_post.status_code, 201)
         project_id = json.loads(res_post.data)["project"]["id"]
         
         # Sửa
-        res_put = self.client.put(f'/api/v1/kanban/projects/{project_id}', json={"name": "Test Project Updated"})
+        res_put = self.client.put(f'/api/v1/kanban/projects/{project_id}', json={"name": "Test Project Updated"}, headers=headers)
         self.assertEqual(res_put.status_code, 200)
         
         # Xóa (Soft Delete)
-        res_del = self.client.delete(f'/api/v1/kanban/projects/{project_id}')
+        res_del = self.client.delete(f'/api/v1/kanban/projects/{project_id}', headers=headers)
         self.assertEqual(res_del.status_code, 200)
         
         # Kiểm tra danh sách hiển thị
@@ -55,9 +68,16 @@ class ProjectApiTestCase(unittest.TestCase):
         self.assertTrue(any(p['id'] == project_id for p in json.loads(res_get_deleted.data)))
 
     def test_2_regular_user_cannot_delete_project(self):
+        # Lấy token Admin để tạo dự án
+        login_payload_admin = {"username": "admin", "password": "admin"}
+        res_login_admin = self.client.post('/api/v1/kanban/users/login', json=login_payload_admin)
+        self.assertEqual(res_login_admin.status_code, 200)
+        admin_token = json.loads(res_login_admin.data).get("token", "")
+        admin_headers = {"Authorization": f"Bearer {admin_token}"}
+
         # 1. Tạo một dự án trước (giả định quyền mặc định là admin khi chưa có token)
         project_payload = {"name": "Dự án Test RBAC", "users": []}
-        res_post = self.client.post('/api/v1/kanban/projects', json=project_payload)
+        res_post = self.client.post('/api/v1/kanban/projects', json=project_payload, headers=admin_headers)
         self.assertEqual(res_post.status_code, 201)
         project_id = json.loads(res_post.data)["project"]["id"]
         
@@ -71,7 +91,7 @@ class ProjectApiTestCase(unittest.TestCase):
         
         # 3. Đăng nhập để lấy Token của user bình thường
         login_payload = {"username": "normal_user", "password": "password123"}
-        res_login = self.client.post('/api/v1/kanban/login', json=login_payload)
+        res_login = self.client.post('/api/v1/kanban/users/login', json=login_payload)
         
         headers = {}
         if res_login.status_code == 200:
@@ -100,7 +120,7 @@ class ProjectApiTestCase(unittest.TestCase):
         
         # 2. Đăng nhập để lấy Token của user bình thường
         login_payload = {"username": "normal_user_create", "password": "password123"}
-        res_login = self.client.post('/api/v1/kanban/login', json=login_payload)
+        res_login = self.client.post('/api/v1/kanban/users/login', json=login_payload)
         
         headers = {}
         if res_login.status_code == 200:

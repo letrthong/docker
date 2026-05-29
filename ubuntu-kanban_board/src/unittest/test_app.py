@@ -38,6 +38,12 @@ class KanbanAppTestCase(unittest.TestCase):
         uhes_restful_blueprint_kanban.UPLOAD_DIR = cls.uploads_dir
         uhes_restful_blueprint_user.USERS_DIR = cls.users_dir
         
+        uhes_restful_blueprint_kanban.init_kanban_db()
+        
+        # Đảm bảo tài khoản admin luôn tồn tại trong DB Test với mật khẩu gốc
+        admin_user = {"useruid": "admin", "username": "admin", "permission": "owner", "password": "admin"}
+        uhes_restful_blueprint_kanban.write_json(os.path.join(cls.users_dir, "admin.json"), admin_user)
+        
         from app import app
         app.config['TESTING'] = True
         cls.app = app
@@ -105,12 +111,19 @@ class KanbanAppTestCase(unittest.TestCase):
         self.assertEqual(res_get_after.status_code, 404)
 
     def test_3_add_and_delete_project(self):
+        # Lấy token Admin
+        login_payload = {"username": "admin", "password": "admin"}
+        res_login = self.client.post('/api/v1/kanban/users/login', json=login_payload)
+        self.assertEqual(res_login.status_code, 200)
+        token = json.loads(res_login.data).get("token", "")
+        headers = {"Authorization": f"Bearer {token}"}
+
         # 1. Tạo dự án mới (Add Project)
         project_payload = {
             "name": "Project Unit Test",
             "users": []
         }
-        res_post = self.client.post('/api/v1/kanban/projects', json=project_payload)
+        res_post = self.client.post('/api/v1/kanban/projects', json=project_payload, headers=headers)
         self.assertEqual(res_post.status_code, 201)
         data_post = json.loads(res_post.data)
         self.assertEqual(data_post["message"], "Tạo dự án thành công")
@@ -122,11 +135,11 @@ class KanbanAppTestCase(unittest.TestCase):
         update_payload = {
             "name": "Project Unit Test Updated"
         }
-        res_put = self.client.put(f'/api/v1/kanban/projects/{project_id}', json=update_payload)
+        res_put = self.client.put(f'/api/v1/kanban/projects/{project_id}', json=update_payload, headers=headers)
         self.assertEqual(res_put.status_code, 200)
         
         # 3. Xóa dự án (Soft Delete Project)
-        res_del = self.client.delete(f'/api/v1/kanban/projects/{project_id}')
+        res_del = self.client.delete(f'/api/v1/kanban/projects/{project_id}', headers=headers)
         self.assertEqual(res_del.status_code, 200)
         data_del = json.loads(res_del.data)
         self.assertEqual(data_del["message"], "Đã xóa dự án thành công (chuyển vào thùng rác)")

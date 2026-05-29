@@ -67,6 +67,18 @@ def get_projects():
 
 @kanban_api.route("/projects", methods=["POST"])
 def create_project():
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+            if payload.get("permission") != "owner":
+                return jsonify({"error": "Forbidden"}), 403
+        except Exception:
+            return jsonify({"error": "Unauthorized"}), 401
+    else:
+        return jsonify({"error": "Unauthorized - Token missing"}), 401
+
     new_project = request.json
     
     new_project['id'] = str(uuid.uuid4().hex)
@@ -80,6 +92,18 @@ def create_project():
 
 @kanban_api.route("/projects/<project_id>", methods=["PUT"])
 def update_project(project_id):
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+            if payload.get("permission") != "owner":
+                return jsonify({"error": "Forbidden"}), 403
+        except Exception:
+            return jsonify({"error": "Unauthorized"}), 401
+    else:
+        return jsonify({"error": "Unauthorized - Token missing"}), 401
+
     updated_data = request.json
     filepath = os.path.join(PROJECTS_DIR, f"{project_id}.json")
     
@@ -93,6 +117,18 @@ def update_project(project_id):
 
 @kanban_api.route("/projects/<project_id>", methods=["DELETE"])
 def delete_project(project_id):
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+            if payload.get("permission") != "owner":
+                return jsonify({"error": "Forbidden"}), 403
+        except Exception:
+            return jsonify({"error": "Unauthorized"}), 401
+    else:
+        return jsonify({"error": "Unauthorized - Token missing"}), 401
+
     filepath = os.path.join(PROJECTS_DIR, f"{project_id}.json")
     
     if not os.path.exists(filepath):
@@ -210,6 +246,19 @@ def delete_task(task_id):
     filepath = os.path.join(TASKS_DIR, f"{task_id}.json")
     if os.path.exists(filepath):
         os.remove(filepath)
+        
+        comments_filepath = os.path.join(COMMENTS_DIR, f"{task_id}.json")
+        if os.path.exists(comments_filepath):
+            comments = read_json(comments_filepath)
+            for c in comments:
+                image_url = c.get("image")
+                if image_url and '/uploads/' in image_url:
+                    filename = image_url.split('/')[-1]
+                    image_filepath = os.path.join(UPLOAD_DIR, filename)
+                    if os.path.exists(image_filepath):
+                        os.remove(image_filepath)
+            os.remove(comments_filepath)
+            
         return jsonify({"message": "Task deleted successfully"})
     return jsonify({"error": "Task not found"}), 404
 
