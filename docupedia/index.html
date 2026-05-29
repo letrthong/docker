@@ -312,6 +312,12 @@
             <i class="fa-regular fa-copy"></i> Sao chép HTML
           </button>
 
+          <!-- Upload File Button -->
+          <label for="upload-file-input" class="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5 transition cursor-pointer" title="Tải lên tệp HTML/TXT">
+            <i class="fa-solid fa-upload"></i> Upload
+            <input id="upload-file-input" type="file" accept=".html,.txt" class="hidden" />
+          </label>
+
           <!-- Export Dropdown Trigger -->
           <div class="relative">
             <button id="export-dropdown-btn" class="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5 transition">
@@ -508,6 +514,6 @@
 
   <!-- Quill core library -->
   <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
-  <script src="js/app.js"></script>
+  <script src="js/app.js" type="module"></script>
 </body>
 </html>
