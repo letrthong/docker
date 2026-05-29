@@ -9,8 +9,7 @@ echo "===================================================="
 
 docker exec -w /app/src telua_python_kanban_board mkdir -p test-reports
 # Thực thi unit test
-docker exec -w /app/src telua_python_kanban_board python -m xmlrunner discover -s unittest -p "test_*.py" -o test-reports
-
+docker exec -w /app/src telua_python_kanban_board sh -c 'python -m xmlrunner discover -s unittest -p "test_*.py" && mkdir -p test-reports && mv TEST-*.xml test-reports/'
 # Copy file XML report từ container ra ngoài máy host
 echo "===================================================="
 echo "📥 Copying XML report to host machine..."

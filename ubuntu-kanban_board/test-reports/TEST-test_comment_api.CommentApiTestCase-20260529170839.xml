@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="test_comment_api.CommentApiTestCase-20260529170839" tests="3" time="0.025" failures="0" errors="0" skipped="0">
+	<testcase classname="test_comment_api.CommentApiTestCase" name="test_1_add_and_delete_comment" time="0.005"/>
+	<testcase classname="test_comment_api.CommentApiTestCase" name="test_2_add_and_delete_comment_with_image" time="0.015"/>
+	<testcase classname="test_comment_api.CommentApiTestCase" name="test_3_edit_comment_history" time="0.005"/>
+	<system-out><![CDATA[]]></system-out>
+	<system-err><![CDATA[]]></system-err>
+</testsuite>

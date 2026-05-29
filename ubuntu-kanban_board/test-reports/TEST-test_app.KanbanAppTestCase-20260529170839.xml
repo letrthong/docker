@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="test_app.KanbanAppTestCase-20260529170839" tests="3" time="0.295" failures="0" errors="0" skipped="0">
+	<testcase classname="test_app.KanbanAppTestCase" name="test_1_add_and_edit_user" time="0.144"/>
+	<testcase classname="test_app.KanbanAppTestCase" name="test_2_add_and_delete_task" time="0.003"/>
+	<testcase classname="test_app.KanbanAppTestCase" name="test_3_add_and_delete_project" time="0.148"/>
+	<system-out><![CDATA[[Kanban API] Login attempt for username: admin
+[Kanban API] Login successful for username: admin
+]]></system-out>
+	<system-err><![CDATA[]]></system-err>
+</testsuite>

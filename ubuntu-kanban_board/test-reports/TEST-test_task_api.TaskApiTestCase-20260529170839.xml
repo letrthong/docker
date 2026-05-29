@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="test_task_api.TaskApiTestCase-20260529170839" tests="2" time="0.010" failures="0" errors="0" skipped="0">
+	<testcase classname="test_task_api.TaskApiTestCase" name="test_1_add_get_delete_task" time="0.004"/>
+	<testcase classname="test_task_api.TaskApiTestCase" name="test_2_delete_task_with_comments_and_images" time="0.006"/>
+	<system-out><![CDATA[]]></system-out>
+	<system-err><![CDATA[]]></system-err>
+</testsuite>

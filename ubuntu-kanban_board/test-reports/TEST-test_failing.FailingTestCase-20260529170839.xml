@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="test_failing.FailingTestCase-20260529170839" tests="2" time="0.000" failures="0" errors="0" skipped="0">
+	<testcase classname="test_failing.FailingTestCase" name="test_4_failing_test" time="0.000"/>
+	<testcase classname="test_failing.FailingTestCase" name="test_4_failing_test" time="0.000"/>
+	<system-out><![CDATA[]]></system-out>
+	<system-err><![CDATA[]]></system-err>
+</testsuite>
