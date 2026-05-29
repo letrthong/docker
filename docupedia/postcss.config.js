@@ -1,6 +1,1 @@
-module.exports = {
-  plugins: {
-    tailwindcss: {},
-    autoprefixer: {},
-  },
-};
+// (Để trống file này, chỉ dùng postcss.config.cjs)
