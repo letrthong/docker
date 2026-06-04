@@ -1,15 +1,44 @@
 #!/bin/bash
 
-mkdir -p docupedia_data
-# remove the rest containers if have
-docker compose down
+# Docupedia - Start Script
+# Khởi động Docker container với Flask backend + React frontend
 
-# Tự động build lại image (nếu có thay đổi Dockerfile/requirements) có sử dụng cache cho nhanh
-# và chạy container ở chế độ nền (Detached mode)
-docker compose up -d  --build
-
-docker cp telua_docupedia:/app/dist/index.html ./docupedia_data/index.html
+set -e
 
 echo "===================================================="
-echo "🚀 Container đã chạy ngầm thành công!"
+echo "🚀 Starting Docupedia..."
 echo "===================================================="
+
+# Tạo thư mục data nếu chưa có
+mkdir -p data
+
+# Dừng containers cũ nếu có
+docker compose down 2>/dev/null || true
+
+# Build với CACHEBUST để invalidate cache (dùng timestamp)
+echo "🔨 Building with cache bust..."
+docker compose build --build-arg CACHEBUST=$(date +%s)
+
+# Chạy container
+docker compose up -d
+
+# Đợi container khởi động
+sleep 3
+
+# Kiểm tra trạng thái
+if docker compose ps | grep -q "Up"; then
+    echo "===================================================="
+    echo "✅ Docupedia đã khởi động thành công!"
+    echo "===================================================="
+    echo ""
+    echo "🌐 URL: http://localhost:5000"
+    echo "👤 Login: admin / admin"
+    echo ""
+    echo "📋 Xem logs: docker compose logs -f"
+    echo "🛑 Dừng:     docker compose down"
+    echo "===================================================="
+else
+    echo "❌ Lỗi khởi động container!"
+    docker compose logs
+    exit 1
+fi

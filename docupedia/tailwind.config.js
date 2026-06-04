@@ -3,10 +3,14 @@ export default {
   darkMode: 'class',
   content: [
     "./index.html",
-    "./js/**/*.{js,ts,jsx,tsx}",
+    "./src-react/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        sans: ['Inter', 'sans-serif'],
+      },
+    },
   },
   plugins: [],
 }

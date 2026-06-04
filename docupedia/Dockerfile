@@ -22,12 +22,18 @@ RUN npm install --legacy-peer-deps
 # Copy toàn bộ project (sau khi đã npm install)
 COPY . .
 
+# Invalidate cache - change this date to force rebuild: 2026-06-02
+ARG CACHEBUST=1
+
 # Build frontend
 RUN npm run build
 
 # Copy toàn bộ file tĩnh (HTML, JS, CSS, Assets) sang Flask static
 RUN mkdir -p /app/src/static && \
 	cp -r /app/dist/* /app/src/static/ || true
+
+# Create data directory
+RUN mkdir -p /app/data
 
 EXPOSE 5000
 
