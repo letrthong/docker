@@ -34,6 +34,9 @@ RUN mkdir -p /app/src/static && \
 
 # Create data directory
 RUN mkdir -p /app/data
+RUN chmod 777 -R /app/data
+
+RUN chmod 777 -R /app/docupedia_data
 
 EXPOSE 5000
 
