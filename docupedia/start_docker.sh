@@ -42,3 +42,5 @@ else
     docker compose logs
     exit 1
 fi
+
+docker cp docupedia_app:/app/dist/index.html ./data/index.html

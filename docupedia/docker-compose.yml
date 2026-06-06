@@ -10,7 +10,7 @@ services:
     volumes:
       - ./data:/app/data
     ports:
-      - "5002:5000"
+      - "5000:5000"
     environment:
       - FLASK_DEBUG=true
       - JWT_SECRET_KEY=docupedia-secret-key-change-in-production
