@@ -7,7 +7,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from config import get_config
-from routes import register_routes
+from uhes_restful_blueprint_doupedia import integrate_docupedia
 from services.auth_service import init_default_admin
 
 # Get configuration
@@ -21,7 +21,7 @@ app.config['SECRET_KEY'] = config.JWT_SECRET_KEY
 CORS(app, origins=config.CORS_ORIGINS, supports_credentials=True)
 
 # Register API routes
-register_routes(app, config.API_PREFIX)
+integrate_docupedia(app, url_prefix=config.API_PREFIX)
 
 # ===== Static File Serving =====
 
