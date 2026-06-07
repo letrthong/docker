@@ -52,7 +52,7 @@ def get_docupedia_blueprint():
     
     return docupedia_bp
 
-def integrate_docupedia(app, url_prefix='/api/docupedia', serve_frontend=False, static_folder=None):
+def integrate_docupedia(app, url_prefix='/api/v1/docupedia', serve_frontend=False, static_folder=None):
     """
     Hàm tiện ích giúp tích hợp nhanh toàn bộ Docupedia vào Flask app khác.
     
