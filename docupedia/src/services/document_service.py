@@ -4,11 +4,11 @@ from typing import List, Dict, Tuple, Optional
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from config import get_config
+from config_doupedia import get_config_doupedia
 from utils.json_storage import JSONStorage, generate_id, get_timestamp
 from services.tree_service import TreeService
 
-config = get_config()
+config = get_config_doupedia()
 
 
 class DocumentService:

@@ -80,7 +80,7 @@ def ensure_project_dirs(project_id: int) -> None:
 # APPLICATION CONFIGURATION
 # =============================================================================
 
-class Config:
+class ConfigDoupedia:
     """Application configuration"""
     
     # Base paths (string versions for backward compatibility)
@@ -99,9 +99,6 @@ class Config:
     JWT_EXPIRATION_HOURS = int(os.environ.get('JWT_EXPIRATION_HOURS', 24))
     JWT_EXPIRATION_DELTA = timedelta(hours=JWT_EXPIRATION_HOURS)
     
-    # Password hashing
-    BCRYPT_ROUNDS = 12
-    
     # API Settings
     API_PREFIX = '/api/v1'
     
@@ -116,15 +113,15 @@ class Config:
     DEFAULT_ADMIN_PASSWORD = 'admin'
 
 
-class DevelopmentConfig(Config):
+class DevelopmentConfig(ConfigDoupedia):
     DEBUG = True
 
 
-class ProductionConfig(Config):
+class ProductionConfig(ConfigDoupedia):
     DEBUG = False
 
 
-def get_config():
+def get_config_doupedia():
     """Get configuration based on environment."""
     env = os.environ.get('FLASK_ENV', 'development')
     if env == 'production':

@@ -5,11 +5,11 @@ import sys
 # Add src to path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from config import get_config
+from config_doupedia import get_config_doupedia
 from uhes_restful_blueprint_doupedia import integrate_docupedia
 
 # Get configuration
-config = get_config()
+config = get_config_doupedia()
 
 # Create Flask app
 app = Flask(__name__, static_folder="static")

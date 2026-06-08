@@ -7,7 +7,7 @@ DOCUPEDIA_SRC_DIR = os.path.dirname(os.path.abspath(__file__))
 if DOCUPEDIA_SRC_DIR not in sys.path:
     sys.path.insert(0, DOCUPEDIA_SRC_DIR)
 
-from config import get_config
+from config_doupedia import get_config_doupedia
 from services.auth_service import init_default_admin
 from utils.response import error_response
 
@@ -59,7 +59,7 @@ def integrate_docupedia(app, url_prefix=None):
         from uhes_restful_blueprint_doupedia import integrate_docupedia
         integrate_docupedia(app, url_prefix='/api/v1')
     """
-    config = get_config()
+    config = get_config_doupedia()
     app.config['SECRET_KEY'] = config.JWT_SECRET_KEY
     
     if url_prefix is None:

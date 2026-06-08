@@ -1,5 +1,5 @@
 from jwt import encode, decode, ExpiredSignatureError, InvalidTokenError
-from bcrypt import gensalt, hashpw, checkpw
+from werkzeug.security import generate_password_hash, check_password_hash
 import os
 from datetime import datetime
 from typing import Optional, Dict, Tuple
@@ -7,10 +7,10 @@ from typing import Optional, Dict, Tuple
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from config import get_config
+from config_doupedia import get_config_doupedia
 from utils.json_storage import JSONStorage, generate_id, get_timestamp
 
-config = get_config()
+config = get_config_doupedia()
 
 
 class AuthService:
@@ -18,18 +18,14 @@ class AuthService:
     
     @staticmethod
     def hash_password(password: str) -> str:
-        """Hash password using bcrypt"""
-        salt = gensalt(rounds=config.BCRYPT_ROUNDS)
-        return hashpw(password.encode('utf-8'), salt).decode('utf-8')
+        """Hash password using Werkzeug security"""
+        return generate_password_hash(password)
     
     @staticmethod
     def verify_password(password: str, password_hash: str) -> bool:
         """Verify password against hash"""
         try:
-            return checkpw(
-                password.encode('utf-8'), 
-                password_hash.encode('utf-8')
-            )
+            return check_password_hash(password_hash, password)
         except Exception:
             return False
     
