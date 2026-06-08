@@ -1,7 +1,6 @@
 import os
 import sys
-from flask import Blueprint, request, jsonify, send_from_directory
-from flask_cors import CORS
+from flask import Blueprint, jsonify, request
 
 # Đảm bảo thư mục src của Docupedia nằm trong sys.path để các imports bên dưới hoạt động đúng
 DOCUPEDIA_SRC_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -52,7 +51,7 @@ def get_docupedia_blueprint():
     
     return docupedia_bp
 
-def integrate_docupedia(app, url_prefix='/api/v1/docupedia', serve_frontend=False, static_folder=None):
+def integrate_docupedia(app, url_prefix=None):
     """
     Hàm tiện ích giúp tích hợp nhanh toàn bộ Docupedia vào Flask app khác.
     
@@ -63,8 +62,26 @@ def integrate_docupedia(app, url_prefix='/api/v1/docupedia', serve_frontend=Fals
     config = get_config()
     app.config['SECRET_KEY'] = config.JWT_SECRET_KEY
     
-    # Enable CORS
-    CORS(app, origins=config.CORS_ORIGINS, supports_credentials=True)
+    if url_prefix is None:
+        url_prefix = config.API_PREFIX
+    
+    # Enable CORS bằng middleware native của Flask
+    @app.after_request
+    def add_cors_headers(response):
+        origin = request.headers.get('Origin')
+        allowed_origins = config.CORS_ORIGINS
+        if isinstance(allowed_origins, str):
+            allowed_origins = [allowed_origins]
+            
+        if origin and (origin in allowed_origins or '*' in allowed_origins):
+            response.headers['Access-Control-Allow-Origin'] = origin
+        elif '*' in allowed_origins:
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept, Origin'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, PATCH, OPTIONS'
+        return response
 
     # Lấy blueprint tổng và register vào app
     bp = get_docupedia_blueprint()
@@ -72,41 +89,4 @@ def integrate_docupedia(app, url_prefix='/api/v1/docupedia', serve_frontend=Fals
     
     print(f"[Docupedia] Đã tích hợp thành công Docupedia API tại prefix: {url_prefix}")
 
-    if serve_frontend:
-        _setup_frontend_and_errors(app, url_prefix, static_folder)
-    
     return app
-
-def _setup_frontend_and_errors(app, api_prefix, static_folder=None):
-    """Cấu hình phục vụ giao diện React (SPA) và Error Handlers cho app"""
-    
-    frontend_dir = static_folder if static_folder else app.static_folder
-    
-    @app.route("/")
-    def index():
-        index_path = os.path.join(frontend_dir, "index.html")
-        if not os.path.exists(index_path):
-            print(f"[Flask][ERROR] index.html not found at {index_path}")
-            return jsonify({'error': 'Frontend not built'}), 404
-        return send_from_directory(frontend_dir, "index.html")
-
-    @app.route('/<path:path>')
-    def static_proxy(path):
-        file_path = os.path.join(frontend_dir, path)
-        if os.path.exists(file_path):
-            return send_from_directory(frontend_dir, path)
-        return send_from_directory(frontend_dir, "index.html")
-
-    @app.errorhandler(404)
-    def not_found(e):
-        if request.path.startswith(api_prefix):
-            from utils.response import error_response
-            return error_response('Endpoint không tồn tại', 'NOT_FOUND', 404)
-        return send_from_directory(frontend_dir, "index.html")
-
-    @app.errorhandler(500)
-    def server_error(e):
-        from utils.response import error_response
-        return error_response('Lỗi server', 'SERVER_ERROR', 500)
-        
-    print("[Docupedia] Đã cấu hình phục vụ giao diện React (SPA) và Error Handlers.")
