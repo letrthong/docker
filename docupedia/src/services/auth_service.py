@@ -1,5 +1,5 @@
-import jwt
-import bcrypt
+from jwt import encode, decode, ExpiredSignatureError, InvalidTokenError
+from bcrypt import gensalt, hashpw, checkpw
 import os
 from datetime import datetime
 from typing import Optional, Dict, Tuple
@@ -19,14 +19,14 @@ class AuthService:
     @staticmethod
     def hash_password(password: str) -> str:
         """Hash password using bcrypt"""
-        salt = bcrypt.gensalt(rounds=config.BCRYPT_ROUNDS)
-        return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
+        salt = gensalt(rounds=config.BCRYPT_ROUNDS)
+        return hashpw(password.encode('utf-8'), salt).decode('utf-8')
     
     @staticmethod
     def verify_password(password: str, password_hash: str) -> bool:
         """Verify password against hash"""
         try:
-            return bcrypt.checkpw(
+            return checkpw(
                 password.encode('utf-8'), 
                 password_hash.encode('utf-8')
             )
@@ -43,21 +43,21 @@ class AuthService:
             'exp': datetime.utcnow() + config.JWT_EXPIRATION_DELTA,
             'iat': datetime.utcnow()
         }
-        return jwt.encode(payload, config.JWT_SECRET_KEY, algorithm=config.JWT_ALGORITHM)
+        return encode(payload, config.JWT_SECRET_KEY, algorithm=config.JWT_ALGORITHM)
     
     @staticmethod
     def decode_token(token: str) -> Optional[Dict]:
         """Decode and verify JWT token"""
         try:
-            payload = jwt.decode(
+            payload = decode(
                 token, 
                 config.JWT_SECRET_KEY, 
                 algorithms=[config.JWT_ALGORITHM]
             )
             return payload
-        except jwt.ExpiredSignatureError:
+        except ExpiredSignatureError:
             return None  # Token expired
-        except jwt.InvalidTokenError:
+        except InvalidTokenError:
             return None  # Invalid token
     
     @classmethod
