@@ -20,13 +20,13 @@ from routes import (
 docupedia_bp = Blueprint('docupedia_restful', __name__)
 
 # Thêm Health Check endpoint trực tiếp vào Blueprint
-@docupedia_bp.route('/health', methods=['GET'])
-def health_check():
-    """GET /health - Health check endpoint"""
-    return jsonify({
-        'success': True,
-        'data': {'status': 'ok', 'version': '1.0.0'}
-    })
+# @docupedia_bp.route('/health', methods=['GET'])
+# def health_check():
+#     """GET /health - Health check endpoint"""
+#     return jsonify({
+#         'success': True,
+#         'data': {'status': 'ok', 'version': '1.0.0'}
+#     })
 
 # Gắn (nest) các blueprints con vào Blueprint cha
 docupedia_bp.register_blueprint(auth_bp, url_prefix='/auth')

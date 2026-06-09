@@ -39,7 +39,10 @@ class AuthService:
             'exp': datetime.utcnow() + config.JWT_EXPIRATION_DELTA,
             'iat': datetime.utcnow()
         }
-        return encode(payload, config.JWT_SECRET_KEY, algorithm=config.JWT_ALGORITHM)
+        token = encode(payload, config.JWT_SECRET_KEY, algorithm=config.JWT_ALGORITHM)
+        if isinstance(token, bytes):
+            return token.decode('utf-8')
+        return token
     
     @staticmethod
     def decode_token(token: str) -> Optional[Dict]:
