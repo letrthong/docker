@@ -31,7 +31,7 @@ USERS_FILE = ROOT_DATABASE_DIR / 'users.json'
 PROJECTS_FILE = ROOT_DATABASE_DIR / 'projects.json'
 PERMISSIONS_FILE = ROOT_DATABASE_DIR / 'permissions.json'
 
-# Projects data directory
+# Projects data directory 
 PROJECTS_DATA_DIR = ROOT_DATABASE_DIR / 'projects'
 
 

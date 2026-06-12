@@ -24,9 +24,16 @@ DOCUPEDIA_STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.absp
 init_docupedia_db()
 
 # Register API routes
-app.register_blueprint(docupedia_bp, url_prefix=config.API_PREFIX)
+#app.register_blueprint(docupedia_bp, url_prefix=config.API_PREFIX)
+app.register_blueprint(docupedia_bp, url_prefix='/api/v1')
 
 # --- MIDDLEWARE & ERROR HANDLERS ---
+
+@app.before_request
+def handle_options_request():
+    """Xử lý tự động các Preflight Request (OPTIONS) cho CORS."""
+    if request.method == 'OPTIONS':
+        return "", 200
 
 @app.after_request
 def add_cors_headers(response):

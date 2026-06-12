@@ -5,10 +5,8 @@ import { resolve } from 'path';
 
 export default defineConfig({
   plugins: [react(), viteSingleFile()],
-  base: '/docupedia/',
   build: {
     outDir: 'dist',
-    emptyOutDir: true,
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html')
