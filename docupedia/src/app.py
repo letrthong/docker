@@ -25,7 +25,7 @@ init_docupedia_db()
 
 # Register API routes
 #app.register_blueprint(docupedia_bp, url_prefix=config.API_PREFIX)
-app.register_blueprint(docupedia_bp, url_prefix='/api/v1')
+app.register_blueprint(docupedia_bp, url_prefix='/api/v1/docupedia')
 
 # --- MIDDLEWARE & ERROR HANDLERS ---
 

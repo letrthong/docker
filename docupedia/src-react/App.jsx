@@ -29,7 +29,7 @@ function PageLoader() {
 
 // Protected Route wrapper
 function ProtectedRoute({ children, adminOnly = false }) {
-  const { isAuthenticated, isLoading, isAdmin } = useAuth();
+  const { isAuthenticated, loading: isLoading, isAdmin } = useAuth();
 
   if (isLoading) {
     return (
@@ -106,7 +106,7 @@ function AppRoutes() {
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/docupedia">
       <ThemeProvider>
         <ToastProvider>
           <AuthProvider>

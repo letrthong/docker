@@ -4,6 +4,7 @@ import { viteSingleFile } from 'vite-plugin-singlefile';
 import { resolve } from 'path';
 
 export default defineConfig({
+  base: '/docupedia/',
   plugins: [react(), viteSingleFile()],
   build: {
     outDir: 'dist',
