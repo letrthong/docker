@@ -1,4 +1,4 @@
-from flask import Flask, send_from_directory, request
+from flask import Flask, send_from_directory, request, redirect
 import os
 import sys
 
@@ -11,10 +11,15 @@ from uhes_restful_blueprint_doupedia import docupedia_bp, init_docupedia_db
 # Get configuration
 config = get_config_doupedia()
 
-# Create Flask app
-app = Flask(__name__, static_folder="static")
+# Create Flask app (bỏ static_folder mặc định vì sẽ tự quản lý nhiều thư mục)
+app = Flask(__name__)
 app.config['SECRET_KEY'] = config.JWT_SECRET_KEY
 
+# Khai báo đường dẫn tuyệt đối tới thư mục build tĩnh của Frontend
+# Vite đang xuất ra thư mục "dist" ở ngoài gốc dự án, 
+# nên ta lùi lại 1 cấp (dirname(dirname)) để trỏ đúng vào "dist".
+DOCUPEDIA_STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dist")
+ 
 # Khởi tạo dữ liệu và tài khoản Admin ngay lập tức để đảm bảo luôn tồn tại
 init_docupedia_db()
 
@@ -40,26 +45,31 @@ def not_found(e):
     if request.path.startswith(config.API_PREFIX):
         from utils.response import error_response
         return error_response('Endpoint không tồn tại', 'NOT_FOUND', 404)
-    return send_from_directory(app.static_folder, "index.html")
+    return "Not Found", 404
 
 # --- FRONTEND PROXY ROUTES ---
 
 @app.route("/")
-def index():
-    index_path = os.path.join(app.static_folder, "index.html")
+def index_redirect():
+    """Chuyển hướng gốc mặc định (bạn có thể chọn /docupedia hoặc /task)"""
+    return redirect("/docupedia")
+
+ 
+
+@app.route("/docupedia")
+@app.route("/docupedia/<path:path>")
+def serve_docupedia(path=""):
+    """Phục vụ Frontend Docupedia"""
+    file_path = os.path.join(DOCUPEDIA_STATIC_DIR, path)
+    if path and os.path.exists(file_path):
+        return send_from_directory(DOCUPEDIA_STATIC_DIR, path)
+        
+    index_path = os.path.join(DOCUPEDIA_STATIC_DIR, "index.html")
     if not os.path.exists(index_path):
-        print(f"[Flask][ERROR] index.html not found at {index_path}")
+        print(f"[Flask][ERROR] Docupedia index.html not found at {index_path}")
+    return send_from_directory(DOCUPEDIA_STATIC_DIR, "index.html")
 
-    return send_from_directory(app.static_folder, "index.html")
-
-@app.route("/<path:path>")
-def static_proxy(path):
-    """Phục vụ file tĩnh (JS, CSS, hình ảnh) hoặc fallback về index.html cho React Router"""
-    file_path = os.path.join(app.static_folder, path)
-    if os.path.exists(file_path):
-        return send_from_directory(app.static_folder, path)
-    return send_from_directory(app.static_folder, "index.html")
-
+ 
 if __name__ == "__main__":
     print("[Flask] Initializing application...")
     

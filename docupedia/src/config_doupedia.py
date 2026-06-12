@@ -18,6 +18,8 @@ ROOT_DIR = Path(__file__).parent.parent.resolve()
 # Source directory
 SRC_DIR = ROOT_DIR / 'src'
 
+ROOT_DATABASE_DIR = Path('/opt/config/docupedia')
+
 # Data directory (can be overridden by environment variable)
 DATA_DIR = Path(os.environ.get('DATA_DIR', ROOT_DIR / 'data'))
 
@@ -25,12 +27,12 @@ DATA_DIR = Path(os.environ.get('DATA_DIR', ROOT_DIR / 'data'))
 STATIC_DIR = ROOT_DIR / 'dist'
 
 # JSON database files
-USERS_FILE = DATA_DIR / 'users.json'
-PROJECTS_FILE = DATA_DIR / 'projects.json'
-PERMISSIONS_FILE = DATA_DIR / 'permissions.json'
+USERS_FILE = ROOT_DATABASE_DIR / 'users.json'
+PROJECTS_FILE = ROOT_DATABASE_DIR / 'projects.json'
+PERMISSIONS_FILE = ROOT_DATABASE_DIR / 'permissions.json'
 
 # Projects data directory
-PROJECTS_DATA_DIR = DATA_DIR / 'projects'
+PROJECTS_DATA_DIR = ROOT_DATABASE_DIR / 'projects'
 
 
 # =============================================================================

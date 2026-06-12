@@ -64,3 +64,5 @@ python app.py
 - **Tài khoản mặc định (Admin):**
   - Username: `admin`
   - Password: `admin`
+
+# http://localhost:5000/docupedia
