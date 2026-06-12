@@ -18,7 +18,7 @@ ROOT_DIR = Path(__file__).parent.parent.resolve()
 # Source directory
 SRC_DIR = ROOT_DIR / 'src'
 
-ROOT_DATABASE_DIR = Path('/opt/config/docupedia')
+ROOT_DATABASE_DIR = Path('/app/config/docupedia')
 
 # Data directory (can be overridden by environment variable)
 DATA_DIR = Path(os.environ.get('DATA_DIR', ROOT_DIR / 'data'))

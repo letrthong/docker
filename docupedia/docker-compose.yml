@@ -8,7 +8,7 @@ services:
       context: .
       dockerfile: Dockerfile
     volumes:
-      - ./data:/opt/config/docupedia
+      - ./data:/app/config/docupedia
     ports:
       - "5000:5000"
     environment:
