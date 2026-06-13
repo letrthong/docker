@@ -65,6 +65,7 @@ class ProjectService:
             'description': data.get('description', ''),
             'owner_id': owner_id,
             'is_active': True,
+            'is_public': bool(data.get('is_public', False)),
             'created_at': get_timestamp(),
             'updated_at': get_timestamp()
         }
@@ -102,10 +103,13 @@ class ProjectService:
             return False, "Không tìm thấy project"
         
         updates = {}
-        allowed_fields = ['name', 'description', 'is_active']
+        allowed_fields = ['name', 'description', 'is_active', 'is_public']
         for field in allowed_fields:
             if field in data:
-                updates[field] = data[field]
+                if field == 'is_public':
+                    updates[field] = bool(data[field])
+                else:
+                    updates[field] = data[field]
         
         success = JSONStorage.update_in_list(
             config.PROJECTS_FILE, 'projects', project_id, updates

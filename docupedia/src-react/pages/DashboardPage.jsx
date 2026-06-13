@@ -85,7 +85,7 @@ function DashboardPage() {
               <Clock className="w-6 h-6 text-amber-600 dark:text-amber-400" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-slate-900 dark:text-white">--</p>
+              <p className="text-lg font-bold text-slate-900 dark:text-white">{new Date().toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
               <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-medium">Cập nhật gần đây</p>
             </div>
           </div>

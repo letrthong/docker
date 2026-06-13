@@ -64,3 +64,23 @@ def require_admin(f):
 def get_current_user():
     """Get current authenticated user from flask.g"""
     return getattr(g, 'current_user', None)
+
+
+def optional_auth(f):
+    """Decorator to optionally authenticate a user"""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        g.current_user = None
+        
+        auth_header = request.headers.get('Authorization', '')
+        
+        if auth_header.startswith('Bearer '):
+            token = auth_header[7:]
+            user = AuthService.get_user_from_token(token)
+            
+            if user:
+                g.current_user = user
+                
+        return f(*args, **kwargs)
+    
+    return decorated

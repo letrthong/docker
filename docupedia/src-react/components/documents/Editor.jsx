@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import { Save, FileText, Download, Clock, Eye, Edit, X, Share2 } from 'lucide-react';
+import { Save, FileText, Download, Clock, Eye, Edit, X, Share2, Globe, Lock } from 'lucide-react';
 import { useProject } from '../../contexts/ProjectContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { Button } from '../common';
 import { documentsApi } from '../../api';
@@ -36,6 +37,7 @@ const formats = [
 function Editor() {
   const { currentProject, currentDocument, saveDocument, hasPermission, setCurrentDocument } = useProject();
   const { success, error } = useToast();
+  const { isAuthenticated } = useAuth();
   
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -48,7 +50,7 @@ function Editor() {
   const quillRef = useRef(null);
   const saveTimeoutRef = useRef(null);
 
-  const canEdit = hasPermission('edit');
+  const canEdit = isAuthenticated && hasPermission('edit');
 
   // Load document content - default to view mode
   useEffect(() => {
@@ -264,13 +266,17 @@ function Editor() {
     return (
       <div className="flex flex-col h-full">
         {/* View Mode Header */}
-        <div className="flex items-center justify-between px-6 py-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex items-center justify-between px-4 py-2 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
-              <Eye className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+            <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg" title={currentProject?.is_public ? 'Dự án công khai' : 'Dự án nội bộ'}>
+              {currentProject?.is_public ? (
+                <Globe className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              ) : (
+                <Lock className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              )}
             </div>
             <div>
-              <h1 className="text-xl font-bold text-slate-900 dark:text-white">
+              <h1 className="text-lg font-bold text-slate-900 dark:text-white">
                 {title || 'Tài liệu không có tiêu đề'}
               </h1>
               <div className="flex items-center gap-3 mt-1">
@@ -278,7 +284,8 @@ function Editor() {
                   <Clock className="w-3 h-3" />
                   Cập nhật: {lastSaved ? new Date(lastSaved).toLocaleString('vi-VN') : 'Chưa xác định'}
                 </span>
-                <span className="text-xs bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full font-medium">
+                <span className="text-xs bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                  <Eye className="w-3 h-3" />
                   Chế độ xem
                 </span>
               </div>
@@ -286,15 +293,17 @@ function Editor() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleCopyLink}
-              title="Sao chép link chia sẻ"
-            >
-              <Share2 className="w-4 h-4 mr-1" />
-              Chia sẻ
-            </Button>
+            {currentProject?.is_public && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleCopyLink}
+                title="Sao chép link chia sẻ"
+              >
+                <Share2 className="w-4 h-4 mr-1" />
+                Chia sẻ
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="sm"
@@ -319,9 +328,9 @@ function Editor() {
 
         {/* View Mode Content */}
         <div className="flex-1 overflow-auto bg-slate-50 dark:bg-slate-950">
-          <div className="max-w-4xl mx-auto p-8">
+          <div className="max-w-4xl mx-auto p-4 sm:p-8 min-h-full flex flex-col">
             <article 
-              className="prose prose-slate dark:prose-invert max-w-none bg-white dark:bg-slate-900 rounded-2xl p-8 shadow-sm border border-slate-200 dark:border-slate-800"
+              className="flex-1 prose prose-slate dark:prose-invert max-w-none bg-white dark:bg-slate-900 rounded-2xl p-6 sm:p-10 shadow-sm border border-slate-200 dark:border-slate-800"
               dangerouslySetInnerHTML={{ __html: htmlContent || '<p class="text-slate-400">Tài liệu trống</p>' }}
             />
           </div>
@@ -337,19 +346,6 @@ function Editor() {
             readOnly
           />
         </div>
-
-        {/* Floating Edit Button */}
-        {canEdit && (
-          <button
-            onClick={handleStartEdit}
-            className="fixed bottom-8 right-8 bg-emerald-600 hover:bg-emerald-700 text-white p-4 rounded-full shadow-lg shadow-emerald-200 dark:shadow-none hover:scale-105 transition-all flex items-center gap-2 group z-50"
-          >
-            <Edit className="w-5 h-5" />
-            <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap font-semibold text-sm">
-              Chỉnh sửa
-            </span>
-          </button>
-        )}
       </div>
     );
   }
@@ -358,7 +354,7 @@ function Editor() {
   return (
     <div className="flex flex-col h-full">
       {/* Edit Mode Toolbar */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+      <div className="flex items-center justify-between px-4 py-2 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
         <div className="flex items-center gap-3 flex-1">
           <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
             <Edit className="w-4 h-4 text-amber-600 dark:text-amber-400" />
@@ -389,14 +385,16 @@ function Editor() {
             Đang chỉnh sửa
           </span>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleCopyLink}
-            title="Sao chép link chia sẻ"
-          >
-            <Share2 className="w-4 h-4" />
-          </Button>
+          {currentProject?.is_public && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleCopyLink}
+              title="Sao chép link chia sẻ"
+            >
+              <Share2 className="w-4 h-4" />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"

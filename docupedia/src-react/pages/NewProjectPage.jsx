@@ -13,6 +13,7 @@ function NewProjectPage() {
   
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [isPublic, setIsPublic] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
   
@@ -86,6 +87,7 @@ function NewProjectPage() {
       const response = await projectsApi.create({
         name: name.trim(),
         description: description.trim(),
+        is_public: isPublic,
       });
 
       if (response.success) {
@@ -156,6 +158,20 @@ function NewProjectPage() {
                 rows={3}
                 placeholder="Mô tả ngắn về project..."
               />
+            </div>
+            
+            <div className="pt-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isPublic}
+                  onChange={(e) => setIsPublic(e.target.checked)}
+                  className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500"
+                />
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Dự án công khai (Ai cũng có thể xem không cần đăng nhập)
+                </span>
+              </label>
             </div>
           </div>
         </div>

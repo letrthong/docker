@@ -162,7 +162,7 @@ function LoginPage() {
         {/* Version badge */}
         <div className="text-center mt-6">
           <span className="text-xs text-slate-500">
-            Docupedia v1.0.9 • Build 2026-06-03-A
+            Được phát triển bởi <a href="https://telua.vn" target="_blank" rel="noopener noreferrer" className="font-semibold text-emerald-400 hover:text-emerald-300 hover:underline transition-colors animate-pulse drop-shadow-[0_0_6px_rgba(52,211,153,0.8)]">Telua</a> @06-2026
           </span>
         </div>
       </div>

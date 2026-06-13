@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, FolderKanban, Users, Eye, FileEdit, X, Check, Search } from 'lucide-react';
+import { Plus, Edit2, Trash2, FolderKanban, Users, Eye, FileEdit, X, Check, Search, Globe } from 'lucide-react';
 import { projectsApi, usersApi } from '../api';
 import { useToast } from '../contexts/ToastContext';
 import { Button, Modal, Input } from '../components/common';
@@ -16,7 +16,7 @@ function ProjectsManagePage() {
   const [searchTerm, setSearchTerm] = useState('');
 
   // Form data for edit
-  const [editForm, setEditForm] = useState({ name: '', description: '' });
+  const [editForm, setEditForm] = useState({ name: '', description: '', is_public: false });
 
   // Permission modal state
   const [projectPermissions, setProjectPermissions] = useState([]);
@@ -54,7 +54,11 @@ function ProjectsManagePage() {
 
   // Edit project
   const openEditModal = (project) => {
-    setEditForm({ name: project.name, description: project.description || '' });
+    setEditForm({ 
+      name: project.name, 
+      description: project.description || '',
+      is_public: project.is_public || false
+    });
     setEditModal({ open: true, project });
   };
 
@@ -264,9 +268,14 @@ function ProjectsManagePage() {
                       <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
                         <FolderKanban className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                       </div>
+                    <div className="flex items-center gap-2">
                       <span className="font-medium text-slate-900 dark:text-white">
                         {project.name}
                       </span>
+                      {project.is_public && (
+                        <Globe className="w-4 h-4 text-emerald-500" title="Dự án công khai" />
+                      )}
+                    </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -335,6 +344,19 @@ function ProjectsManagePage() {
               rows={3}
               className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
+          </div>
+          <div className="pt-2">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={editForm.is_public}
+                onChange={(e) => setEditForm({ ...editForm, is_public: e.target.checked })}
+                className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500"
+              />
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Dự án công khai (Ai cũng có thể xem không cần đăng nhập)
+              </span>
+            </label>
           </div>
           <div className="flex justify-end gap-3 pt-4">
             <Button

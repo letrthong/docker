@@ -57,11 +57,14 @@ def not_found(e):
 # --- FRONTEND PROXY ROUTES ---
 
 @app.route("/")
-def index_redirect():
+def index_redirect_home():
     """Chuyển hướng gốc mặc định (bạn có thể chọn /docupedia hoặc /task)"""
     return redirect("/docupedia")
 
- 
+@app.route("/login")
+def index_redirect_login():
+    """Chuyển hướng gốc mặc định (bạn có thể chọn /docupedia hoặc /task)"""
+    return redirect("/docupedia")
 
 @app.route("/docupedia")
 @app.route("/docupedia/<path:path>")

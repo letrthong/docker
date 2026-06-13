@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   ChevronRight, 
@@ -9,7 +9,9 @@ import {
   Plus,
   MoreHorizontal,
   Trash2,
-  Edit2
+  Edit2,
+  Search,
+  X
 } from 'lucide-react';
 import { useProject } from '../../contexts/ProjectContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -24,10 +26,20 @@ function TreeNode({
   onCreateDocument,
   onCreateFolder,
   onDelete,
-  onRename
+  onRename,
+  canCreate,
+  canEdit,
+  canDelete,
+  searchTerm
 }) {
   const [expanded, setExpanded] = useState(true);
   const [showMenu, setShowMenu] = useState(false);
+
+  useEffect(() => {
+    if (searchTerm) {
+      setExpanded(true);
+    }
+  }, [searchTerm]);
   
   const isFolder = node.type === 'folder';
   const isSelected = node.id === selectedId;
@@ -40,6 +52,20 @@ function TreeNode({
       onSelectDocument(node.id);
     }
   };
+
+  const checkMatch = (n, term) => {
+    if (!term) return true;
+    if (n.title.toLowerCase().includes(term.toLowerCase())) return true;
+    if (n.children) {
+      return n.children.some(childId => {
+        const childNode = nodes[childId];
+        return childNode && checkMatch(childNode, term);
+      });
+    }
+    return false;
+  };
+
+  const filteredChildren = children.filter(child => checkMatch(child, searchTerm));
 
   return (
     <div>
@@ -79,6 +105,7 @@ function TreeNode({
         <span className="flex-1 truncate">{node.title}</span>
 
         {/* Actions */}
+        {(canCreate || canEdit || canDelete) && (
         <div className="relative opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={(e) => {
@@ -95,7 +122,7 @@ function TreeNode({
               className="absolute right-0 top-full mt-1 w-44 bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 py-1 z-20"
               onClick={(e) => e.stopPropagation()}
             >
-              {isFolder && (
+              {isFolder && canCreate && (
                 <>
                   <button
                     onClick={() => {
@@ -120,6 +147,7 @@ function TreeNode({
                   <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
                 </>
               )}
+              {canEdit && (
               <button
                 onClick={() => {
                   setShowMenu(false);
@@ -130,6 +158,8 @@ function TreeNode({
                 <Edit2 className="w-4 h-4 text-slate-400" />
                 Đổi tên
               </button>
+              )}
+              {canDelete && (
               <button
                 onClick={() => {
                   setShowMenu(false);
@@ -140,15 +170,17 @@ function TreeNode({
                 <Trash2 className="w-4 h-4" />
                 Xóa
               </button>
+              )}
             </div>
           )}
         </div>
+        )}
       </div>
 
       {/* Children */}
-      {isFolder && expanded && children.length > 0 && (
+      {isFolder && expanded && filteredChildren.length > 0 && (
         <div>
-          {children.map((child) => (
+          {filteredChildren.map((child) => (
             <TreeNode
               key={child.id}
               node={child}
@@ -160,6 +192,10 @@ function TreeNode({
               onCreateFolder={onCreateFolder}
               onDelete={onDelete}
               onRename={onRename}
+              canCreate={canCreate}
+              canEdit={canEdit}
+              canDelete={canDelete}
+              searchTerm={searchTerm}
             />
           ))}
         </div>
@@ -179,6 +215,7 @@ function TreeView() {
   const [deleteModal, setDeleteModal] = useState({ open: false, node: null });
   const [renameModal, setRenameModal] = useState({ open: false, node: null });
   const [newTitle, setNewTitle] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
 
   const canCreate = hasPermission('create');
   const canDelete = hasPermission('delete');
@@ -263,9 +300,43 @@ function TreeView() {
   }
 
   const rootChildren = tree.root?.children?.map(id => tree.nodes?.[id]).filter(Boolean) || [];
+  
+  const checkMatch = (n, term) => {
+    if (!term) return true;
+    if (n.title.toLowerCase().includes(term.toLowerCase())) return true;
+    if (n.children) {
+      return n.children.some(childId => {
+        const childNode = tree.nodes[childId];
+        return childNode && checkMatch(childNode, term);
+      });
+    }
+    return false;
+  };
+
+  const filteredRootChildren = rootChildren.filter(node => checkMatch(node, searchTerm));
 
   return (
     <div>
+      {/* Search Bar */}
+      <div className="mb-3 relative">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <input
+          type="text"
+          placeholder="Tìm tài liệu..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full pl-8 pr-8 py-1.5 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        />
+        {searchTerm && (
+          <button
+            onClick={() => setSearchTerm('')}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
       {/* Root level actions */}
       {canCreate && (
         <div className="flex gap-2 mb-3">
@@ -293,8 +364,20 @@ function TreeView() {
       )}
 
       {/* Tree */}
-      {rootChildren.length > 0 ? (
-        rootChildren.map((node) => (
+      {rootChildren.length === 0 ? (
+        <div className="text-center py-6">
+          <div className="w-12 h-12 mx-auto mb-3 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center">
+            <FileText className="w-6 h-6 text-slate-400 dark:text-slate-500" />
+          </div>
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Chưa có tài liệu</p>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Tạo tài liệu đầu tiên</p>
+        </div>
+      ) : filteredRootChildren.length === 0 ? (
+        <div className="text-center py-6">
+          <p className="text-sm text-slate-500 dark:text-slate-400">Không tìm thấy kết quả cho "{searchTerm}"</p>
+        </div>
+      ) : (
+        filteredRootChildren.map((node) => (
           <TreeNode
             key={node.id}
             node={node}
@@ -325,16 +408,12 @@ function TreeView() {
                 setRenameModal({ open: true, node });
               }
             }}
+            canCreate={canCreate}
+            canEdit={canEdit}
+            canDelete={canDelete}
+            searchTerm={searchTerm}
           />
         ))
-      ) : (
-        <div className="text-center py-6">
-          <div className="w-12 h-12 mx-auto mb-3 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center">
-            <FileText className="w-6 h-6 text-slate-400 dark:text-slate-500" />
-          </div>
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Chưa có tài liệu</p>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Tạo tài liệu đầu tiên</p>
-        </div>
       )}
 
       {/* New Document Modal */}

@@ -6,20 +6,25 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from routes import projects_bp
 from services.document_service import DocumentService
-from middleware.auth_middleware import require_auth, get_current_user
+from services.project_service import ProjectService
+from middleware.auth_middleware import require_auth, get_current_user, optional_auth
 from middleware.permission_middleware import get_user_permissions
 from utils.response import success_response, error_response
 from utils.validators import validate_document
 
 
 @projects_bp.route('/<project_id>/documents', methods=['GET'])
-@require_auth
+@optional_auth
 def get_documents(project_id):
     """GET /api/v1/projects/:projectId/documents - Get all documents"""
     user = get_current_user()
+    project = ProjectService.get_project_by_id(project_id)
     
-    permissions = get_user_permissions(user['id'], project_id, user.get('role'))
-    if 'view' not in permissions:
+    permissions = []
+    if user:
+        permissions = get_user_permissions(user['id'], project_id, user.get('role'))
+        
+    if 'view' not in permissions and (not project or not project.get('is_public')):
         return error_response('Không có quyền truy cập', 'PERMISSION_DENIED', 403)
     
     documents = DocumentService.get_all_documents(project_id)
@@ -27,13 +32,17 @@ def get_documents(project_id):
 
 
 @projects_bp.route('/<project_id>/documents/<doc_id>', methods=['GET'])
-@require_auth
+@optional_auth
 def get_document(project_id, doc_id):
     """GET /api/v1/projects/:projectId/documents/:id - Get document"""
     user = get_current_user()
+    project = ProjectService.get_project_by_id(project_id)
     
-    permissions = get_user_permissions(user['id'], project_id, user.get('role'))
-    if 'view' not in permissions:
+    permissions = []
+    if user:
+        permissions = get_user_permissions(user['id'], project_id, user.get('role'))
+        
+    if 'view' not in permissions and (not project or not project.get('is_public')):
         return error_response('Không có quyền truy cập', 'PERMISSION_DENIED', 403)
     
     document = DocumentService.get_document(project_id, doc_id)
@@ -123,13 +132,17 @@ def move_document(project_id, doc_id):
 
 
 @projects_bp.route('/<project_id>/documents/<doc_id>/export', methods=['GET'])
-@require_auth
+@optional_auth
 def export_document(project_id, doc_id):
     """GET /api/v1/projects/:projectId/documents/:id/export - Export document"""
     user = get_current_user()
+    project = ProjectService.get_project_by_id(project_id)
     
-    permissions = get_user_permissions(user['id'], project_id, user.get('role'))
-    if 'view' not in permissions:
+    permissions = []
+    if user:
+        permissions = get_user_permissions(user['id'], project_id, user.get('role'))
+        
+    if 'view' not in permissions and (not project or not project.get('is_public')):
         return error_response('Không có quyền truy cập', 'PERMISSION_DENIED', 403)
     
     format_type = request.args.get('format', 'html')

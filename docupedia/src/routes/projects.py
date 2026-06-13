@@ -7,35 +7,42 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from routes import projects_bp
 from services.project_service import ProjectService
 from services.permission_service import PermissionService
-from middleware.auth_middleware import require_auth, require_admin, get_current_user
+from middleware.auth_middleware import require_auth, require_admin, get_current_user, optional_auth
 from middleware.permission_middleware import require_permission, get_user_permissions
 from utils.response import success_response, error_response
 from utils.validators import validate_project, validate_permission
 
 
 @projects_bp.route('', methods=['GET'])
-@require_auth
+@optional_auth
 def get_projects():
     """GET /api/v1/projects - Get user's accessible projects"""
     user = get_current_user()
+    if not user:
+        return success_response([])
     projects = ProjectService.get_user_projects(user['id'], user['role'])
     return success_response(projects)
 
 
 @projects_bp.route('/<project_id>', methods=['GET'])
-@require_auth
+@optional_auth
 def get_project(project_id):
     """GET /api/v1/projects/:id - Get project details"""
     user = get_current_user()
     
-    # Check permission
-    permissions = get_user_permissions(user['id'], project_id, user.get('role'))
-    if 'view' not in permissions:
-        return error_response('Bạn không có quyền truy cập project này', 'PERMISSION_DENIED', 403)
-    
     project = ProjectService.get_project_by_id(project_id)
     if not project:
         return error_response('Không tìm thấy project', 'NOT_FOUND', 404)
+
+    # Check permission
+    permissions = []
+    if user:
+        permissions = get_user_permissions(user['id'], project_id, user.get('role'))
+    elif project.get('is_public'):
+        permissions = ['view']
+        
+    if 'view' not in permissions and not project.get('is_public'):
+        return error_response('Bạn không có quyền truy cập project này', 'PERMISSION_DENIED', 403)
     
     project['user_permissions'] = permissions
     return success_response(project)
@@ -107,11 +114,14 @@ def get_project_permissions(project_id):
 
 
 @projects_bp.route('/<project_id>/permissions', methods=['POST'])
-@require_auth
+@optional_auth
 def add_project_permission(project_id):
     """POST /api/v1/projects/:id/permissions - Add permission"""
     user = get_current_user()
     
+    if not user:
+        return error_response('Bạn không có quyền xem permissions', 'PERMISSION_DENIED', 403)
+        
     # Check permission
     permissions = get_user_permissions(user['id'], project_id, user.get('role'))
     if 'manage' not in permissions and user.get('role') != 'admin':

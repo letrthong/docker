@@ -20,13 +20,20 @@
       "id": "folder_1780390104580",
       "type": "folder",
       "title": "123",
-      "children": []
+      "children": [
+        "doc_1781344648973"
+      ]
     },
     "doc_1780390775751": {
       "id": "doc_1780390775751",
       "type": "file",
       "title": "dsfsdfsd"
+    },
+    "doc_1781344648973": {
+      "id": "doc_1781344648973",
+      "type": "file",
+      "title": "xx"
     }
   },
-  "updated_at": "2026-06-02T08:59:45.990583Z"
+  "updated_at": "2026-06-13T09:57:28.974505Z"
 }

@@ -57,6 +57,13 @@ function AppRoutes() {
       <Routes>
         {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
+        
+        {/* Public Project Routes (Truy cập công khai không cần đăng nhập) */}
+        <Route element={<MainLayout />}>
+          <Route path="/project" element={<ProjectPage />} />
+          <Route path="/project/:projectId" element={<ProjectPage />} />
+          <Route path="/project/:projectId/doc/:documentId" element={<ProjectPage />} />
+        </Route>
 
         {/* Protected routes with layout */}
         <Route
@@ -67,9 +74,6 @@ function AppRoutes() {
           }
         >
           <Route path="/" element={<DashboardPage />} />
-          <Route path="/project" element={<ProjectPage />} />
-          <Route path="/project/:projectId" element={<ProjectPage />} />
-          <Route path="/project/:projectId/doc/:documentId" element={<ProjectPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         
         {/* Admin only routes */}

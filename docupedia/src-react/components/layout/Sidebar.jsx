@@ -1,4 +1,4 @@
-import { X, FolderKanban, Plus, ChevronDown, FileText, Folder } from 'lucide-react';
+import { X, FolderKanban, Plus, ChevronDown, FileText, Folder, Search, Globe } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useProject } from '../../contexts/ProjectContext';
@@ -8,13 +8,24 @@ import TreeView from '../documents/TreeView';
 function Sidebar({ isOpen, onClose }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isAuthenticated } = useAuth(); // Lấy thêm isAuthenticated
   const { projects, fetchProjects, currentProject, selectProject, isLoading, tree } = useProject();
   const [showProjectList, setShowProjectList] = useState(false);
+  const [projectSearchTerm, setProjectSearchTerm] = useState('');
+
+  // Xóa từ khóa tìm kiếm khi đóng dropdown
+  useEffect(() => {
+    if (!showProjectList) {
+      setProjectSearchTerm('');
+    }
+  }, [showProjectList]);
 
   useEffect(() => {
-    fetchProjects();
-  }, [fetchProjects]);
+    // Chỉ fetch danh sách dự án (hiển thị dropdown Sidebar) nếu đã đăng nhập
+    if (isAuthenticated) {
+      fetchProjects();
+    }
+  }, [fetchProjects, isAuthenticated]);
 
   const handleSelectProject = (project) => {
     selectProject(project.id);
@@ -27,6 +38,11 @@ function Sidebar({ isOpen, onClose }) {
 
   // Count nodes in tree
   const nodeCount = tree?.nodes ? Object.keys(tree.nodes).length : 0;
+
+  // Lọc danh sách dự án dựa trên từ khóa
+  const filteredProjects = projects.filter((p) =>
+    p.name.toLowerCase().includes(projectSearchTerm.toLowerCase())
+  );
 
   return (
     <>
@@ -69,68 +85,106 @@ function Sidebar({ isOpen, onClose }) {
             </button>
           </div>
 
-{/* Project Selector - Compact */}
-          <div className="px-3 py-2 border-b border-slate-200 dark:border-slate-800">
-            <div className="relative">
-              <button
-                onClick={() => setShowProjectList(!showProjectList)}
-                className="w-full flex items-center justify-between px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-emerald-300 dark:hover:border-emerald-600 transition-all"
-              >
-                <span className="truncate font-medium text-slate-900 dark:text-white">
-                  {currentProject?.name || 'Chọn Project...'}
-                </span>
-                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${showProjectList ? 'rotate-180' : ''}`} />
-              </button>
+          {/* Project Header */}
+          {isAuthenticated ? (
+            <div className="px-3 py-2 border-b border-slate-200 dark:border-slate-800">
+              <div className="relative">
+                <button
+                  onClick={() => setShowProjectList(!showProjectList)}
+                  className="w-full flex items-center justify-between px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-emerald-300 dark:hover:border-emerald-600 transition-all"
+                >
+                  <span className="truncate font-medium text-slate-900 dark:text-white">
+                    {currentProject?.name || 'Chọn Project...'}
+                  </span>
+                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${showProjectList ? 'rotate-180' : ''}`} />
+                </button>
 
-              {showProjectList && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl max-h-60 overflow-y-auto z-10">
-                  {isLoading ? (
-                    <div className="px-4 py-3 text-sm text-slate-500 flex items-center gap-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-emerald-200 border-t-emerald-600" />
-                      Đang tải...
+                {showProjectList && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl max-h-80 flex flex-col z-10">
+                    {/* Thanh tìm kiếm */}
+                    <div className="p-2 border-b border-slate-100 dark:border-slate-800 flex-shrink-0">
+                      <div className="relative">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="Tìm dự án..."
+                          value={projectSearchTerm}
+                          onChange={(e) => setProjectSearchTerm(e.target.value)}
+                          className="w-full pl-8 pr-8 py-1.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          autoFocus
+                        />
+                        {projectSearchTerm && (
+                          <button
+                            onClick={() => setProjectSearchTerm('')}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  ) : projects.length === 0 ? (
-                    <div className="px-4 py-3 text-sm text-slate-500">
-                      Không có project
-                    </div>
-                  ) : (
-                    projects.map((project) => (
-                      <button
-                        key={project.id}
-                        onClick={() => handleSelectProject(project)}
-                        className={`w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition ${
-                          currentProject?.id === project.id
-                            ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 font-medium'
-                            : 'text-slate-900 dark:text-white'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <FolderKanban className="w-4 h-4 text-slate-400" />
-                          {project.name}
+
+                    {/* Danh sách lọc */}
+                    <div className="overflow-y-auto flex-1">
+                      {isLoading ? (
+                        <div className="px-4 py-3 text-sm text-slate-500 flex items-center gap-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-emerald-200 border-t-emerald-600" />
+                          Đang tải...
                         </div>
-                      </button>
-                    ))
-                  )}
-                  
-                  {isAdmin && (
-                    <>
-                      <div className="border-t border-slate-100 dark:border-slate-800" />
-                      <button
-                        onClick={() => {
-                          setShowProjectList(false);
-                          navigate('/projects/new');
-                        }}
-                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 font-medium transition"
-                      >
-                        <Plus className="w-4 h-4" />
-                        Tạo Project mới
-                      </button>
-                    </>
-                  )}
-                </div>
-              )}
+                      ) : filteredProjects.length === 0 ? (
+                        <div className="px-4 py-3 text-sm text-slate-500">
+                          Không tìm thấy project
+                        </div>
+                      ) : (
+                        filteredProjects.map((project) => (
+                          <button
+                            key={project.id}
+                            onClick={() => handleSelectProject(project)}
+                            className={`w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition ${
+                              currentProject?.id === project.id
+                                ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 font-medium'
+                                : 'text-slate-900 dark:text-white'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <FolderKanban className="w-4 h-4 text-slate-400" />
+                              <span className="truncate">{project.name}</span>
+                              {project.is_public && (
+                                <Globe className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" title="Dự án công khai" />
+                              )}
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                    
+                    {isAdmin && (
+                      <>
+                        <div className="border-t border-slate-100 dark:border-slate-800" />
+                        <button
+                          onClick={() => {
+                            setShowProjectList(false);
+                            navigate('/projects/new');
+                          }}
+                          className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 font-medium transition"
+                        >
+                          <Plus className="w-4 h-4" />
+                          Tạo Project mới
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          ) : currentProject ? (
+            <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3 bg-slate-50 dark:bg-slate-900/50">
+              <FolderKanban className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+              <span className="font-semibold text-slate-900 dark:text-white truncate">
+                {currentProject.name}
+              </span>
+            </div>
+          ) : null}
 
           {/* Tree View - Maximum Height */}
           <div className="flex-1 overflow-y-auto px-2 py-2" style={{ minHeight: 0 }}>
@@ -145,11 +199,26 @@ function Sidebar({ isOpen, onClose }) {
           </div>
 
           {/* Compact Footer */}
-          {currentProject && (
-            <div className="flex-shrink-0 px-3 py-1.5 border-t border-slate-200 dark:border-slate-800 text-[11px] text-slate-400 dark:text-slate-500 text-center">
-              {nodeCount} tài liệu
-            </div>
-          )}
+          <div className="flex-shrink-0 px-3 py-2 border-t border-slate-200 dark:border-slate-800 text-center flex flex-col gap-1">
+            {currentProject && (
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                {nodeCount} tài liệu
+              </span>
+            )}
+            <span className="text-[10px] text-slate-400 dark:text-slate-500">
+              Copyright © 2026{' '}
+              <span className="group relative inline-block">
+                <a href="https://telua.vn/" target="_blank" rel="noopener noreferrer" className="font-semibold text-emerald-500 hover:text-emerald-400 hover:underline transition-colors">Telua</a>
+                
+                {/* Custom Tooltip */}
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2.5 py-1 bg-slate-800 dark:bg-slate-700 text-white text-xs font-medium rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50 shadow-xl pointer-events-none">
+                  Đơn vị phát triển phần mềm
+                  {/* Tooltip Arrow */}
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-slate-800 dark:border-t-slate-700"></div>
+                </div>
+              </span>
+            </span>
+          </div>
         </div>
       </aside>
     </>
