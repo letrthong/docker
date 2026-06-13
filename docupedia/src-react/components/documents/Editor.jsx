@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import { Save, FileText, Download, Clock, Eye, Edit, X } from 'lucide-react';
+import { Save, FileText, Download, Clock, Eye, Edit, X, Share2 } from 'lucide-react';
 import { useProject } from '../../contexts/ProjectContext';
 import { useToast } from '../../contexts/ToastContext';
 import { Button } from '../common';
@@ -170,6 +170,19 @@ function Editor() {
     setIsSaving(false);
   };
 
+  const handleCopyLink = () => {
+    if (!currentProject || !currentDocument) return;
+    
+    // Lấy origin (ví dụ: http://localhost:5000) và tạo link URL Parameters
+    const baseUrl = window.location.origin;
+    // Chú ý: Sử dụng basename /docupedia như cấu hình ở App.jsx
+    const shareUrl = `${baseUrl}/docupedia/project?projectId=${currentProject.id}&docId=${currentDocument.id}`;
+    
+    navigator.clipboard.writeText(shareUrl)
+      .then(() => success('Đã sao chép link chia sẻ'))
+      .catch(() => error('Không thể sao chép link'));
+  };
+
   const handleExport = async (format) => {
     if (!currentDocument || !currentProject) return;
 
@@ -276,6 +289,15 @@ function Editor() {
             <Button
               variant="ghost"
               size="sm"
+              onClick={handleCopyLink}
+              title="Sao chép link chia sẻ"
+            >
+              <Share2 className="w-4 h-4 mr-1" />
+              Chia sẻ
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => handleExport('html')}
             >
               <Download className="w-4 h-4 mr-1" />
@@ -367,6 +389,14 @@ function Editor() {
             Đang chỉnh sửa
           </span>
 
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleCopyLink}
+            title="Sao chép link chia sẻ"
+          >
+            <Share2 className="w-4 h-4" />
+          </Button>
           <Button
             variant="ghost"
             size="sm"

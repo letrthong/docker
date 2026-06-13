@@ -101,7 +101,7 @@ function NewProjectPage() {
         success('Tạo project thành công');
         await fetchProjects();
         selectProject(projectId);
-        navigate(`/project/${projectId}`);
+        navigate(`/project?projectId=${projectId}`);
       } else {
         showError(response.error?.message || 'Không thể tạo project');
       }

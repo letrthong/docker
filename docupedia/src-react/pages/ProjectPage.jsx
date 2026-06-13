@@ -1,13 +1,17 @@
 import { useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useProject } from '../contexts/ProjectContext';
 import { Editor } from '../components/documents';
 import { FolderX } from 'lucide-react';
 
 function ProjectPage() {
-  const { projectId, documentId } = useParams();
+  const params = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { selectProject, currentProject, isLoading, loadDocument, currentDocument } = useProject();
+
+  const projectId = searchParams.get('projectId') || params.projectId;
+  const documentId = searchParams.get('docId') || searchParams.get('documentId') || params.documentId;
 
   // Load project
   useEffect(() => {

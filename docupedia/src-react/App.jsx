@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ProjectProvider } from './contexts/ProjectContext';
@@ -30,17 +30,18 @@ function PageLoader() {
 // Protected Route wrapper
 function ProtectedRoute({ children, adminOnly = false }) {
   const { isAuthenticated, loading: isLoading, isAdmin } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600" />
       </div>
     );
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   if (adminOnly && !isAdmin) {
@@ -66,6 +67,7 @@ function AppRoutes() {
           }
         >
           <Route path="/" element={<DashboardPage />} />
+          <Route path="/project" element={<ProjectPage />} />
           <Route path="/project/:projectId" element={<ProjectPage />} />
           <Route path="/project/:projectId/doc/:documentId" element={<ProjectPage />} />
           <Route path="/settings" element={<SettingsPage />} />

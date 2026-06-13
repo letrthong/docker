@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   ChevronRight, 
   ChevronDown, 
@@ -170,6 +170,7 @@ function TreeNode({
 
 function TreeView() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { tree, currentProject, currentDocument, loadDocument, createDocument, createFolder, deleteDocument, deleteFolder, hasPermission } = useProject();
   const { success, error } = useToast();
   
@@ -185,6 +186,9 @@ function TreeView() {
 
   const handleSelectDocument = (docId) => {
     loadDocument(docId);
+    if (currentProject) {
+      setSearchParams({ projectId: currentProject.id, docId: docId }, { replace: true });
+    }
   };
 
   const handleCreateDocument = async () => {
@@ -202,6 +206,9 @@ function TreeView() {
       // Auto-select new document
       if (result.data?.id) {
         loadDocument(result.data.id);
+        if (currentProject) {
+          setSearchParams({ projectId: currentProject.id, docId: result.data.id }, { replace: true });
+        }
       }
     } else {
       error(result.error || 'Không thể tạo tài liệu');
@@ -236,6 +243,11 @@ function TreeView() {
     if (result.success) {
       success(`Đã xóa ${node.type === 'folder' ? 'thư mục' : 'tài liệu'}`);
       setDeleteModal({ open: false, node: null });
+      
+      // Xóa docId khỏi URL nếu tài liệu đang mở vừa bị xóa
+      if (node.type !== 'folder' && currentDocument?.id === node.id && currentProject) {
+        setSearchParams({ projectId: currentProject.id }, { replace: true });
+      }
     } else {
       error(result.error || 'Không thể xóa');
     }

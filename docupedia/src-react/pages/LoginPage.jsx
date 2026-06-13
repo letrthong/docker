@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { useNavigate, Navigate, useLocation } from 'react-router-dom';
 import { FileText, Eye, EyeOff, Loader2, Lock, User } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 
 function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, isAuthenticated, isLoading } = useAuth();
   const { error: showError } = useToast();
   
@@ -17,7 +18,8 @@ function LoginPage() {
 
   // Redirect if already logged in
   if (isAuthenticated && !isLoading) {
-    return <Navigate to="/" replace />;
+    const from = location.state?.from ? `${location.state.from.pathname}${location.state.from.search}` : '/';
+    return <Navigate to={from} replace />;
   }
 
   const validate = () => {
@@ -43,7 +45,8 @@ function LoginPage() {
     const result = await login(username, password);
 
     if (result.success) {
-      navigate('/');
+      const from = location.state?.from ? `${location.state.from.pathname}${location.state.from.search}` : '/';
+      navigate(from, { replace: true });
     } else {
       showError(result.error || 'Đăng nhập thất bại');
       setErrors({ form: result.error });

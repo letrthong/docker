@@ -15,7 +15,7 @@ function DashboardPage() {
 
   const handleProjectClick = (project) => {
     selectProject(project.id);
-    navigate(`/project/${project.id}`);
+    navigate(`/project?projectId=${project.id}`);
   };
 
   return (
