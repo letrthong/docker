@@ -50,12 +50,6 @@ function Header({ onMenuClick, title }) {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Auto-save status indicator */}
-          <span className="hidden sm:inline-flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 mr-2">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            Đã đồng bộ
-          </span>
-
           {/* Theme Toggle */}
           <button 
             onClick={toggleTheme}

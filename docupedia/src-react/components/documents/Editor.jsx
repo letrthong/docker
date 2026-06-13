@@ -51,6 +51,8 @@ function Editor() {
   const saveTimeoutRef = useRef(null);
 
   const canEdit = isAuthenticated && hasPermission('edit');
+  const isAutoSaveEnabled = localStorage.getItem('enableAutoSave') === 'true';
+  const autoSaveInterval = parseInt(localStorage.getItem('autoSaveInterval')) || 3;
 
   // Load document content - default to view mode
   useEffect(() => {
@@ -92,24 +94,24 @@ function Editor() {
 
   // Auto-save (only in edit mode)
   useEffect(() => {
-    if (!hasChanges || !currentDocument || !canEdit || isViewMode) return;
+    if (!isAutoSaveEnabled || !hasChanges || !currentDocument || !canEdit || isViewMode) return;
 
     // Clear previous timeout
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
 
-    // Set new timeout for auto-save (3 seconds)
+    // Set new timeout for auto-save
     saveTimeoutRef.current = setTimeout(() => {
       handleSave(true);
-    }, 3000);
+    }, autoSaveInterval * 1000);
 
     return () => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [hasChanges, content, title, isViewMode]);
+  }, [hasChanges, content, title, isViewMode, autoSaveInterval]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -175,10 +177,9 @@ function Editor() {
   const handleCopyLink = () => {
     if (!currentProject || !currentDocument) return;
     
-    // Lấy origin (ví dụ: http://localhost:5000) và tạo link URL Parameters
     const baseUrl = window.location.origin;
-    // Chú ý: Sử dụng basename /docupedia như cấu hình ở App.jsx
-    const shareUrl = `${baseUrl}/docupedia/project?projectId=${currentProject.id}&docId=${currentDocument.id}`;
+    // Sử dụng cấu trúc route đẹp: /project/:projectId/doc/:documentId
+    const shareUrl = `${baseUrl}/docupedia/project/${currentProject.id}/doc/${currentDocument.id}`;
     
     navigator.clipboard.writeText(shareUrl)
       .then(() => success('Đã sao chép link chia sẻ'))
@@ -276,23 +277,23 @@ function Editor() {
               )}
             </div>
             <div>
-              <h1 className="text-lg font-bold text-slate-900 dark:text-white">
+              <h1 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
                 {title || 'Tài liệu không có tiêu đề'}
               </h1>
               <div className="flex items-center gap-3 mt-1">
-                <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                <span className="hidden sm:flex text-xs text-slate-500 dark:text-slate-400 items-center gap-1">
                   <Clock className="w-3 h-3" />
-                  Cập nhật: {lastSaved ? new Date(lastSaved).toLocaleString('vi-VN') : 'Chưa xác định'}
+                  <span className="hidden sm:inline">Cập nhật: </span>{lastSaved ? new Date(lastSaved).toLocaleString('vi-VN') : 'Chưa xác định'}
                 </span>
-                <span className="text-xs bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                <span className="hidden sm:flex text-xs bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full font-medium items-center gap-1">
                   <Eye className="w-3 h-3" />
-                  Chế độ xem
+                  <span>Chế độ xem</span>
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             {currentProject?.is_public && (
               <Button
                 variant="ghost"
@@ -300,17 +301,18 @@ function Editor() {
                 onClick={handleCopyLink}
                 title="Sao chép link chia sẻ"
               >
-                <Share2 className="w-4 h-4 mr-1" />
-                Chia sẻ
+                <Share2 className="w-4 h-4 sm:mr-1" />
+                <span className="hidden sm:inline">Chia sẻ</span>
               </Button>
             )}
             <Button
               variant="ghost"
               size="sm"
               onClick={() => handleExport('html')}
+              title="Tải xuống HTML"
             >
-              <Download className="w-4 h-4 mr-1" />
-              Tải xuống
+              <Download className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">Tải xuống</span>
             </Button>
 
             {canEdit && (
@@ -318,9 +320,10 @@ function Editor() {
                 variant="primary"
                 size="sm"
                 onClick={handleStartEdit}
+                title="Chỉnh sửa tài liệu"
               >
-                <Edit className="w-4 h-4 mr-1" />
-                Chỉnh sửa
+                <Edit className="w-4 h-4 sm:mr-1" />
+                <span className="hidden sm:inline">Chỉnh sửa</span>
               </Button>
             )}
           </div>
@@ -364,14 +367,14 @@ function Editor() {
             value={title}
             onChange={handleTitleChange}
             disabled={!canEdit}
-            className="text-xl font-bold bg-transparent border-none focus:outline-none focus:ring-0 text-slate-900 dark:text-white flex-1 placeholder:text-slate-400"
+            className="text-lg sm:text-xl font-bold bg-transparent border-none focus:outline-none focus:ring-0 text-slate-900 dark:text-white flex-1 placeholder:text-slate-400"
             placeholder="Tiêu đề tài liệu..."
           />
         </div>
 
         <div className="flex items-center gap-2">
           {lastSaved && (
-            <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-lg">
+            <span className="hidden sm:flex text-xs text-slate-500 dark:text-slate-400 items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-lg">
               <Clock className="w-3 h-3" />
               {new Date(lastSaved).toLocaleTimeString('vi-VN')}
             </span>
@@ -381,7 +384,7 @@ function Editor() {
             <span className="text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-2 py-1 rounded-lg">Chưa lưu</span>
           )}
 
-          <span className="text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 px-2 py-1 rounded-full font-medium">
+          <span className="hidden sm:inline text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 px-2 py-1 rounded-full font-medium">
             Đang chỉnh sửa
           </span>
 
@@ -399,9 +402,10 @@ function Editor() {
             variant="ghost"
             size="sm"
             onClick={handleCancelEdit}
+            title="Hủy chỉnh sửa"
           >
-            <X className="w-4 h-4 mr-1" />
-            Hủy
+            <X className="w-4 h-4 sm:mr-1" />
+            <span className="hidden sm:inline">Hủy</span>
           </Button>
 
           {canEdit && (
@@ -417,9 +421,10 @@ function Editor() {
                 setIsViewMode(true);
               }}
               isLoading={isSaving}
+              title="Lưu & Đóng"
             >
-              <Save className="w-4 h-4 mr-1" />
-              Lưu & Đóng
+              <Save className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">Lưu & Đóng</span>
             </Button>
           )}
         </div>

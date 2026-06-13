@@ -71,14 +71,14 @@ class AuthService:
         )
         
         if not user:
-            return False, None, "Tên đăng nhập hoặc mật khẩu không đúng"
+            return False, None, "Tên đăng nhập không tồn tại"
         
         if not user.get('is_active', True):
             return False, None, "Tài khoản đã bị vô hiệu hóa"
         
         # Verify password
         if not cls.verify_password(password, user.get('password_hash', '')):
-            return False, None, "Tên đăng nhập hoặc mật khẩu không đúng"
+            return False, None, "Mật khẩu không chính xác"
         
         # Generate token
         token = cls.generate_token(user['id'], user['username'], user['role'])

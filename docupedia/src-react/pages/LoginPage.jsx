@@ -49,7 +49,14 @@ function LoginPage() {
       navigate(from, { replace: true });
     } else {
       showError(result.error || 'Đăng nhập thất bại');
-      setErrors({ form: result.error });
+      
+      if (result.error === 'Tên đăng nhập không tồn tại') {
+        setErrors({ username: result.error });
+      } else if (result.error === 'Mật khẩu không chính xác') {
+        setErrors({ password: result.error });
+      } else {
+        setErrors({ form: result.error });
+      }
     }
 
     setIsSubmitting(false);
