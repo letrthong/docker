@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import ReactQuill from 'react-quill';
+import ReactQuill, { Quill } from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { Save, FileText, Download, Clock, Eye, Edit, X, Share2, Globe, Lock } from 'lucide-react';
 import { useProject } from '../../contexts/ProjectContext';
@@ -7,6 +7,37 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { Button } from '../common';
 import { documentsApi } from '../../api';
+
+// Fix lỗi tương thích thư viện trong môi trường Vite/React
+window.Quill = Quill;
+
+// Mở rộng Image mặc định của Quill để lưu lại các thuộc tính kích thước, canh lề
+const BaseImage = Quill.import('formats/image');
+const IMAGE_ATTRIBUTES = ['alt', 'height', 'width', 'style'];
+
+class CustomImage extends BaseImage {
+  static formats(domNode) {
+    return IMAGE_ATTRIBUTES.reduce(function(formats, attribute) {
+      if (domNode.hasAttribute(attribute)) {
+        formats[attribute] = domNode.getAttribute(attribute);
+      }
+      return formats;
+    }, {});
+  }
+
+  format(name, value) {
+    if (IMAGE_ATTRIBUTES.indexOf(name) > -1) {
+      if (value) {
+        this.domNode.setAttribute(name, value);
+      } else {
+        this.domNode.removeAttribute(name);
+      }
+    } else {
+      super.format(name, value);
+    }
+  }
+}
+Quill.register(CustomImage, true);
 
 // Quill toolbar configuration
 const modules = {
@@ -22,6 +53,10 @@ const modules = {
     ['blockquote', 'code-block'],
     ['clean'],
   ],
+  imageResize: {
+    parchment: Quill.import('parchment'),
+    modules: ['Resize', 'DisplaySize', 'Toolbar']
+  }
 };
 
 const formats = [
@@ -32,6 +67,7 @@ const formats = [
   'align',
   'link', 'image', 'video',
   'blockquote', 'code-block',
+  'width', 'height', 'style', 'alt'
 ];
 
 function Editor() {
@@ -46,6 +82,7 @@ function Editor() {
   const [hasChanges, setHasChanges] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
   const [isViewMode, setIsViewMode] = useState(true); // Default to view mode
+  const [isQuillLoaded, setIsQuillLoaded] = useState(false);
   
   const quillRef = useRef(null);
   const saveTimeoutRef = useRef(null);
@@ -54,9 +91,20 @@ function Editor() {
   const isAutoSaveEnabled = localStorage.getItem('enableAutoSave') === 'true';
   const autoSaveInterval = parseInt(localStorage.getItem('autoSaveInterval')) || 3;
 
+  // Tải module ImageResize động để tránh lỗi circular dependency của Vite
+  useEffect(() => {
+    import('quill-image-resize-module-react').then(module => {
+      Quill.register('modules/imageResize', module.default);
+      setIsQuillLoaded(true);
+    }).catch(err => {
+      console.warn("Could not load Quill modules", err);
+      setIsQuillLoaded(true);
+    });
+  }, []);
+
   // Load document content - default to view mode
   useEffect(() => {
-    if (currentDocument) {
+    if (currentDocument && isQuillLoaded) {
       setTitle(currentDocument.title || '');
       setIsViewMode(true); // Always start in view mode
       setHasChanges(false);
@@ -90,7 +138,7 @@ function Editor() {
       setLastSaved(null);
       setIsViewMode(true);
     }
-  }, [currentDocument]);
+  }, [currentDocument, isQuillLoaded]);
 
   // Auto-save (only in edit mode)
   useEffect(() => {
@@ -348,13 +396,15 @@ function Editor() {
 
         {/* Hidden Quill for content conversion */}
         <div style={{ position: 'absolute', left: '-9999px', visibility: 'hidden' }}>
-          <ReactQuill
-            ref={quillRef}
-            theme="snow"
-            value={content}
-            modules={{ toolbar: false }}
-            readOnly
-          />
+          {isQuillLoaded && (
+            <ReactQuill
+              ref={quillRef}
+              theme="snow"
+              value={content}
+              modules={{ toolbar: false }}
+              readOnly
+            />
+          )}
         </div>
       </div>
     );
@@ -439,17 +489,23 @@ function Editor() {
 
       {/* Editor */}
       <div className="flex-1 overflow-hidden bg-white dark:bg-slate-900">
-        <ReactQuill
-          ref={quillRef}
-          theme="snow"
-          value={content}
-          onChange={handleContentChange}
-          modules={modules}
-          formats={formats}
-          readOnly={!canEdit}
-          className="h-full docupedia-editor"
-          placeholder="Bắt đầu viết..."
-        />
+        {!isQuillLoaded ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+          </div>
+        ) : (
+          <ReactQuill
+            ref={quillRef}
+            theme="snow"
+            value={content}
+            onChange={handleContentChange}
+            modules={modules}
+            formats={formats}
+            readOnly={!canEdit}
+            className="h-full docupedia-editor"
+            placeholder="Bắt đầu viết..."
+          />
+        )}
       </div>
 
       {/* Custom styles for Quill */}
