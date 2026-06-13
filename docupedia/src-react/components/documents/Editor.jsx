@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import ReactQuill, { Quill } from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import { Save, FileText, Download, Clock, Eye, Edit, X, Share2, Globe, Lock } from 'lucide-react';
+import { Save, FileText, Download, Clock, Eye, Edit, X, Share2, Globe, Lock, Upload } from 'lucide-react';
 import { useProject } from '../../contexts/ProjectContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -86,6 +86,7 @@ function Editor() {
   
   const quillRef = useRef(null);
   const saveTimeoutRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   const canEdit = isAuthenticated && hasPermission('edit');
   const isAutoSaveEnabled = localStorage.getItem('enableAutoSave') === 'true';
@@ -176,6 +177,19 @@ function Editor() {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [hasChanges, canEdit]);
 
+  // Cập nhật thẻ tiêu đề trình duyệt (Browser Tab Title)
+  useEffect(() => {
+    if (title) {
+      document.title = `${title} - ${currentProject?.name || 'Docupedia'}`;
+    } else if (currentProject) {
+      document.title = `${currentProject.name} - Docupedia`;
+    }
+
+    return () => {
+      document.title = 'Docupedia';
+    };
+  }, [title, currentProject]);
+
   const handleContentChange = useCallback((value, delta, source, editor) => {
     if (source === 'user') {
       setContent(value);
@@ -253,6 +267,32 @@ function Editor() {
     } catch (err) {
       error('Không thể xuất file');
     }
+  };
+
+  // Import nội dung từ file HTML/TXT
+  const handleImport = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const fileContent = event.target.result;
+      
+      // Nếu là file HTML, chỉ lấy phần nội dung bên trong thẻ <body> để tránh rác
+      let htmlToPaste = fileContent;
+      if (file.name.endsWith('.html') || file.name.endsWith('.htm')) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(fileContent, 'text/html');
+        htmlToPaste = doc.body ? doc.body.innerHTML : fileContent;
+      }
+
+      // Gán trực tiếp vào state để ReactQuill tự động hiển thị ra UI
+      setContent(htmlToPaste);
+      setHasChanges(true);
+      success('Đã nhập nội dung từ file');
+    };
+    reader.readAsText(file);
+    e.target.value = ''; // Reset input để có thể chọn lại cùng 1 file
   };
 
   if (!currentDocument) {
@@ -455,6 +495,24 @@ function Editor() {
               <Share2 className="w-4 h-4" />
             </Button>
           )}
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            title="Tải lên file HTML/TXT"
+          >
+            <Upload className="w-4 h-4 sm:mr-1" />
+            <span className="hidden sm:inline">Nhập file</span>
+          </Button>
+          <input 
+            type="file" 
+            accept=".html,.htm,.txt" 
+            className="hidden" 
+            ref={fileInputRef} 
+            onChange={handleImport} 
+          />
+
           <Button
             variant="ghost"
             size="sm"
