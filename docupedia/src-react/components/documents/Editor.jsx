@@ -66,7 +66,7 @@ function Editor() {
       const docContent = currentDocument.content;
       if (typeof docContent === 'object' && docContent.ops) {
         // It's a delta - need to convert to HTML for view mode
-        setContent('');
+        setContent(docContent);
         // We'll set HTML content after Quill converts it
         setTimeout(() => {
           if (quillRef.current) {
@@ -74,7 +74,7 @@ function Editor() {
             editor.setContents(docContent);
             setHtmlContent(editor.root.innerHTML);
           }
-        }, 100);
+        }, 300);
       } else if (typeof docContent === 'string') {
         setContent(docContent);
         setHtmlContent(docContent);
@@ -227,6 +227,12 @@ function Editor() {
   const handleStartEdit = () => {
     if (!canEdit) return;
     setIsViewMode(false);
+    
+    // Cập nhật state trực tiếp để ReactQuill nhận giá trị ngay khi mount
+    if (currentDocument?.content) {
+      setContent(currentDocument.content);
+    }
+    
     // Load content into Quill
     setTimeout(() => {
       if (quillRef.current && currentDocument?.content) {
@@ -235,7 +241,7 @@ function Editor() {
           editor.setContents(currentDocument.content);
         }
       }
-    }, 100);
+    }, 300);
   };
 
   // Cancel edit and go back to view mode
@@ -250,6 +256,7 @@ function Editor() {
     // Reset content
     if (currentDocument?.content) {
       const docContent = currentDocument.content;
+      setContent(docContent);
       if (typeof docContent === 'object' && docContent.ops) {
         setTimeout(() => {
           if (quillRef.current) {
@@ -257,7 +264,7 @@ function Editor() {
             editor.setContents(docContent);
             setHtmlContent(editor.root.innerHTML);
           }
-        }, 100);
+        }, 300);
       }
     }
   };
