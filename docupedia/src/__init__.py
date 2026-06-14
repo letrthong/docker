@@ -1,1 +1,0 @@
-# Docupedia Backend Package
