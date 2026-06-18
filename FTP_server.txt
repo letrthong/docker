@@ -13,8 +13,8 @@ COPY vsftpd.conf /etc/vsftpd.conf
 # Expose the FTP port
 EXPOSE 21
 
-# Start vsftpd
-CMD ["vsftpd", "/etc/vsftpd.conf"]
+# Start vsftpd 
+CMD ["vsftpd", "/etc/vsftpd.conf"] 
 
 
 Step 2: Create the vsftpd Configuration File
