@@ -1,0 +1,17 @@
+# Connect docker
+docker exec -it ubuntu_gcc bash
+
+service ssh status
+service ssh restart
+
+
+# start docker
+docker compose up -d
+
+# Rebuild
+docker compose down
+docker compose up --build -d
+
+
+https://protobuf.dev/
+https://github.com/protocolbuffers/protobuf#protobuf-compiler-installation
